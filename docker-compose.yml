@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql
+    container_name: codelions_be
+    ports:
+      - "3307:3307"
+    environment:
+      MYSQL_HOST: ${DB_HOST}
+      MYSQL_ROOT_PASSWORD: ${DB_USERNAME}
+      MYSQL_DATABASE: ${DB_NAME}
+    restart: always
+    volumes:
+      - mysqldata:/var/lib/mysqldata/codelions
+volumes:
+  mysqldata:
