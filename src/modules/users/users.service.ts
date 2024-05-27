@@ -27,9 +27,11 @@ export class UsersService {
   async createUser(name: string, email: string): Promise<User> {
     try {
       const user = new User();
+
       user.id = uuidv4();
       user.name = name;
       user.email = email;
+
       return await this.entityManager.save(user);
     } catch (error) {
       throw new HttpException(
