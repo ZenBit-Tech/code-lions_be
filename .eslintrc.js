@@ -103,6 +103,24 @@ module.exports = {
         format: ['UPPER_CASE'],
       },
     ],
+
+    'no-magic-numbers': [
+      'error',
+      {
+        ignore: [0, 1],
+        ignoreArrayIndexes: true,
+        enforceConst: true,
+        detectObjects: false,
+      },
+    ],
+    'no-constant-condition': 'error',
+    'no-nested-ternary': 'error',
+    'no-unused-vars': [
+      'error',
+      { vars: 'all', varsIgnorePattern: '^_', args: 'none' },
+    ],
+
+    'import/no-relative-parent-imports': 'error',
     'prettier/prettier': [
       'error',
       {
