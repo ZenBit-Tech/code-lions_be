@@ -1,11 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { User } from './common/entities/user.entity';
+import { User } from 'src/common/entities/user.entity';
 import { EntityManager } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
-export class AppService {
+export class UsersService {
   constructor(
     @InjectEntityManager() private readonly entityManager: EntityManager,
   ) {}

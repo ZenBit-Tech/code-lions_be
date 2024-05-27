@@ -4,10 +4,10 @@ services:
     image: mysql
     container_name: codelions_be
     ports:
-      - "3307:3307"
+      - "${DB_PORT}:3306"
     environment:
       MYSQL_HOST: ${DB_HOST}
-      MYSQL_ROOT_PASSWORD: ${DB_USERNAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
     restart: always
     volumes:
