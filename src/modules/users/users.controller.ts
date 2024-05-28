@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Delete, Param } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { User } from 'src/common/entities/user.entity';
+import { User } from './user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CreateUserDTO } from './DTO/create.dto';
+import { ResponseUserDTO } from './DTO/response.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -12,7 +14,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({ status: 200, description: 'Return all users.', type: [User] })
   async getUsers(): Promise<User[]> {
-    return await this.usersService.findAllUsers();
+    return await this.usersService.getAllUsers();
   }
 
   @Post()
@@ -22,10 +24,12 @@ export class UsersController {
     description: 'The user has been successfully created.',
     type: User,
   })
-  async addUser(
-    @Body('name') name: string,
-    @Body('email') email: string,
-  ): Promise<User> {
-    return await this.usersService.createUser(name, email);
+  async register(@Body() dto: CreateUserDTO): Promise<ResponseUserDTO> {
+    return await this.usersService.registerUser(dto);
+  }
+
+  @Delete()
+  async deleteUser(@Param('id') id: string): Promise<void> {
+    await this.usersService.deleteUser(id);
   }
 }
