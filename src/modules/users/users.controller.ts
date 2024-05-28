@@ -5,7 +5,6 @@ import {
   ApiOperation,
   ApiOkResponse,
   ApiInternalServerErrorResponse,
-  ApiBadRequestResponse,
   ApiResponse,
   ApiTags,
   ApiBody,
@@ -50,10 +49,6 @@ export class UsersController {
     status: 201,
     description: responseDescrptions.success,
     type: ResponseUserDTO,
-  })
-  @ApiBadRequestResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
   })
   @ApiInternalServerErrorResponse({
     description: responseDescrptions.error,
