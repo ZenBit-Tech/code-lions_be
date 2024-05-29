@@ -30,6 +30,10 @@ import { UsersService } from './users.service';
 
 @ApiTags('users')
 @Controller('users')
+@ApiInternalServerErrorResponse({
+  description: responseDescrptions.error,
+  type: ErrorResponse,
+})
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -42,10 +46,6 @@ export class UsersController {
   @ApiOkResponse({
     description: responseDescrptions.success,
     type: [User],
-  })
-  @ApiInternalServerErrorResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
   })
   async getUsers(): Promise<User[]> {
     return await this.usersService.getAllUsers();
@@ -67,10 +67,6 @@ export class UsersController {
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
-  @ApiInternalServerErrorResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
-  })
   @ApiBody({ type: CreateUserDTO })
   async register(@Body() dto: CreateUserDTO): Promise<ResponseUserDTO> {
     return await this.usersService.registerUser(dto);
@@ -88,10 +84,6 @@ export class UsersController {
     description: responseDescrptions.success,
   })
   @ApiNotFoundResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
-  })
-  @ApiInternalServerErrorResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
