@@ -6,7 +6,8 @@ import { EntityManager } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDTO } from './DTO/create.dto';
 import { ResponseUserDTO } from './DTO/response.dto';
-import { HttpException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -17,6 +18,7 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         EntityManager,
+        ConfigService,
         {
           provide: getRepositoryToken(User),
           useValue: {},
@@ -139,7 +141,9 @@ describe('UsersService', () => {
       const existingUser = new User();
       jest.spyOn(service, 'findUserByEmail').mockResolvedValue(existingUser);
 
-      await expect(service.registerUser(dto)).rejects.toThrow(HttpException);
+      await expect(service.registerUser(dto)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(service.findUserByEmail).toHaveBeenCalledWith(dto.email);
     });

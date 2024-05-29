@@ -5,8 +5,9 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { User } from './user.entity';
 import { EntityManager } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDTO } from './DTO/create.dto';
 import { ResponseUserDTO } from './DTO/response.dto';
@@ -16,10 +17,12 @@ import { Errors } from 'src/common/errors';
 export class UsersService {
   constructor(
     @InjectEntityManager() private readonly entityManager: EntityManager,
+    private readonly configService: ConfigService,
   ) {}
 
   async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 10);
+    const salt = +this.configService.get('SALT');
+    return await bcrypt.hash(password, salt);
   }
 
   async findUserByEmail(email: string): Promise<User> {
@@ -58,7 +61,9 @@ export class UsersService {
   async registerUser(dto: CreateUserDTO): Promise<ResponseUserDTO> {
     try {
       const userExists = await this.findUserByEmail(dto.email);
-      if (userExists) throw new BadRequestException(Errors.USER_EXISTS);
+      if (userExists) {
+        throw new BadRequestException(Errors.USER_EXISTS);
+      }
 
       dto.password = await this.hashPassword(dto.password);
 
@@ -72,10 +77,14 @@ export class UsersService {
       const responseUser = await this.returnPublicUser(user);
       return responseUser;
     } catch (error) {
-      throw new HttpException(
-        'Failed to create a user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      if (error instanceof BadRequestException) {
+        throw error;
+      } else {
+        throw new HttpException(
+          'Failed to create a user',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
   }
 

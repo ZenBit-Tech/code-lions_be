@@ -5,6 +5,7 @@ import { EntityManager } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDTO } from './DTO/create.dto';
 import { ResponseUserDTO } from './DTO/response.dto';
+import { ConfigService } from '@nestjs/config';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -13,7 +14,7 @@ describe('UsersController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [UsersService, EntityManager],
+      providers: [UsersService, EntityManager, ConfigService],
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
