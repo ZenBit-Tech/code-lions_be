@@ -21,4 +21,18 @@ export class User {
   })
   @Column()
   email: string;
+
+  @ApiProperty({
+    example: '$2b$10$bcOlXlUdMoPiI1aZJgyXEeRXhbms7spSgaktfTskP01IDAObl7Aiu',
+    description: 'The password of the user',
+  })
+  @Column()
+  password: string;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if the user is verified',
+  })
+  @Column({ default: false })
+  isVerified: boolean;
 }
