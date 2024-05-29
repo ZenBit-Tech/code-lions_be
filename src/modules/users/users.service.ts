@@ -1,11 +1,11 @@
 import {
-  HttpException,
-  HttpStatus,
-  BadRequestException,
+  InternalServerErrorException,
   Injectable,
+  NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
@@ -16,7 +16,8 @@ import { Errors } from 'src/common/errors';
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectEntityManager() private readonly entityManager: EntityManager,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
   ) {}
 
@@ -27,13 +28,12 @@ export class UsersService {
 
   async findUserByEmail(email: string): Promise<User> {
     try {
-      return this.entityManager.findOne(User, {
+      return this.userRepository.findOne({
         where: { email },
       });
     } catch (error) {
-      throw new HttpException(
+      throw new InternalServerErrorException(
         'Failed to fetch the user by email',
-        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -47,14 +47,9 @@ export class UsersService {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      return await this.entityManager
-        .createQueryBuilder(User, 'user')
-        .getMany();
+      return await this.userRepository.find();
     } catch (error) {
-      throw new HttpException(
-        'Failed to fetch users',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new InternalServerErrorException('Failed to fetch users');
     }
   }
 
@@ -62,7 +57,7 @@ export class UsersService {
     try {
       const userExists = await this.findUserByEmail(dto.email);
       if (userExists) {
-        throw new BadRequestException(Errors.USER_EXISTS);
+        throw new ConflictException(Errors.USER_EXISTS);
       }
 
       dto.password = await this.hashPassword(dto.password);
@@ -72,31 +67,35 @@ export class UsersService {
       user.email = dto.email;
       user.password = dto.password;
 
-      await this.entityManager.save(user);
+      await this.userRepository.save(user);
 
       const responseUser = await this.returnPublicUser(user);
       return responseUser;
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (error instanceof ConflictException) {
         throw error;
       } else {
-        throw new HttpException(
-          'Failed to create a user',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
+        throw new InternalServerErrorException('Failed to create a user');
       }
     }
   }
 
-  async deleteUser(userId: string): Promise<string> {
+  async deleteUser(userId: string): Promise<void> {
     try {
-      await this.entityManager.delete(User, userId);
-      return 'The user is successfully deleted';
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      await this.userRepository.delete(userId);
     } catch (error) {
-      throw new HttpException(
-        'Failed to delete a user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else {
+        throw new InternalServerErrorException('Failed to delete a user');
+      }
     }
   }
 }

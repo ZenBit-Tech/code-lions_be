@@ -2,32 +2,32 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from './user.entity';
-import { EntityManager } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDTO } from './DTO/create.dto';
 import { ResponseUserDTO } from './DTO/response.dto';
-import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let entityManager: EntityManager;
+  let userRepository: Repository<User>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        EntityManager,
         ConfigService,
+        Repository<User>,
         {
           provide: getRepositoryToken(User),
-          useValue: {},
+          useClass: Repository,
         },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    entityManager = module.get<EntityManager>(EntityManager);
+    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 
   it('should be defined', () => {
@@ -53,13 +53,11 @@ describe('UsersService', () => {
       const user = new User();
       user.email = email;
 
-      jest.spyOn(entityManager, 'findOne').mockResolvedValue(user);
+      jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
 
       const result = await service.findUserByEmail(email);
 
-      expect(entityManager.findOne).toHaveBeenCalledWith(User, {
-        where: { email },
-      });
+      expect(userRepository.findOne).toHaveBeenCalledWith({ where: { email } });
       expect(result).toEqual(user);
     });
   });
@@ -89,17 +87,12 @@ describe('UsersService', () => {
     it('should return all users', async () => {
       const users = [new User(), new User()];
 
-      jest.spyOn(entityManager, 'createQueryBuilder').mockReturnValue({
-        getMany: jest.fn().mockResolvedValue(users),
-      } as any);
+      jest.spyOn(userRepository, 'find').mockResolvedValue(users);
 
       const result = await service.getAllUsers();
 
       expect(result).toEqual(users);
-      expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(
-        User,
-        'user',
-      );
+      expect(userRepository.find).toHaveBeenCalled();
     });
   });
 
@@ -119,14 +112,14 @@ describe('UsersService', () => {
       user.password = dto.password;
 
       jest.spyOn(service, 'hashPassword').mockResolvedValue(dto.password);
-      jest.spyOn(entityManager, 'save').mockResolvedValue(user);
+      jest.spyOn(userRepository, 'save').mockResolvedValue(user);
       jest.spyOn(service, 'returnPublicUser').mockResolvedValue(user);
 
       const result = await service.registerUser(dto);
 
       expect(service.findUserByEmail).toHaveBeenCalledWith(dto.email);
       expect(service.hashPassword).toHaveBeenCalledWith(dto.password);
-      expect(entityManager.save).toHaveBeenCalledWith(user);
+      expect(userRepository.save).toHaveBeenCalledWith(user);
       expect(service.returnPublicUser).toHaveBeenCalledWith(user);
       expect(result).toEqual(user);
     });
@@ -142,7 +135,7 @@ describe('UsersService', () => {
       jest.spyOn(service, 'findUserByEmail').mockResolvedValue(existingUser);
 
       await expect(service.registerUser(dto)).rejects.toThrow(
-        BadRequestException,
+        ConflictException,
       );
 
       expect(service.findUserByEmail).toHaveBeenCalledWith(dto.email);

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Delete, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  HttpCode,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import {
@@ -9,6 +17,8 @@ import {
   ApiTags,
   ApiBody,
   ApiParam,
+  ApiConflictResponse,
+  ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { CreateUserDTO } from './DTO/create.dto';
 import { ResponseUserDTO } from './DTO/response.dto';
@@ -50,6 +60,10 @@ export class UsersController {
     description: responseDescrptions.success,
     type: ResponseUserDTO,
   })
+  @ApiConflictResponse({
+    description: responseDescrptions.error,
+    type: ErrorResponse,
+  })
   @ApiInternalServerErrorResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
@@ -59,7 +73,8 @@ export class UsersController {
     return await this.usersService.registerUser(dto);
   }
 
-  @Delete()
+  @HttpCode(204)
+  @Delete(':id')
   @ApiOperation({
     summary: 'Delete a user',
     tags: ['Users Endpoints'],
@@ -68,6 +83,10 @@ export class UsersController {
   @ApiResponse({
     status: 204,
     description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: responseDescrptions.error,
+    type: ErrorResponse,
   })
   @ApiInternalServerErrorResponse({
     description: responseDescrptions.error,
