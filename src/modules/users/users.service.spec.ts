@@ -1,13 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from './users.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { User } from './user.entity';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
 import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import * as bcrypt from 'bcrypt';
+import { Repository } from 'typeorm';
+
+import { CreateUserDTO } from './DTO/create.dto';
+import { ResponseUserDTO } from './DTO/response.dto';
+import { User } from './user.entity';
+import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -37,12 +39,14 @@ describe('UsersService', () => {
   describe('hashPassword', () => {
     it('should hash the password', async () => {
       const password = 'password';
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const salt = 10;
+      const hashedPassword = await bcrypt.hash(password, salt);
 
       const shouldPasswordsMatch = await bcrypt.compare(
         password,
         hashedPassword,
       );
+
       expect(shouldPasswordsMatch).toBe(true);
     });
   });
@@ -51,6 +55,7 @@ describe('UsersService', () => {
     it('should find a user by email', async () => {
       const email = 'test@example.com';
       const user = new User();
+
       user.email = email;
 
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
@@ -65,6 +70,7 @@ describe('UsersService', () => {
   describe('returnPublicUser', () => {
     it('should return a public user object', async () => {
       const user = new User();
+
       user.id = '123';
       user.name = 'John Doe';
       user.email = 'test@example.com';
@@ -107,6 +113,7 @@ describe('UsersService', () => {
       jest.spyOn(service, 'findUserByEmail').mockResolvedValue(null);
 
       const user = new User();
+
       user.name = dto.name;
       user.email = dto.email;
       user.password = dto.password;
@@ -132,6 +139,7 @@ describe('UsersService', () => {
       };
 
       const existingUser = new User();
+
       jest.spyOn(service, 'findUserByEmail').mockResolvedValue(existingUser);
 
       await expect(service.registerUser(dto)).rejects.toThrow(

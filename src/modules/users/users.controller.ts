@@ -6,9 +6,8 @@ import {
   Delete,
   Param,
   HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { User } from './user.entity';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -20,12 +19,14 @@ import {
   ApiConflictResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+
 import { ErrorResponse } from 'src/common/ErrorResponse';
 import { responseDescrptions } from 'src/common/responseDescriptions';
 
-
+import { CreateUserDTO } from './DTO/create.dto';
+import { ResponseUserDTO } from './DTO/response.dto';
+import { User } from './user.entity';
+import { UsersService } from './users.service';
 
 @ApiTags('users')
 @Controller('users')
@@ -75,7 +76,7 @@ export class UsersController {
     return await this.usersService.registerUser(dto);
   }
 
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
   @ApiOperation({
     summary: 'Delete a user',

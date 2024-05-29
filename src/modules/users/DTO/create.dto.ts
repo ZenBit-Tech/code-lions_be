@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
+
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { Errors } from 'src/common/errors';
+
+const MIN_PASSWORD_LENGTH = 8;
 
 export class CreateUserDTO {
   @ApiProperty({ example: 'John Doe', description: 'The name of the user' })
@@ -22,6 +25,6 @@ export class CreateUserDTO {
   })
   @IsNotEmpty({ message: Errors.MISSING_CREDENTIALS })
   @IsString({ message: Errors.PASSWORD_IS_STRING })
-  @MinLength(8, { message: Errors.PASSWORD_LENGTH })
+  @MinLength(MIN_PASSWORD_LENGTH, { message: Errors.PASSWORD_LENGTH })
   password: string;
 }

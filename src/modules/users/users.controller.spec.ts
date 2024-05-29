@@ -1,12 +1,14 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from './users.controller';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UsersService } from './users.service';
+
 import { Repository } from 'typeorm';
-import { User } from './user.entity';
+
 import { CreateUserDTO } from './DTO/create.dto';
 import { ResponseUserDTO } from './DTO/response.dto';
-import { ConfigService } from '@nestjs/config';
+import { User } from './user.entity';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -50,6 +52,7 @@ describe('UsersController', () => {
         isVerified: true,
       },
     ];
+
     jest.spyOn(controller, 'getUsers').mockResolvedValue(users);
 
     const result = await controller.getUsers();
@@ -70,6 +73,7 @@ describe('UsersController', () => {
       email: 'test@example.com',
       isVerified: false,
     };
+
     jest.spyOn(controller, 'register').mockResolvedValue(responseUser);
 
     const result = await controller.register(createUserDto);
