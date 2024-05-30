@@ -20,11 +20,11 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 
-import { ErrorResponse } from 'src/common/ErrorResponse';
-import { responseDescrptions } from 'src/common/responseDescriptions';
+import { ErrorResponse } from 'src/common/error-response';
+import { responseDescrptions } from 'src/common/response-descriptions';
 
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+import { CreateUserDto } from './dto/create.dto';
+import { ResponseUserDto } from './dto/response.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -35,7 +35,7 @@ import { UsersService } from './users.service';
   type: ErrorResponse,
 })
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get()
   @ApiOperation({
@@ -61,14 +61,14 @@ export class UsersController {
   @ApiResponse({
     status: 201,
     description: responseDescrptions.success,
-    type: ResponseUserDTO,
+    type: ResponseUserDto,
   })
   @ApiConflictResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
-  @ApiBody({ type: CreateUserDTO })
-  async register(@Body() dto: CreateUserDTO): Promise<ResponseUserDTO> {
+  @ApiBody({ type: CreateUserDto })
+  async register(@Body() dto: CreateUserDto): Promise<ResponseUserDto> {
     return await this.usersService.registerUser(dto);
   }
 

@@ -5,7 +5,7 @@ import { Errors } from 'src/common/errors';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-export class CreateUserDTO {
+export class CreateUserDto {
   @ApiProperty({ example: 'John Doe', description: 'The name of the user' })
   @IsNotEmpty({ message: Errors.MISSING_CREDENTIALS })
   @IsString({ message: Errors.NAME_IS_STRING })

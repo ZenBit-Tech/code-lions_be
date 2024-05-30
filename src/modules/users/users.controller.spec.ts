@@ -4,8 +4,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+import { CreateUserDto } from './Dto/create.dto';
+import { ResponseUserDto } from './Dto/response.dto';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -62,12 +62,12 @@ describe('UsersController', () => {
   });
 
   it('register => should create a new user and return the response user', async () => {
-    const createUserDto: CreateUserDTO = {
+    const createUserDto: CreateUserDto = {
       name: 'John',
       email: 'test@example.com',
       password: 'password',
     };
-    const responseUser: ResponseUserDTO = {
+    const responseUser: ResponseUserDto = {
       id: '123',
       name: 'John',
       email: 'test@example.com',

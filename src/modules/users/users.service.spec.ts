@@ -6,8 +6,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+import { CreateUserDto } from './dto/create.dto';
+import { ResponseUserDto } from './dto/response.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -76,7 +76,7 @@ describe('UsersService', () => {
       user.email = 'test@example.com';
       user.isVerified = true;
 
-      const expectedResult: ResponseUserDTO = {
+      const expectedResult: ResponseUserDto = {
         id: '123',
         name: 'John Doe',
         email: 'test@example.com',
@@ -104,7 +104,7 @@ describe('UsersService', () => {
 
   describe('registerUser', () => {
     it('should register a new user when the user does not already exist', async () => {
-      const dto: CreateUserDTO = {
+      const dto: CreateUserDto = {
         name: 'John',
         email: 'test@example.com',
         password: 'password',
@@ -132,7 +132,7 @@ describe('UsersService', () => {
     });
 
     it('should throw an error if the user already exists', async () => {
-      const dto: CreateUserDTO = {
+      const dto: CreateUserDto = {
         name: 'John Doe',
         email: 'test@example.com',
         password: 'password',

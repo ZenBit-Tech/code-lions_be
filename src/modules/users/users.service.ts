@@ -11,8 +11,8 @@ import * as bcrypt from 'bcrypt';
 import { Errors } from 'src/common/errors';
 import { Repository } from 'typeorm';
 
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+import { CreateUserDto } from './dto/create.dto';
+import { ResponseUserDto } from './dto/response.dto';
 import { User } from './user.entity';
 
 @Injectable()
@@ -21,7 +21,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async hashPassword(password: string): Promise<string> {
     const salt = +this.configService.get('SALT');
@@ -41,7 +41,7 @@ export class UsersService {
     }
   }
 
-  async returnPublicUser(userObject: User): Promise<ResponseUserDTO> {
+  async returnPublicUser(userObject: User): Promise<ResponseUserDto> {
     const { id, name, email, isVerified } = userObject;
 
     const returnUser = { id, name, email, isVerified };
@@ -57,7 +57,7 @@ export class UsersService {
     }
   }
 
-  async registerUser(dto: CreateUserDTO): Promise<ResponseUserDTO> {
+  async registerUser(dto: CreateUserDto): Promise<ResponseUserDto> {
     try {
       const userExists = await this.findUserByEmail(dto.email);
 
