@@ -4,8 +4,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 
-import { CreateUserDto } from './Dto/create.dto';
-import { ResponseUserDto } from './Dto/response.dto';
+import { CreateUserDto } from './dto/create.dto';
+import { ResponseUserDto } from './dto/response.dto';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';

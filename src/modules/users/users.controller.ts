@@ -35,7 +35,7 @@ import { UsersService } from './users.service';
   type: ErrorResponse,
 })
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   @Get()
   @ApiOperation({

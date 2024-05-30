@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import { Repository } from 'typeorm';
 
@@ -24,9 +24,14 @@ export class UsersService {
   ) { }
 
   async hashPassword(password: string): Promise<string> {
-    const salt = +this.configService.get('SALT');
-
-    return await bcrypt.hash(password, salt);
+    try {
+      const saltRounds = 10;
+      const salt = await bcrypt.genSalt(saltRounds);
+      const hash = await bcrypt.hash(password, salt);
+      return hash;
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to hash the password');
+    }
   }
 
   async findUserByEmail(email: string): Promise<User> {
@@ -99,11 +104,10 @@ export class UsersService {
 
       await this.userRepository.delete(userId);
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
         throw error;
-      } else {
-        throw new InternalServerErrorException('Failed to delete a user');
       }
+      throw new InternalServerErrorException('Failed to delete a user');
     }
   }
 }
