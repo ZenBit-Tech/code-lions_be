@@ -21,13 +21,14 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async hashPassword(password: string): Promise<string> {
     try {
       const saltRounds = 10;
       const salt = await bcrypt.genSalt(saltRounds);
       const hash = await bcrypt.hash(password, salt);
+
       return hash;
     } catch (error) {
       throw new InternalServerErrorException('Failed to hash the password');
@@ -104,7 +105,10 @@ export class UsersService {
 
       await this.userRepository.delete(userId);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof InternalServerErrorException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException('Failed to delete a user');
