@@ -6,9 +6,8 @@ import {
   Delete,
   Param,
   HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { User } from './user.entity';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -20,13 +19,21 @@ import {
   ApiConflictResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+
 import { ErrorResponse } from 'src/common/ErrorResponse';
 import { responseDescrptions } from 'src/common/responseDescriptions';
 
+import { CreateUserDTO } from './DTO/create.dto';
+import { ResponseUserDTO } from './DTO/response.dto';
+import { User } from './user.entity';
+import { UsersService } from './users.service';
+
 @ApiTags('users')
 @Controller('users')
+@ApiInternalServerErrorResponse({
+  description: responseDescrptions.error,
+  type: ErrorResponse,
+})
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -39,10 +46,6 @@ export class UsersController {
   @ApiOkResponse({
     description: responseDescrptions.success,
     type: [User],
-  })
-  @ApiInternalServerErrorResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
   })
   async getUsers(): Promise<User[]> {
     return await this.usersService.getAllUsers();
@@ -64,16 +67,12 @@ export class UsersController {
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
-  @ApiInternalServerErrorResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
-  })
   @ApiBody({ type: CreateUserDTO })
   async register(@Body() dto: CreateUserDTO): Promise<ResponseUserDTO> {
     return await this.usersService.registerUser(dto);
   }
 
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
   @ApiOperation({
     summary: 'Delete a user',
@@ -85,10 +84,6 @@ export class UsersController {
     description: responseDescrptions.success,
   })
   @ApiNotFoundResponse({
-    description: responseDescrptions.error,
-    type: ErrorResponse,
-  })
-  @ApiInternalServerErrorResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
