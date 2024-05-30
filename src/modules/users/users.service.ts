@@ -31,7 +31,7 @@ export class UsersService {
 
       return hash;
     } catch (error) {
-      throw new InternalServerErrorException('Failed to hash the password');
+      throw new InternalServerErrorException(Errors.FAILED_TO_HASH);
     }
   }
 
@@ -42,7 +42,7 @@ export class UsersService {
       });
     } catch (error) {
       throw new InternalServerErrorException(
-        'Failed to fetch the user by email',
+        Errors.FAILED_TO_FETCH_USER_BY_EMAIL,
       );
     }
   }
@@ -59,7 +59,7 @@ export class UsersService {
     try {
       return await this.userRepository.find();
     } catch (error) {
-      throw new InternalServerErrorException('Failed to fetch users');
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
     }
   }
 
@@ -88,7 +88,7 @@ export class UsersService {
       if (error instanceof ConflictException) {
         throw error;
       } else {
-        throw new InternalServerErrorException('Failed to create a user');
+        throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_USER);
       }
     }
   }
@@ -100,7 +100,7 @@ export class UsersService {
       });
 
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
       await this.userRepository.delete(userId);
@@ -111,7 +111,7 @@ export class UsersService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Failed to delete a user');
+      throw new InternalServerErrorException(Errors.FAILED_TO_DELETE_USER);
     }
   }
 }
