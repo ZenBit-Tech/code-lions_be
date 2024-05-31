@@ -118,14 +118,12 @@ describe('UsersService', () => {
       user.email = dto.email;
       user.password = dto.password;
 
-      jest.spyOn(service, 'hashPassword').mockResolvedValue(dto.password);
       jest.spyOn(userRepository, 'save').mockResolvedValue(user);
       jest.spyOn(service, 'returnPublicUser').mockResolvedValue(user);
 
       const result = await service.registerUser(dto);
 
       expect(service.findUserByEmail).toHaveBeenCalledWith(dto.email);
-      expect(service.hashPassword).toHaveBeenCalledWith(dto.password);
       expect(userRepository.save).toHaveBeenCalledWith(user);
       expect(service.returnPublicUser).toHaveBeenCalledWith(user);
       expect(result).toEqual(user);

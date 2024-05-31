@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ErrorResponse {
-  @ApiProperty({ example: 404, description: 'Error status code' })
+  @ApiProperty({ example: 500, description: 'Error status code' })
   statusCode: number;
 
   @ApiProperty({
@@ -11,7 +11,7 @@ export class ErrorResponse {
   message: string | string[];
 
   @ApiPropertyOptional({
-    example: 'Not Found',
+    example: 'Internal server error',
     description: 'Brief description of the error',
   })
   error?: string;

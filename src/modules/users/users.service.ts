@@ -4,11 +4,11 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
+import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
 import { CreateUserDto } from './dto/create.dto';
@@ -20,20 +20,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly configService: ConfigService,
   ) {}
-
-  async hashPassword(password: string): Promise<string> {
-    try {
-      const saltRounds = 10;
-      const salt = await bcrypt.genSalt(saltRounds);
-      const hash = await bcrypt.hash(password, salt);
-
-      return hash;
-    } catch (error) {
-      throw new InternalServerErrorException(Errors.FAILED_TO_HASH);
-    }
-  }
 
   async findUserByEmail(email: string): Promise<User> {
     try {
@@ -112,6 +99,37 @@ export class UsersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_DELETE_USER);
+    }
+  }
+
+  async saveVerificationCode(userId: string, code: string): Promise<void> {
+    try {
+      const verificationCodeExpiration = new Date();
+
+      verificationCodeExpiration.setSeconds(
+        verificationCodeExpiration.getSeconds() + VERIFICATION_CODE_EXPIRATION,
+      );
+
+      await this.userRepository.update(
+        { id: userId },
+        { verificationCode: code, verificationCodeExpiration },
+      );
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_SAVE_VERIFICATION_CODE,
+      );
+    }
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    try {
+      const saltRounds = 10;
+      const salt = await bcrypt.genSalt(saltRounds);
+      const hash = await bcrypt.hash(password, salt);
+
+      return hash;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_HASH);
     }
   }
 }
