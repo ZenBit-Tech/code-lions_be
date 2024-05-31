@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
@@ -6,6 +6,7 @@ import { UsersService } from 'src/modules/users/users.service';
 
 import { MailerService } from '../mailer/mailer.service';
 import { CreateUserDto } from '../users/dto/create.dto';
+import { PublicUserDto } from '../users/dto/public-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,28 +15,35 @@ export class AuthService {
     private mailerService: MailerService,
   ) {}
 
-  async register(dto: CreateUserDto): Promise<void> {
-    const user = await this.usersService.registerUser(dto);
-    const verificationCode = this.generateVerificationCode(
-      VERIFICATION_CODE_LENGTH,
-    );
-    const isMailSent = await this.mailerService.sendMail({
-      receiverEmail: user.email,
-      subject: 'Verification email',
-      templateName: 'verify-email.hbs',
-      context: {
-        name: user.name,
-        otp: verificationCode,
-      },
-    });
-
-    if (!isMailSent) {
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+  async register(dto: CreateUserDto): Promise<PublicUserDto> {
+    try {
+      const user = await this.usersService.registerUser(dto);
+      const verificationCode = this.generateVerificationCode(
+        VERIFICATION_CODE_LENGTH,
       );
-    }
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'Verification email',
+        templateName: 'verify-email.hbs',
+        context: {
+          name: user.name,
+          otp: verificationCode,
+        },
+      });
 
-    await this.usersService.saveVerificationCode(user.id, verificationCode);
+      if (!isMailSent) {
+        await this.usersService.deleteUser(user.id);
+        throw new ServiceUnavailableException(
+          Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+        );
+      }
+
+      await this.usersService.saveVerificationCode(user.id, verificationCode);
+
+      return user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   private generateVerificationCode(length: number): string {
