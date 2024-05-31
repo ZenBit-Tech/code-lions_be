@@ -12,7 +12,7 @@ import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
 import { CreateUserDto } from './dto/create.dto';
-import { ResponseUserDto } from './dto/response.dto';
+import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 
 @Injectable()
@@ -21,6 +21,24 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
+  private buildPublicUserResponse(user: User): PublicUserDto {
+    const { id, name, email, isVerified } = user;
+
+    const publicUser = { id, name, email, isVerified };
+
+    return publicUser;
+  }
+  private async hashPassword(password: string): Promise<string> {
+    try {
+      const saltRounds = 10;
+      const salt = await bcrypt.genSalt(saltRounds);
+      const hash = await bcrypt.hash(password, salt);
+
+      return hash;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_HASH);
+    }
+  }
 
   async findUserByEmail(email: string): Promise<User> {
     try {
@@ -34,14 +52,6 @@ export class UsersService {
     }
   }
 
-  async returnPublicUser(userObject: User): Promise<ResponseUserDto> {
-    const { id, name, email, isVerified } = userObject;
-
-    const returnUser = { id, name, email, isVerified };
-
-    return returnUser;
-  }
-
   async getAllUsers(): Promise<User[]> {
     try {
       return await this.userRepository.find();
@@ -50,7 +60,7 @@ export class UsersService {
     }
   }
 
-  async registerUser(dto: CreateUserDto): Promise<ResponseUserDto> {
+  async registerUser(dto: CreateUserDto): Promise<PublicUserDto> {
     try {
       const userExists = await this.findUserByEmail(dto.email);
 
@@ -66,11 +76,11 @@ export class UsersService {
       user.email = dto.email;
       user.password = dto.password;
 
-      await this.userRepository.save(user);
+      const createdUser = await this.userRepository.save(user);
 
-      const responseUser = await this.returnPublicUser(user);
+      const publicUser = this.buildPublicUserResponse(createdUser);
 
-      return responseUser;
+      return publicUser;
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
@@ -118,18 +128,6 @@ export class UsersService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_SAVE_VERIFICATION_CODE,
       );
-    }
-  }
-
-  private async hashPassword(password: string): Promise<string> {
-    try {
-      const saltRounds = 10;
-      const salt = await bcrypt.genSalt(saltRounds);
-      const hash = await bcrypt.hash(password, salt);
-
-      return hash;
-    } catch (error) {
-      throw new InternalServerErrorException(Errors.FAILED_TO_HASH);
     }
   }
 }

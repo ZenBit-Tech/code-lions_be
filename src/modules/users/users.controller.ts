@@ -24,7 +24,7 @@ import { ErrorResponse } from 'src/common/error-response';
 import { responseDescrptions } from 'src/common/response-descriptions';
 
 import { CreateUserDto } from './dto/create.dto';
-import { ResponseUserDto } from './dto/response.dto';
+import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -61,19 +61,19 @@ export class UsersController {
   @ApiResponse({
     status: 201,
     description: responseDescrptions.success,
-    type: ResponseUserDto,
+    type: PublicUserDto,
   })
   @ApiConflictResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
   @ApiBody({ type: CreateUserDto })
-  async register(@Body() dto: CreateUserDto): Promise<ResponseUserDto> {
+  async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
     return await this.usersService.registerUser(dto);
   }
 
-  @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete a user',
     tags: ['Users Endpoints'],
