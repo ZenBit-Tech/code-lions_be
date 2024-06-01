@@ -35,4 +35,18 @@ export class User {
   })
   @Column({ default: false })
   isVerified: boolean;
+
+  @ApiProperty({
+    example: '123456',
+    description: 'The verification code of the user',
+  })
+  @Column({ nullable: true })
+  verificationCode: string;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The expiration date of the verification code',
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  verificationCodeExpiration: Date;
 }

@@ -20,11 +20,11 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 
-import { ErrorResponse } from 'src/common/ErrorResponse';
-import { responseDescrptions } from 'src/common/responseDescriptions';
+import { ErrorResponse } from 'src/common/error-response';
+import { responseDescrptions } from 'src/common/response-descriptions';
 
-import { CreateUserDTO } from './DTO/create.dto';
-import { ResponseUserDTO } from './DTO/response.dto';
+import { CreateUserDto } from './dto/create.dto';
+import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -61,19 +61,19 @@ export class UsersController {
   @ApiResponse({
     status: 201,
     description: responseDescrptions.success,
-    type: ResponseUserDTO,
+    type: PublicUserDto,
   })
   @ApiConflictResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
-  @ApiBody({ type: CreateUserDTO })
-  async register(@Body() dto: CreateUserDTO): Promise<ResponseUserDTO> {
+  @ApiBody({ type: CreateUserDto })
+  async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
     return await this.usersService.registerUser(dto);
   }
 
-  @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete a user',
     tags: ['Users Endpoints'],
