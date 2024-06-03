@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -56,32 +57,27 @@ export class AuthService {
     };
   }
   async register(dto: CreateUserDto): Promise<PublicUserDto> {
-    try {
-      const user = await this.usersService.registerUser(dto);
-      const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: user.email,
-        subject: 'Verification on CodeLions otp',
-        templateName: 'verify-email.hbs',
-        context: {
-          name: user.name,
-          otp: otp,
-        },
-      });
+    const user = await this.usersService.registerUser(dto);
+    const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+    const isMailSent = await this.mailerService.sendMail({
+      receiverEmail: user.email,
+      subject: 'Verification on CodeLions otp',
+      templateName: 'verify-email.hbs',
+      context: {
+        name: user.name,
+        otp: otp,
+      },
+    });
 
-      if (!isMailSent) {
-        await this.usersService.deleteUser(user.id);
-        throw new ServiceUnavailableException(
-          Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
-        );
-      }
-
-      await this.usersService.saveOtp(user.id, otp);
-
-      return user;
-    } catch (error) {
-      throw error;
+    if (!isMailSent) {
+      await this.usersService.deleteUser(user.id);
+      throw new ServiceUnavailableException(
+        Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+      );
     }
+    await this.usersService.saveOtp(user.id, otp);
+
+    return user;
   }
   async verifyOtp(dto: VerifyOtpDto): Promise<TokensDto> {
     const { id, otp } = dto;
@@ -108,5 +104,36 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email);
 
     return tokens;
+  }
+
+  async resendOtp(id: string): Promise<void> {
+    const user = await this.usersService.getUserById(id);
+
+    if (!user) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+    if (user.isEmailVerified) {
+      throw new BadRequestException(Errors.EMAIL_ALREADY_VERIFIED);
+    }
+
+    const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+
+    const isMailSent = await this.mailerService.sendMail({
+      receiverEmail: user.email,
+      subject: 'Your verification code on CodeLions',
+      templateName: 'resend-otp.hbs',
+      context: {
+        name: user.name,
+        otp: otp,
+      },
+    });
+
+    if (!isMailSent) {
+      throw new ServiceUnavailableException(
+        Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+      );
+    }
+
+    await this.usersService.saveOtp(user.id, otp);
   }
 }

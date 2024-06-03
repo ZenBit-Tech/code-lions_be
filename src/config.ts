@@ -1,3 +1,4 @@
 export const VERIFICATION_CODE_LENGTH = 6;
 export const VERIFICATION_CODE_EXPIRATION = 55;
 export const MIN_PASSWORD_LENGTH = 8;
+export const UUID_VERSION = 4;

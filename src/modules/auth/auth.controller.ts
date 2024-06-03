@@ -5,6 +5,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiInternalServerErrorResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -20,6 +21,7 @@ import { CreateUserDto } from 'src/modules/users/dto/create.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
+import { IdDto } from './dto/id.dto';
 import { TokensDto } from './dto/tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -92,6 +94,12 @@ export class AuthController {
   }
 
   @Post('verify-otp')
+  @ApiOperation({
+    summary: 'Verify OTP',
+    tags: ['Auth Endpoints'],
+    description:
+      'This endpoint verifies the OTP and returns an object with access and refresh tokens.',
+  })
   @ApiOkResponse({
     status: 200,
     description: 'OTP verified successfully, return access and refresh tokens',
@@ -146,5 +154,60 @@ export class AuthController {
     const tokens = await this.authService.verifyOtp(dto);
 
     return tokens;
+  }
+
+  @Post('resend-otp')
+  @ApiOperation({
+    summary: 'Resend OTP',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint resends the OTP.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'OTP resent successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'User email has already been verified',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string',
+          example: Errors.EMAIL_ALREADY_VERIFIED,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiBody({ type: IdDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resendOtp(@Body() dto: IdDto): Promise<void> {
+    await this.authService.resendOtp(dto.id);
   }
 }
