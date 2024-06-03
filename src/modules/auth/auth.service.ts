@@ -61,7 +61,7 @@ export class AuthService {
       const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
       const isMailSent = await this.mailerService.sendMail({
         receiverEmail: user.email,
-        subject: 'Verification email',
+        subject: 'Verification on CodeLions otp',
         templateName: 'verify-email.hbs',
         context: {
           name: user.name,
@@ -96,6 +96,14 @@ export class AuthService {
     }
 
     await this.usersService.confirmUser(id);
+    await this.mailerService.sendMail({
+      receiverEmail: user.email,
+      subject: 'Verification on CodeLions success',
+      templateName: 'verification-success.hbs',
+      context: {
+        name: user.name,
+      },
+    });
 
     const tokens = await this.generateTokens(user.id, user.email);
 
