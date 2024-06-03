@@ -22,9 +22,9 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
   ) {}
   private buildPublicUserResponse(user: User): PublicUserDto {
-    const { id, name, email, isVerified } = user;
+    const { id, name, email, isEmailVerified } = user;
 
-    const publicUser = { id, name, email, isVerified };
+    const publicUser = { id, name, email, isEmailVerified };
 
     return publicUser;
   }
@@ -40,7 +40,7 @@ export class UsersService {
     }
   }
 
-  async findUserByEmail(email: string): Promise<User> {
+  async getUserByEmail(email: string): Promise<User> {
     try {
       return this.userRepository.findOne({
         where: { email },
@@ -49,6 +49,16 @@ export class UsersService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_FETCH_USER_BY_EMAIL,
       );
+    }
+  }
+
+  async getUserById(id: string): Promise<User> {
+    try {
+      return this.userRepository.findOne({
+        where: { id },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
     }
   }
 
@@ -62,7 +72,7 @@ export class UsersService {
 
   async registerUser(dto: CreateUserDto): Promise<PublicUserDto> {
     try {
-      const userExists = await this.findUserByEmail(dto.email);
+      const userExists = await this.getUserByEmail(dto.email);
 
       if (userExists) {
         throw new ConflictException(Errors.USER_EXISTS);
@@ -90,17 +100,17 @@ export class UsersService {
     }
   }
 
-  async deleteUser(userId: string): Promise<void> {
+  async deleteUser(id: string): Promise<void> {
     try {
       const user = await this.userRepository.findOne({
-        where: { id: userId },
+        where: { id: id },
       });
 
       if (!user) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      await this.userRepository.delete(userId);
+      await this.userRepository.delete(id);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -112,22 +122,30 @@ export class UsersService {
     }
   }
 
-  async saveVerificationCode(userId: string, code: string): Promise<void> {
+  async saveOtp(id: string, otp: string): Promise<void> {
     try {
-      const verificationCodeExpiration = new Date();
+      const otpExpiration = new Date();
 
-      verificationCodeExpiration.setSeconds(
-        verificationCodeExpiration.getSeconds() + VERIFICATION_CODE_EXPIRATION,
+      otpExpiration.setSeconds(
+        otpExpiration.getSeconds() + VERIFICATION_CODE_EXPIRATION,
       );
 
-      await this.userRepository.update(
-        { id: userId },
-        { verificationCode: code, verificationCodeExpiration },
-      );
+      await this.userRepository.update({ id }, { otp, otpExpiration });
     } catch (error) {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_SAVE_VERIFICATION_CODE,
       );
+    }
+  }
+
+  async confirmUser(id: string): Promise<void> {
+    try {
+      await this.userRepository.update(
+        { id },
+        { isEmailVerified: true, otp: null, otpExpiration: null },
+      );
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_CONFIRM_USER);
     }
   }
 }

@@ -17,6 +17,7 @@ import { CreateUserDto } from 'src/modules/users/dto/create.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -82,5 +83,12 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
     return this.authService.register(dto);
+  }
+
+  @Post('verify-otp')
+  @ApiBody({ type: VerifyOtpDto })
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<void> {
+    return this.authService.verifyOtp(dto);
   }
 }
