@@ -5,10 +5,12 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiServiceUnavailableResponse,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 
 import { ErrorResponse } from 'src/common/error-response';
@@ -94,6 +96,49 @@ export class AuthController {
     status: 200,
     description: 'OTP verified successfully, return access and refresh tokens',
     type: TokensDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [
+            Errors.INVALID_USER_ID,
+            Errors.DIGITS_ONLY,
+            Errors.CODE_LENGTH,
+          ],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'Invalid or expired OTP',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 422 },
+        message: {
+          type: 'string',
+          example: Errors.WRONG_CODE,
+        },
+        error: { type: 'string', example: 'Unprocessable Entity' },
+      },
+    },
   })
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)

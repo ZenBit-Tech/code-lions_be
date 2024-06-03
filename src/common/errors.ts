@@ -1,8 +1,8 @@
 import { MIN_PASSWORD_LENGTH, VERIFICATION_CODE_LENGTH } from 'src/config';
 
 export const Errors = {
-  CODE_LENGTH: `The value must be exactly ${VERIFICATION_CODE_LENGTH} characters long.`,
-  DIGITS_ONLY: 'The value must contain only digits',
+  CODE_LENGTH: `Otp must be exactly ${VERIFICATION_CODE_LENGTH} characters long`,
+  DIGITS_ONLY: 'Otp must contain only digits',
   FAILED_TO_CONFIRM_USER: 'Failed to confirm a user',
   FAILED_TO_CREATE_USER: 'Failed to create a user',
   FAILED_TO_DELETE_USER: 'Failed to delete a user',
