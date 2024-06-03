@@ -5,6 +5,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiInternalServerErrorResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiServiceUnavailableResponse,
   ApiTags,
@@ -17,6 +18,7 @@ import { CreateUserDto } from 'src/modules/users/dto/create.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
+import { TokensDto } from './dto/tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
@@ -82,13 +84,22 @@ export class AuthController {
   @ApiBody({ type: CreateUserDto })
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
-    return this.authService.register(dto);
+    const user = await this.authService.register(dto);
+
+    return user;
   }
 
   @Post('verify-otp')
+  @ApiOkResponse({
+    status: 200,
+    description: 'OTP verified successfully, return access and refresh tokens',
+    type: TokensDto,
+  })
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<void> {
-    return this.authService.verifyOtp(dto);
+  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<TokensDto> {
+    const tokens = await this.authService.verifyOtp(dto);
+
+    return tokens;
   }
 }

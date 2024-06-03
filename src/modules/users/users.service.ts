@@ -42,9 +42,11 @@ export class UsersService {
 
   async getUserByEmail(email: string): Promise<User> {
     try {
-      return this.userRepository.findOne({
+      const user = await this.userRepository.findOne({
         where: { email },
       });
+
+      return user;
     } catch (error) {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_FETCH_USER_BY_EMAIL,
@@ -54,9 +56,11 @@ export class UsersService {
 
   async getUserById(id: string): Promise<User> {
     try {
-      return this.userRepository.findOne({
+      const user = await this.userRepository.findOne({
         where: { id },
       });
+
+      return user;
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
     }
@@ -64,7 +68,9 @@ export class UsersService {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      return await this.userRepository.find();
+      const users = await this.userRepository.find();
+
+      return users;
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
     }
@@ -103,7 +109,7 @@ export class UsersService {
   async deleteUser(id: string): Promise<void> {
     try {
       const user = await this.userRepository.findOne({
-        where: { id: id },
+        where: { id },
       });
 
       if (!user) {
