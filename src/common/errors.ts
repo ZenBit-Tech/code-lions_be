@@ -1,9 +1,14 @@
-import { MIN_PASSWORD_LENGTH } from 'src/config';
+import { MIN_PASSWORD_LENGTH, VERIFICATION_CODE_LENGTH } from 'src/config';
 
 export const Errors = {
+  CODE_LENGTH: `Otp must be exactly ${VERIFICATION_CODE_LENGTH} characters long`,
+  DIGITS_ONLY: 'Otp must contain only digits',
+  EMAIL_ALREADY_VERIFIED: 'Email already verified',
+  FAILED_TO_CONFIRM_USER: 'Failed to confirm a user',
   FAILED_TO_CREATE_USER: 'Failed to create a user',
   FAILED_TO_DELETE_USER: 'Failed to delete a user',
   FAILED_TO_FETCH_USER_BY_EMAIL: 'Failed to fetch the user by email',
+  FAILED_TO_FETCH_USER_BY_ID: 'Failed to fetch the user by id',
   FAILED_TO_FETCH_USERS: 'Failed to fetch users',
   FAILED_TO_HASH: 'Failed to hash the password',
   FAILED_TO_SEND_VERIFICATION_EMAIL: 'Failed to send verification email',
@@ -12,6 +17,7 @@ export const Errors = {
   INVALID_EMAIL: 'Invalid email',
   INVALID_PASSWORD: 'Invalid password',
   INVALID_TOKEN: 'Your access token is invalid',
+  INVALID_USER_ID: 'Invalid user id',
   MISSING_CREDENTIALS: 'Missing credentials',
   NAME_IS_STRING: 'Name must be a string',
   PASSWORD_IS_STRING: 'Password must be a string',
@@ -21,4 +27,5 @@ export const Errors = {
   USER_EXISTS: 'User with this email already exists',
   USERS_NAME_CANNOT_BE_EMPTY: "User's name cannot be empty",
   USER_NOT_FOUND: 'User not found',
+  WRONG_CODE: 'Wrong or expired OTP code',
 };

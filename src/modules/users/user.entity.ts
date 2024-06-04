@@ -34,19 +34,19 @@ export class User {
     description: 'Indicates if the user is verified',
   })
   @Column({ default: false })
-  isVerified: boolean;
+  isEmailVerified: boolean;
 
   @ApiProperty({
     example: '123456',
-    description: 'The verification code of the user',
+    description: 'OTP of the user',
   })
   @Column({ nullable: true })
-  verificationCode: string;
+  otp: string;
 
   @ApiProperty({
     example: new Date(),
-    description: 'The expiration date of the verification code',
+    description: 'The expiration date of the OTP',
   })
   @Column({ type: 'timestamp', nullable: true })
-  verificationCodeExpiration: Date;
+  otpExpiration: Date;
 }

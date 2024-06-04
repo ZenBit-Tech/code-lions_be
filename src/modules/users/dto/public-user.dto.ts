@@ -29,5 +29,5 @@ export class PublicUserDto {
     description: 'Indicates if the user is verified',
   })
   @IsBoolean()
-  isVerified: boolean;
+  isEmailVerified: boolean;
 }
