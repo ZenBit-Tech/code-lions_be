@@ -56,6 +56,7 @@ export class AuthService {
       refreshToken,
     };
   }
+
   async register(dto: CreateUserDto): Promise<PublicUserDto> {
     const user = await this.usersService.registerUser(dto);
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
@@ -79,6 +80,7 @@ export class AuthService {
 
     return user;
   }
+
   async verifyOtp(dto: VerifyOtpDto): Promise<TokensDto> {
     const { id, otp } = dto;
     const user = await this.usersService.getUserById(id);

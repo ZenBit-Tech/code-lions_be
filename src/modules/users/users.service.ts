@@ -21,6 +21,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
+
   private buildPublicUserResponse(user: User): PublicUserDto {
     const { id, name, email, isEmailVerified } = user;
 
@@ -28,6 +29,7 @@ export class UsersService {
 
     return publicUser;
   }
+
   private async hashPassword(password: string): Promise<string> {
     try {
       const saltRounds = 10;
