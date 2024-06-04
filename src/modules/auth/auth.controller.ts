@@ -22,6 +22,7 @@ import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
+import { EmailDto } from './dto/email.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
@@ -256,5 +257,60 @@ export class AuthController {
     }
 
     return this.authService.generateUserWithTokens(user);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({
+    summary: 'Send email to reset password',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint sends an email with a otp to reset password.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Email sent successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.INVALID_EMAIL],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_FORGET_PASSWORD_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiBody({ type: EmailDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async forgotPassword(@Body() dto: EmailDto): Promise<void> {
+    await this.authService.sendResetPasswordEmail(dto);
   }
 }

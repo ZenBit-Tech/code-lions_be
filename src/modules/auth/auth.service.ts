@@ -16,6 +16,7 @@ import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
+import { EmailDto } from './dto/email.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -55,6 +56,26 @@ export class AuthService {
     if (!isMailSent) {
       throw new ServiceUnavailableException(
         Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+      );
+    }
+    await this.usersService.saveOtp(user.id, otp);
+  }
+
+  private async sendResetPasswordOtp(user: PublicUserDto): Promise<void> {
+    const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+    const isMailSent = await this.mailerService.sendMail({
+      receiverEmail: user.email,
+      subject: 'Forgot Password on CodeLions otp',
+      templateName: 'forgot-password.hbs',
+      context: {
+        name: user.name,
+        otp: otp,
+      },
+    });
+
+    if (!isMailSent) {
+      throw new ServiceUnavailableException(
+        Errors.FAILED_TO_SEND_FORGET_PASSWORD_EMAIL,
       );
     }
     await this.usersService.saveOtp(user.id, otp);
@@ -163,5 +184,15 @@ export class AuthService {
     }
 
     await this.usersService.saveOtp(user.id, otp);
+  }
+
+  async sendResetPasswordEmail(dto: EmailDto): Promise<void> {
+    const user = await this.usersService.getUserByEmail(dto.email);
+
+    if (!user) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
+    await this.sendResetPasswordOtp(user);
   }
 }

@@ -11,6 +11,7 @@ export const Errors = {
   FAILED_TO_FETCH_USER_BY_ID: 'Failed to fetch the user by id',
   FAILED_TO_FETCH_USERS: 'Failed to fetch users',
   FAILED_TO_HASH: 'Failed to hash the password',
+  FAILED_TO_SEND_FORGET_PASSWORD_EMAIL: 'Failed to send forgot password email',
   FAILED_TO_SEND_VERIFICATION_EMAIL: 'Failed to send verification email',
   FAILED_TO_SAVE_VERIFICATION_CODE: 'Failed to save verification code',
   INTERNAL_SERVER_ERROR: 'Internal server error',
