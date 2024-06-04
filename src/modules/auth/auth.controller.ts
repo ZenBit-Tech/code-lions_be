@@ -12,6 +12,7 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
 
 import { ErrorResponse } from 'src/common/error-response';
@@ -96,7 +97,7 @@ export class AuthController {
 
   @Post('verify-otp')
   @ApiOperation({
-    summary: 'Verify OTP',
+    summary: 'Verify user`s email and generate access and refresh tokens',
     tags: ['Auth Endpoints'],
     description:
       'This endpoint verifies the OTP and returns an object with access and refresh tokens.',
@@ -159,7 +160,7 @@ export class AuthController {
 
   @Post('resend-otp')
   @ApiOperation({
-    summary: 'Resend OTP',
+    summary: 'Resend OTP for user email verification',
     tags: ['Auth Endpoints'],
     description: 'This endpoint resends the OTP.',
   })
@@ -213,6 +214,36 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiOperation({
+    summary: 'Login user',
+    tags: ['Auth Endpoints'],
+    description:
+      'This endpoint logs in the user and returns an object with access and refresh tokens or without them.',
+  })
+  @ApiOkResponse({
+    status: 200,
+    description:
+      'Login successful, return user with or without access and refresh tokens',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PublicUserDto) },
+        { $ref: getSchemaPath(UserWithTokensDto) },
+      ],
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid or user credentials are invalid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string | string[]',
+          example: Errors.INVALID_CREDENTIALS,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
   @ApiBody({ type: LoginDto })
   @HttpCode(HttpStatus.OK)
   async login(
