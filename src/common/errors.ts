@@ -14,6 +14,7 @@ export const Errors = {
   FAILED_TO_SEND_VERIFICATION_EMAIL: 'Failed to send verification email',
   FAILED_TO_SAVE_VERIFICATION_CODE: 'Failed to save verification code',
   INTERNAL_SERVER_ERROR: 'Internal server error',
+  INVALID_CREDENTIALS: 'Invalid email or password',
   INVALID_EMAIL: 'Invalid email',
   INVALID_PASSWORD: 'Invalid password',
   INVALID_TOKEN: 'Your access token is invalid',
@@ -27,5 +28,6 @@ export const Errors = {
   USER_EXISTS: 'User with this email already exists',
   USERS_NAME_CANNOT_BE_EMPTY: "User's name cannot be empty",
   USER_NOT_FOUND: 'User not found',
+  USER_NOT_VERIFIED: 'User not verified email yet',
   WRONG_CODE: 'Wrong or expired OTP code',
 };

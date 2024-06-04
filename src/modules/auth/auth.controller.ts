@@ -17,12 +17,13 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
-import { CreateUserDto } from 'src/modules/users/dto/create.dto';
+import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
 import { IdDto } from './dto/id.dto';
-import { TokensDto } from './dto/tokens.dto';
+import { LoginDto } from './dto/login.dto';
+import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
@@ -103,7 +104,7 @@ export class AuthController {
   @ApiOkResponse({
     status: 200,
     description: 'OTP verified successfully, return access and refresh tokens',
-    type: TokensDto,
+    type: UserWithTokensDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -150,7 +151,7 @@ export class AuthController {
   })
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<TokensDto> {
+  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<UserWithTokensDto> {
     const tokens = await this.authService.verifyOtp(dto);
 
     return tokens;
@@ -209,5 +210,20 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async resendOtp(@Body() dto: IdDto): Promise<void> {
     await this.authService.resendOtp(dto.id);
+  }
+
+  @Post('login')
+  @ApiBody({ type: LoginDto })
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() dto: LoginDto,
+  ): Promise<PublicUserDto | UserWithTokensDto> {
+    const user = await this.authService.login(dto);
+
+    if (!user.isEmailVerified) {
+      return user;
+    }
+
+    return this.authService.generateUserWithTokens(user);
   }
 }
