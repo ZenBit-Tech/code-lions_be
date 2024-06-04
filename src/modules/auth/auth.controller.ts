@@ -25,6 +25,7 @@ import { AuthService } from './auth.service';
 import { EmailDto } from './dto/email.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -312,5 +313,64 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async forgotPassword(@Body() dto: EmailDto): Promise<void> {
     await this.authService.sendResetPasswordEmail(dto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({
+    summary: 'Reset password',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint resets password if otp is valid.',
+  })
+  @ApiOkResponse({
+    status: 200,
+    description:
+      'Password reset successfully, return user with access and refresh tokens',
+    type: UserWithTokensDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid or otp is invalid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.INVALID_EMAIL, Errors.CODE_LENGTH],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given email',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'Invalid or expired OTP',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 422 },
+        message: {
+          type: 'string',
+          example: Errors.WRONG_CODE,
+        },
+        error: { type: 'string', example: 'Unprocessable Entity' },
+      },
+    },
+  })
+  @ApiBody({ type: ResetOtpDto })
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetOtpDto): Promise<UserWithTokensDto> {
+    const userWithTokens = await this.authService.resetPassword(dto);
+
+    return userWithTokens;
   }
 }

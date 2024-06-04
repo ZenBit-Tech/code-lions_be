@@ -18,6 +18,7 @@ import { UsersService } from 'src/modules/users/users.service';
 
 import { EmailDto } from './dto/email.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -194,5 +195,25 @@ export class AuthService {
     }
 
     await this.sendResetPasswordOtp(user);
+  }
+
+  async resetPassword(dto: ResetOtpDto): Promise<UserWithTokensDto> {
+    const { email, otp } = dto;
+
+    const user = await this.usersService.getUserByEmail(email);
+
+    if (!user) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
+    if (user.otp !== otp || user.otpExpiration < new Date()) {
+      throw new UnprocessableEntityException(Errors.WRONG_CODE);
+    }
+
+    await this.usersService.confirmUser(user.id);
+    const publicUser = this.usersService.buildPublicUser(user);
+    const userWithTokens = await this.generateUserWithTokens(publicUser);
+
+    return userWithTokens;
   }
 }
