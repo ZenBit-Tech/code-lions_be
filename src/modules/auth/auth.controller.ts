@@ -12,17 +12,21 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
 
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
-import { CreateUserDto } from 'src/modules/users/dto/create.dto';
+import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
+import { EmailDto } from './dto/email.dto';
 import { IdDto } from './dto/id.dto';
-import { TokensDto } from './dto/tokens.dto';
+import { LoginDto } from './dto/login.dto';
+import { ResetOtpDto } from './dto/reset-otp';
+import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
@@ -95,7 +99,7 @@ export class AuthController {
 
   @Post('verify-otp')
   @ApiOperation({
-    summary: 'Verify OTP',
+    summary: 'Verify user`s email and generate access and refresh tokens',
     tags: ['Auth Endpoints'],
     description:
       'This endpoint verifies the OTP and returns an object with access and refresh tokens.',
@@ -103,7 +107,7 @@ export class AuthController {
   @ApiOkResponse({
     status: 200,
     description: 'OTP verified successfully, return access and refresh tokens',
-    type: TokensDto,
+    type: UserWithTokensDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -150,7 +154,7 @@ export class AuthController {
   })
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<TokensDto> {
+  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<UserWithTokensDto> {
     const tokens = await this.authService.verifyOtp(dto);
 
     return tokens;
@@ -158,7 +162,7 @@ export class AuthController {
 
   @Post('resend-otp')
   @ApiOperation({
-    summary: 'Resend OTP',
+    summary: 'Resend OTP for user email verification',
     tags: ['Auth Endpoints'],
     description: 'This endpoint resends the OTP.',
   })
@@ -209,5 +213,164 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async resendOtp(@Body() dto: IdDto): Promise<void> {
     await this.authService.resendOtp(dto.id);
+  }
+
+  @Post('login')
+  @ApiOperation({
+    summary: 'Login user',
+    tags: ['Auth Endpoints'],
+    description:
+      'This endpoint logs in the user and returns an object with access and refresh tokens or without them.',
+  })
+  @ApiOkResponse({
+    status: 200,
+    description:
+      'Login successful, return user with or without access and refresh tokens',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PublicUserDto) },
+        { $ref: getSchemaPath(UserWithTokensDto) },
+      ],
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid or user credentials are invalid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string | string[]',
+          example: Errors.INVALID_CREDENTIALS,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiBody({ type: LoginDto })
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() dto: LoginDto,
+  ): Promise<PublicUserDto | UserWithTokensDto> {
+    const user = await this.authService.login(dto);
+
+    if (!user.isEmailVerified) {
+      return user;
+    }
+
+    return this.authService.generateUserWithTokens(user);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({
+    summary: 'Send email to reset password',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint sends an email with a otp to reset password.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Email sent successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.INVALID_EMAIL],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_FORGET_PASSWORD_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiBody({ type: EmailDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async forgotPassword(@Body() dto: EmailDto): Promise<void> {
+    await this.authService.sendResetPasswordEmail(dto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({
+    summary: 'Reset password',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint resets password if otp is valid.',
+  })
+  @ApiOkResponse({
+    status: 200,
+    description:
+      'Password reset successfully, return user with access and refresh tokens',
+    type: UserWithTokensDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body is not valid or otp is invalid',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.INVALID_EMAIL, Errors.CODE_LENGTH],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given email',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'Invalid or expired OTP',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 422 },
+        message: {
+          type: 'string',
+          example: Errors.WRONG_CODE,
+        },
+        error: { type: 'string', example: 'Unprocessable Entity' },
+      },
+    },
+  })
+  @ApiBody({ type: ResetOtpDto })
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetOtpDto): Promise<UserWithTokensDto> {
+    const userWithTokens = await this.authService.resetPassword(dto);
+
+    return userWithTokens;
   }
 }

@@ -8,7 +8,7 @@ import { AppModule } from './app.module';
 const configService = new ConfigService();
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true });
   const config = new DocumentBuilder()
     .setTitle('CodeLions')
     .setDescription('The API description')

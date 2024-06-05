@@ -8,14 +8,18 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
+import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
-import { CreateUserDto } from 'src/modules/users/dto/create.dto';
+import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
-import { TokensDto } from './dto/tokens.dto';
+import { EmailDto } from './dto/email.dto';
+import { LoginDto } from './dto/login.dto';
+import { ResetOtpDto } from './dto/reset-otp';
+import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @Injectable()
@@ -38,8 +42,50 @@ export class AuthService {
     return result;
   }
 
-  private async generateTokens(id: string, email: string): Promise<TokensDto> {
-    const payload = { id, email };
+  private async sendVerificationOtp(user: PublicUserDto): Promise<void> {
+    const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+    const isMailSent = await this.mailerService.sendMail({
+      receiverEmail: user.email,
+      subject: 'Verification on CodeLions otp',
+      templateName: 'verify-email.hbs',
+      context: {
+        name: user.name,
+        otp: otp,
+      },
+    });
+
+    if (!isMailSent) {
+      throw new ServiceUnavailableException(
+        Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
+      );
+    }
+    await this.usersService.saveOtp(user.id, otp);
+  }
+
+  private async sendResetPasswordOtp(user: PublicUserDto): Promise<void> {
+    const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+    const isMailSent = await this.mailerService.sendMail({
+      receiverEmail: user.email,
+      subject: 'Forgot Password on CodeLions otp',
+      templateName: 'forgot-password.hbs',
+      context: {
+        name: user.name,
+        otp: otp,
+      },
+    });
+
+    if (!isMailSent) {
+      throw new ServiceUnavailableException(
+        Errors.FAILED_TO_SEND_FORGET_PASSWORD_EMAIL,
+      );
+    }
+    await this.usersService.saveOtp(user.id, otp);
+  }
+
+  async generateUserWithTokens(
+    publicUser: PublicUserDto,
+  ): Promise<UserWithTokensDto> {
+    const payload = { ...publicUser };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET_KEY'),
       expiresIn: this.configService.get<string>('TOKEN_EXPIRE_TIME'),
@@ -57,31 +103,32 @@ export class AuthService {
     };
   }
 
+  async login(dto: LoginDto): Promise<PublicUserDto> {
+    const { email, password } = dto;
+    const user = await this.usersService.getUserByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException(Errors.INVALID_CREDENTIALS);
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      throw new BadRequestException(Errors.INVALID_CREDENTIALS);
+    }
+
+    return this.usersService.buildPublicUser(user);
+  }
+
   async register(dto: CreateUserDto): Promise<PublicUserDto> {
     const user = await this.usersService.registerUser(dto);
-    const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
-    const isMailSent = await this.mailerService.sendMail({
-      receiverEmail: user.email,
-      subject: 'Verification on CodeLions otp',
-      templateName: 'verify-email.hbs',
-      context: {
-        name: user.name,
-        otp: otp,
-      },
-    });
 
-    if (!isMailSent) {
-      await this.usersService.deleteUser(user.id);
-      throw new ServiceUnavailableException(
-        Errors.FAILED_TO_SEND_VERIFICATION_EMAIL,
-      );
-    }
-    await this.usersService.saveOtp(user.id, otp);
+    await this.sendVerificationOtp(user);
 
     return user;
   }
 
-  async verifyOtp(dto: VerifyOtpDto): Promise<TokensDto> {
+  async verifyOtp(dto: VerifyOtpDto): Promise<UserWithTokensDto> {
     const { id, otp } = dto;
     const user = await this.usersService.getUserById(id);
 
@@ -103,9 +150,10 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const publicUser = this.usersService.buildPublicUser(user);
+    const userWithTokens = await this.generateUserWithTokens(publicUser);
 
-    return tokens;
+    return userWithTokens;
   }
 
   async resendOtp(id: string): Promise<void> {
@@ -137,5 +185,35 @@ export class AuthService {
     }
 
     await this.usersService.saveOtp(user.id, otp);
+  }
+
+  async sendResetPasswordEmail(dto: EmailDto): Promise<void> {
+    const user = await this.usersService.getUserByEmail(dto.email);
+
+    if (!user) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
+    await this.sendResetPasswordOtp(user);
+  }
+
+  async resetPassword(dto: ResetOtpDto): Promise<UserWithTokensDto> {
+    const { email, otp } = dto;
+
+    const user = await this.usersService.getUserByEmail(email);
+
+    if (!user) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
+    if (user.otp !== otp || user.otpExpiration < new Date()) {
+      throw new UnprocessableEntityException(Errors.WRONG_CODE);
+    }
+
+    await this.usersService.confirmUser(user.id);
+    const publicUser = this.usersService.buildPublicUser(user);
+    const userWithTokens = await this.generateUserWithTokens(publicUser);
+
+    return userWithTokens;
   }
 }

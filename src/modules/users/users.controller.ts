@@ -23,7 +23,7 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { responseDescrptions } from 'src/common/response-descriptions';
 
-import { CreateUserDto } from './dto/create.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';

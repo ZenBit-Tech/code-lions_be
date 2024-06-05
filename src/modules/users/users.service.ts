@@ -11,7 +11,7 @@ import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
-import { CreateUserDto } from './dto/create.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 
@@ -21,14 +21,6 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
-
-  private buildPublicUserResponse(user: User): PublicUserDto {
-    const { id, name, email, isEmailVerified } = user;
-
-    const publicUser = { id, name, email, isEmailVerified };
-
-    return publicUser;
-  }
 
   private async hashPassword(password: string): Promise<string> {
     try {
@@ -40,6 +32,14 @@ export class UsersService {
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_HASH);
     }
+  }
+
+  buildPublicUser(user: User): PublicUserDto {
+    const { id, name, email, isEmailVerified } = user;
+
+    const publicUser = { id, name, email, isEmailVerified };
+
+    return publicUser;
   }
 
   async getUserByEmail(email: string): Promise<User> {
@@ -96,7 +96,7 @@ export class UsersService {
 
       const createdUser = await this.userRepository.save(user);
 
-      const publicUser = this.buildPublicUserResponse(createdUser);
+      const publicUser = this.buildPublicUser(createdUser);
 
       return publicUser;
     } catch (error) {
