@@ -156,4 +156,14 @@ export class UsersService {
       throw new InternalServerErrorException(Errors.FAILED_TO_CONFIRM_USER);
     }
   }
+
+  async changePassword(id: string, password: string): Promise<void> {
+    try {
+      const hashedPassword = await this.hashPassword(password);
+
+      await this.userRepository.update({ id }, { password: hashedPassword });
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_PASSWORD);
+    }
+  }
 }

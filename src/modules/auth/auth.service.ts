@@ -18,6 +18,7 @@ import { UsersService } from 'src/modules/users/users.service';
 
 import { EmailDto } from './dto/email.dto';
 import { LoginDto } from './dto/login.dto';
+import { PasswordDto } from './dto/password.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -225,5 +226,11 @@ export class AuthService {
     const userWithTokens = await this.generateUserWithTokens(verifiedUser);
 
     return userWithTokens;
+  }
+
+  async changePassword(id: string, dto: PasswordDto): Promise<void> {
+    const { password } = dto;
+
+    await this.usersService.changePassword(id, password);
   }
 }

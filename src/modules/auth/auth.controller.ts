@@ -20,6 +20,7 @@ import {
   ApiOperation,
   ApiServiceUnavailableResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
@@ -35,6 +36,7 @@ import { AuthService } from './auth.service';
 import { EmailDto } from './dto/email.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
+import { PasswordDto } from './dto/password.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -387,9 +389,60 @@ export class AuthController {
   @Post('new-password')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  async setNewPassword(
+  @ApiOperation({
+    summary: 'Change password upon successful otp verification',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint changes password if otp is valid.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Password changed successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid or short password',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.PASSWORD_LENGTH, Errors.PASSWORD_IS_STRING],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.INVALID_TOKEN,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to change password',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_CHANGE_PASSWORD,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: PasswordDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async changePassword(
     @Request() request: Request & { user: PublicUserDto },
+    @Body() dto: PasswordDto,
   ): Promise<void> {
-    console.log(request.user);
+    await this.authService.changePassword(request.user.id, dto);
   }
 }
