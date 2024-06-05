@@ -18,7 +18,8 @@ export const Errors = {
   INVALID_CREDENTIALS: 'Invalid email or password',
   INVALID_EMAIL: 'Invalid email',
   INVALID_PASSWORD: 'Invalid password',
-  INVALID_TOKEN: 'Your access token is invalid',
+  INVALID_TOKEN:
+    'You are not authorized to access this resource, valid token is required',
   INVALID_USER_ID: 'Invalid user id',
   MISSING_CREDENTIALS: 'Missing credentials',
   NAME_IS_STRING: 'Name must be a string',

@@ -1,6 +1,15 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -21,6 +30,7 @@ import { responseDescrptions } from 'src/common/response-descriptions';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
+import { JwtAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { EmailDto } from './dto/email.dto';
 import { IdDto } from './dto/id.dto';
@@ -155,9 +165,9 @@ export class AuthController {
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)
   async verifyOtp(@Body() dto: VerifyOtpDto): Promise<UserWithTokensDto> {
-    const tokens = await this.authService.verifyOtp(dto);
+    const userWithTokens = await this.authService.verifyOtp(dto);
 
-    return tokens;
+    return userWithTokens;
   }
 
   @Post('resend-otp')
@@ -372,5 +382,14 @@ export class AuthController {
     const userWithTokens = await this.authService.resetPassword(dto);
 
     return userWithTokens;
+  }
+
+  @Post('new-password')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async setNewPassword(
+    @Request() request: Request & { user: PublicUserDto },
+  ): Promise<void> {
+    console.log(request.user);
   }
 }
