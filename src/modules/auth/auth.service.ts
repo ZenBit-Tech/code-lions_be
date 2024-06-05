@@ -82,6 +82,13 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
+  private makeUserVerified(user: PublicUserDto): PublicUserDto {
+    return {
+      ...user,
+      isEmailVerified: true,
+    };
+  }
+
   async generateUserWithTokens(
     publicUser: PublicUserDto,
   ): Promise<UserWithTokensDto> {
@@ -151,7 +158,8 @@ export class AuthService {
     });
 
     const publicUser = this.usersService.buildPublicUser(user);
-    const userWithTokens = await this.generateUserWithTokens(publicUser);
+    const verifiedUser = this.makeUserVerified(publicUser);
+    const userWithTokens = await this.generateUserWithTokens(verifiedUser);
 
     return userWithTokens;
   }
@@ -211,8 +219,10 @@ export class AuthService {
     }
 
     await this.usersService.confirmUser(user.id);
+
     const publicUser = this.usersService.buildPublicUser(user);
-    const userWithTokens = await this.generateUserWithTokens(publicUser);
+    const verifiedUser = this.makeUserVerified(publicUser);
+    const userWithTokens = await this.generateUserWithTokens(verifiedUser);
 
     return userWithTokens;
   }
