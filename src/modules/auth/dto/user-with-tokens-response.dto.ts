@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 
-export class UserWithTokensDto extends PublicUserDto {
+export class UserWithTokensResponseDto extends UserResponseDto {
   @ApiProperty({
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     description: 'The access token',

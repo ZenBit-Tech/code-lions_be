@@ -28,8 +28,8 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
-import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { JwtAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
@@ -38,7 +38,7 @@ import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { PasswordDto } from './dto/password.dto';
 import { ResetOtpDto } from './dto/reset-otp';
-import { UserWithTokensDto } from './dto/user-with-tokens.dto';
+import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
@@ -60,7 +60,7 @@ export class AuthController {
   @ApiCreatedResponse({
     status: 201,
     description: 'User created successfully',
-    type: PublicUserDto,
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -103,7 +103,9 @@ export class AuthController {
   })
   @ApiBody({ type: CreateUserDto })
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() createUserDto: CreateUserDto): Promise<PublicUserDto> {
+  async register(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
     const user = await this.authService.register(createUserDto);
 
     return user;
@@ -119,7 +121,7 @@ export class AuthController {
   @ApiOkResponse({
     status: 200,
     description: 'OTP verified successfully, return access and refresh tokens',
-    type: UserWithTokensDto,
+    type: UserWithTokensResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -168,7 +170,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyOtp(
     @Body() verifyOtpDto: VerifyOtpDto,
-  ): Promise<UserWithTokensDto> {
+  ): Promise<UserWithTokensResponseDto> {
     const userWithTokens = await this.authService.verifyOtp(verifyOtpDto);
 
     return userWithTokens;
@@ -242,8 +244,8 @@ export class AuthController {
       'Login successful, return user with or without access and refresh tokens',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(PublicUserDto) },
-        { $ref: getSchemaPath(UserWithTokensDto) },
+        { $ref: getSchemaPath(UserResponseDto) },
+        { $ref: getSchemaPath(UserWithTokensResponseDto) },
       ],
     },
   })
@@ -264,14 +266,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() loginDto: LoginDto,
-  ): Promise<PublicUserDto | UserWithTokensDto> {
+  ): Promise<UserResponseDto | UserWithTokensResponseDto> {
     const user = await this.authService.login(loginDto);
 
     if (!user.isEmailVerified) {
       return user;
     }
 
-    return this.authService.generateUserWithTokens(user);
+    return this.authService.generateUserWithTokensResponseDto(user);
   }
 
   @Post('forgot-password')
@@ -339,7 +341,7 @@ export class AuthController {
     status: 200,
     description:
       'Password reset successfully, return user with access and refresh tokens',
-    type: UserWithTokensDto,
+    type: UserWithTokensResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid or otp is invalid',
@@ -384,7 +386,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(
     @Body() resetOtpDto: ResetOtpDto,
-  ): Promise<UserWithTokensDto> {
+  ): Promise<UserWithTokensResponseDto> {
     const userWithTokens = await this.authService.resetPassword(resetOtpDto);
 
     return userWithTokens;
@@ -444,7 +446,7 @@ export class AuthController {
   @ApiBody({ type: PasswordDto })
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
-    @Request() request: Request & { user: PublicUserDto },
+    @Request() request: Request & { user: UserResponseDto },
     @Body() passwordDto: PasswordDto,
   ): Promise<void> {
     await this.authService.changePassword(request.user.id, passwordDto);

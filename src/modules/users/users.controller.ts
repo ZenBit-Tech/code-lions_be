@@ -23,8 +23,9 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { responseDescrptions } from 'src/common/response-descriptions';
 
+import { UserResponseDto } from '../auth/dto/user-response.dto';
+
 import { CreateUserDto } from './dto/create-user.dto';
-import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -61,14 +62,16 @@ export class UsersController {
   @ApiResponse({
     status: 201,
     description: responseDescrptions.success,
-    type: PublicUserDto,
+    type: UserResponseDto,
   })
   @ApiConflictResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
   @ApiBody({ type: CreateUserDto })
-  async register(@Body() createUserDto: CreateUserDto): Promise<PublicUserDto> {
+  async register(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
     return await this.usersService.registerUser(createUserDto);
   }
 

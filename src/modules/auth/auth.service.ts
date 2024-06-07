@@ -11,9 +11,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
-import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
 import { EmailDto } from './dto/email.dto';
@@ -21,7 +21,7 @@ import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { PasswordDto } from './dto/password.dto';
 import { ResetOtpDto } from './dto/reset-otp';
-import { UserWithTokensDto } from './dto/user-with-tokens.dto';
+import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @Injectable()
@@ -44,7 +44,7 @@ export class AuthService {
     return result;
   }
 
-  private async sendVerificationOtp(user: PublicUserDto): Promise<void> {
+  private async sendVerificationOtp(user: UserResponseDto): Promise<void> {
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
     const isMailSent = await this.mailerService.sendMail({
       receiverEmail: user.email,
@@ -64,7 +64,7 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  private async sendResetPasswordOtp(user: PublicUserDto): Promise<void> {
+  private async sendResetPasswordOtp(user: UserResponseDto): Promise<void> {
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
     const isMailSent = await this.mailerService.sendMail({
       receiverEmail: user.email,
@@ -84,16 +84,16 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  private makeUserVerified(user: PublicUserDto): PublicUserDto {
+  private makeUserVerified(user: UserResponseDto): UserResponseDto {
     return {
       ...user,
       isEmailVerified: true,
     };
   }
 
-  async generateUserWithTokens(
-    publicUser: PublicUserDto,
-  ): Promise<UserWithTokensDto> {
+  async generateUserWithTokensResponseDto(
+    publicUser: UserResponseDto,
+  ): Promise<UserWithTokensResponseDto> {
     const payload = { ...publicUser };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET_KEY'),
@@ -112,7 +112,7 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<PublicUserDto> {
+  async login(loginDto: LoginDto): Promise<UserResponseDto> {
     const { email, password } = loginDto;
     const user = await this.usersService.getUserByEmail(email);
 
@@ -126,10 +126,10 @@ export class AuthService {
       throw new BadRequestException(Errors.INVALID_CREDENTIALS);
     }
 
-    return this.usersService.buildPublicUser(user);
+    return this.usersService.buildUserResponseDto(user);
   }
 
-  async register(createUserDto: CreateUserDto): Promise<PublicUserDto> {
+  async register(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const user = await this.usersService.registerUser(createUserDto);
 
     await this.sendVerificationOtp(user);
@@ -137,7 +137,9 @@ export class AuthService {
     return user;
   }
 
-  async verifyOtp(verifyOtpDto: VerifyOtpDto): Promise<UserWithTokensDto> {
+  async verifyOtp(
+    verifyOtpDto: VerifyOtpDto,
+  ): Promise<UserWithTokensResponseDto> {
     const { id, otp } = verifyOtpDto;
     const user = await this.usersService.getUserById(id);
 
@@ -159,9 +161,10 @@ export class AuthService {
       },
     });
 
-    const publicUser = this.usersService.buildPublicUser(user);
+    const publicUser = this.usersService.buildUserResponseDto(user);
     const verifiedUser = this.makeUserVerified(publicUser);
-    const userWithTokens = await this.generateUserWithTokens(verifiedUser);
+    const userWithTokens =
+      await this.generateUserWithTokensResponseDto(verifiedUser);
 
     return userWithTokens;
   }
@@ -209,7 +212,9 @@ export class AuthService {
     await this.sendResetPasswordOtp(user);
   }
 
-  async resetPassword(resetOtpDto: ResetOtpDto): Promise<UserWithTokensDto> {
+  async resetPassword(
+    resetOtpDto: ResetOtpDto,
+  ): Promise<UserWithTokensResponseDto> {
     const { email, otp } = resetOtpDto;
 
     const user = await this.usersService.getUserByEmail(email);
@@ -224,9 +229,10 @@ export class AuthService {
 
     await this.usersService.confirmUser(user.id);
 
-    const publicUser = this.usersService.buildPublicUser(user);
+    const publicUser = this.usersService.buildUserResponseDto(user);
     const verifiedUser = this.makeUserVerified(publicUser);
-    const userWithTokens = await this.generateUserWithTokens(verifiedUser);
+    const userWithTokens =
+      await this.generateUserWithTokensResponseDto(verifiedUser);
 
     return userWithTokens;
   }

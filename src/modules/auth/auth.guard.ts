@@ -3,11 +3,11 @@ import { AuthGuard } from '@nestjs/passport';
 
 import { Errors } from 'src/common/errors';
 
-import { PublicUserDto } from '../users/dto/public-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  handleRequest<TUser = PublicUserDto>(err: Error, user: TUser): TUser {
+  handleRequest<TUser = UserResponseDto>(err: Error, user: TUser): TUser {
     if (err || !user) {
       throw new UnauthorizedException(Errors.INVALID_TOKEN);
     }

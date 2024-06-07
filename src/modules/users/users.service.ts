@@ -11,8 +11,9 @@ import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
+import { UserResponseDto } from '../auth/dto/user-response.dto';
+
 import { CreateUserDto } from './dto/create-user.dto';
-import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 
 @Injectable()
@@ -34,7 +35,7 @@ export class UsersService {
     }
   }
 
-  buildPublicUser(user: User): PublicUserDto {
+  buildUserResponseDto(user: User): UserResponseDto {
     const { id, name, email, isEmailVerified } = user;
 
     const publicUser = { id, name, email, isEmailVerified };
@@ -78,7 +79,7 @@ export class UsersService {
     }
   }
 
-  async registerUser(createUserDto: CreateUserDto): Promise<PublicUserDto> {
+  async registerUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const { name, email, password } = createUserDto;
 
     try {
@@ -98,7 +99,7 @@ export class UsersService {
 
       const createdUser = await this.userRepository.save(user);
 
-      const publicUser = this.buildPublicUser(createdUser);
+      const publicUser = this.buildUserResponseDto(createdUser);
 
       return publicUser;
     } catch (error) {
