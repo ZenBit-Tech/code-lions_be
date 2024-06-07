@@ -16,10 +16,7 @@ import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
-import { EmailDto } from './dto/email.dto';
-import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
-import { PasswordDto } from './dto/password.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -169,8 +166,7 @@ export class AuthService {
     return userWithTokens;
   }
 
-  async resendOtp(idDto: IdDto): Promise<void> {
-    const { id } = idDto;
+  async resendOtp(id: string): Promise<void> {
     const user = await this.usersService.getUserById(id);
 
     if (!user) {
@@ -201,8 +197,7 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  async sendResetPasswordEmail(emailDto: EmailDto): Promise<void> {
-    const { email } = emailDto;
+  async sendResetPasswordEmail(email: string): Promise<void> {
     const user = await this.usersService.getUserByEmail(email);
 
     if (!user) {
@@ -237,9 +232,7 @@ export class AuthService {
     return userWithTokens;
   }
 
-  async changePassword(id: string, passswordDto: PasswordDto): Promise<void> {
-    const { password } = passswordDto;
-
+  async changePassword(id: string, password: string): Promise<void> {
     await this.usersService.changePassword(id, password);
   }
 }

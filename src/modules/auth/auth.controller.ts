@@ -228,7 +228,7 @@ export class AuthController {
   @ApiBody({ type: IdDto })
   @HttpCode(HttpStatus.NO_CONTENT)
   async resendOtp(@Body() idDto: IdDto): Promise<void> {
-    await this.authService.resendOtp(idDto);
+    await this.authService.resendOtp(idDto.id);
   }
 
   @Post('login')
@@ -328,7 +328,7 @@ export class AuthController {
   @ApiBody({ type: EmailDto })
   @HttpCode(HttpStatus.NO_CONTENT)
   async forgotPassword(@Body() emailDto: EmailDto): Promise<void> {
-    await this.authService.sendResetPasswordEmail(emailDto);
+    await this.authService.sendResetPasswordEmail(emailDto.email);
   }
 
   @Post('reset-password')
@@ -449,6 +449,9 @@ export class AuthController {
     @Request() request: Request & { user: UserResponseDto },
     @Body() passwordDto: PasswordDto,
   ): Promise<void> {
-    await this.authService.changePassword(request.user.id, passwordDto);
+    await this.authService.changePassword(
+      request.user.id,
+      passwordDto.password,
+    );
   }
 }
