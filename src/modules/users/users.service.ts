@@ -78,21 +78,23 @@ export class UsersService {
     }
   }
 
-  async registerUser(dto: CreateUserDto): Promise<PublicUserDto> {
+  async registerUser(createUserDto: CreateUserDto): Promise<PublicUserDto> {
+    const { name, email, password } = createUserDto;
+
     try {
-      const userExists = await this.getUserByEmail(dto.email);
+      const userExists = await this.getUserByEmail(email);
 
       if (userExists) {
         throw new ConflictException(Errors.USER_EXISTS);
       }
 
-      dto.password = await this.hashPassword(dto.password);
+      const hashedPassword = await this.hashPassword(password);
 
       const user = new User();
 
-      user.name = dto.name;
-      user.email = dto.email;
-      user.password = dto.password;
+      user.name = name;
+      user.email = email;
+      user.password = hashedPassword;
 
       const createdUser = await this.userRepository.save(user);
 

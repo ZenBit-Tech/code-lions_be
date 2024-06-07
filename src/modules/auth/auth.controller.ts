@@ -103,8 +103,8 @@ export class AuthController {
   })
   @ApiBody({ type: CreateUserDto })
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
-    const user = await this.authService.register(dto);
+  async register(@Body() createUserDto: CreateUserDto): Promise<PublicUserDto> {
+    const user = await this.authService.register(createUserDto);
 
     return user;
   }
@@ -166,8 +166,10 @@ export class AuthController {
   })
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<UserWithTokensDto> {
-    const userWithTokens = await this.authService.verifyOtp(dto);
+  async verifyOtp(
+    @Body() verifyOtpDto: VerifyOtpDto,
+  ): Promise<UserWithTokensDto> {
+    const userWithTokens = await this.authService.verifyOtp(verifyOtpDto);
 
     return userWithTokens;
   }
@@ -223,8 +225,8 @@ export class AuthController {
   })
   @ApiBody({ type: IdDto })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async resendOtp(@Body() dto: IdDto): Promise<void> {
-    await this.authService.resendOtp(dto.id);
+  async resendOtp(@Body() idDto: IdDto): Promise<void> {
+    await this.authService.resendOtp(idDto);
   }
 
   @Post('login')
@@ -261,9 +263,9 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body() dto: LoginDto,
+    @Body() loginDto: LoginDto,
   ): Promise<PublicUserDto | UserWithTokensDto> {
-    const user = await this.authService.login(dto);
+    const user = await this.authService.login(loginDto);
 
     if (!user.isEmailVerified) {
       return user;
@@ -323,8 +325,8 @@ export class AuthController {
   })
   @ApiBody({ type: EmailDto })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async forgotPassword(@Body() dto: EmailDto): Promise<void> {
-    await this.authService.sendResetPasswordEmail(dto);
+  async forgotPassword(@Body() emailDto: EmailDto): Promise<void> {
+    await this.authService.sendResetPasswordEmail(emailDto);
   }
 
   @Post('reset-password')
@@ -380,8 +382,10 @@ export class AuthController {
   })
   @ApiBody({ type: ResetOtpDto })
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() dto: ResetOtpDto): Promise<UserWithTokensDto> {
-    const userWithTokens = await this.authService.resetPassword(dto);
+  async resetPassword(
+    @Body() resetOtpDto: ResetOtpDto,
+  ): Promise<UserWithTokensDto> {
+    const userWithTokens = await this.authService.resetPassword(resetOtpDto);
 
     return userWithTokens;
   }
@@ -441,8 +445,8 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
     @Request() request: Request & { user: PublicUserDto },
-    @Body() dto: PasswordDto,
+    @Body() passwordDto: PasswordDto,
   ): Promise<void> {
-    await this.authService.changePassword(request.user.id, dto);
+    await this.authService.changePassword(request.user.id, passwordDto);
   }
 }

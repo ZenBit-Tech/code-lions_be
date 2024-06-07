@@ -17,6 +17,7 @@ import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
 import { EmailDto } from './dto/email.dto';
+import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { PasswordDto } from './dto/password.dto';
 import { ResetOtpDto } from './dto/reset-otp';
@@ -111,8 +112,8 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto): Promise<PublicUserDto> {
-    const { email, password } = dto;
+  async login(loginDto: LoginDto): Promise<PublicUserDto> {
+    const { email, password } = loginDto;
     const user = await this.usersService.getUserByEmail(email);
 
     if (!user) {
@@ -128,16 +129,16 @@ export class AuthService {
     return this.usersService.buildPublicUser(user);
   }
 
-  async register(dto: CreateUserDto): Promise<PublicUserDto> {
-    const user = await this.usersService.registerUser(dto);
+  async register(createUserDto: CreateUserDto): Promise<PublicUserDto> {
+    const user = await this.usersService.registerUser(createUserDto);
 
     await this.sendVerificationOtp(user);
 
     return user;
   }
 
-  async verifyOtp(dto: VerifyOtpDto): Promise<UserWithTokensDto> {
-    const { id, otp } = dto;
+  async verifyOtp(verifyOtpDto: VerifyOtpDto): Promise<UserWithTokensDto> {
+    const { id, otp } = verifyOtpDto;
     const user = await this.usersService.getUserById(id);
 
     if (!user) {
@@ -165,7 +166,8 @@ export class AuthService {
     return userWithTokens;
   }
 
-  async resendOtp(id: string): Promise<void> {
+  async resendOtp(idDto: IdDto): Promise<void> {
+    const { id } = idDto;
     const user = await this.usersService.getUserById(id);
 
     if (!user) {
@@ -196,8 +198,9 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  async sendResetPasswordEmail(dto: EmailDto): Promise<void> {
-    const user = await this.usersService.getUserByEmail(dto.email);
+  async sendResetPasswordEmail(emailDto: EmailDto): Promise<void> {
+    const { email } = emailDto;
+    const user = await this.usersService.getUserByEmail(email);
 
     if (!user) {
       throw new NotFoundException(Errors.USER_NOT_FOUND);
@@ -206,8 +209,8 @@ export class AuthService {
     await this.sendResetPasswordOtp(user);
   }
 
-  async resetPassword(dto: ResetOtpDto): Promise<UserWithTokensDto> {
-    const { email, otp } = dto;
+  async resetPassword(resetOtpDto: ResetOtpDto): Promise<UserWithTokensDto> {
+    const { email, otp } = resetOtpDto;
 
     const user = await this.usersService.getUserByEmail(email);
 
@@ -228,8 +231,8 @@ export class AuthService {
     return userWithTokens;
   }
 
-  async changePassword(id: string, dto: PasswordDto): Promise<void> {
-    const { password } = dto;
+  async changePassword(id: string, passswordDto: PasswordDto): Promise<void> {
+    const { password } = passswordDto;
 
     await this.usersService.changePassword(id, password);
   }

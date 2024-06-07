@@ -68,8 +68,8 @@ export class UsersController {
     type: ErrorResponse,
   })
   @ApiBody({ type: CreateUserDto })
-  async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
-    return await this.usersService.registerUser(dto);
+  async register(@Body() createUserDto: CreateUserDto): Promise<PublicUserDto> {
+    return await this.usersService.registerUser(createUserDto);
   }
 
   @Delete(':id')
