@@ -161,8 +161,6 @@ export class AuthService {
   async resendOtp(id: string): Promise<void> {
     const user = await this.usersService.getUserById(id);
 
-    console.log(user, 'resend');
-
     if (!user) {
       throw new NotFoundException(Errors.USER_NOT_FOUND);
     }
@@ -171,8 +169,6 @@ export class AuthService {
     }
 
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
-
-    console.log(otp, 'user');
 
     const isMailSent = await this.mailerService.sendMail({
       receiverEmail: user.email,
