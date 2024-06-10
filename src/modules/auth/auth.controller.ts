@@ -37,6 +37,7 @@ import { EmailDto } from './dto/email.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { PasswordDto } from './dto/password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -453,5 +454,35 @@ export class AuthController {
       request.user.id,
       passwordDto.password,
     );
+  }
+
+  @Post('refresh-token')
+  @ApiOkResponse({
+    description: 'Return user with access and refresh tokens',
+    type: UserWithTokensResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid refresh token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.REFRESH_TOKEN_SHOULD_BE_JWT],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const user = await this.authService.refreshToken(
+      refreshTokenDto.refreshToken,
+    );
+
+    return user;
   }
 }

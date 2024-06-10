@@ -235,4 +235,25 @@ export class AuthService {
   async changePassword(id: string, password: string): Promise<void> {
     await this.usersService.changePassword(id, password);
   }
+
+  async refreshToken(refreshToken: string): Promise<UserWithTokensResponseDto> {
+    try {
+      const { id } = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_SECRET_REFRESH_KEY'),
+      });
+      const user = await this.usersService.getUserById(id);
+
+      if (!user) {
+        throw new Error();
+      }
+
+      const publicUser = this.usersService.buildUserResponseDto(user);
+      const userWithTokens =
+        await this.generateUserWithTokensResponseDto(publicUser);
+
+      return userWithTokens;
+    } catch (error) {
+      throw new BadRequestException(Errors.INVALID_REFRESH_TOKEN);
+    }
+  }
 }

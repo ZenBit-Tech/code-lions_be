@@ -19,6 +19,7 @@ export const Errors = {
   INVALID_CREDENTIALS: 'Invalid email or password',
   INVALID_EMAIL: 'Invalid email',
   INVALID_PASSWORD: 'Invalid password',
+  INVALID_REFRESH_TOKEN: 'Invalid refresh token',
   INVALID_TOKEN:
     'You are not authorized to access this resource, valid token is required',
   INVALID_USER_ID: 'Invalid user id',
@@ -26,6 +27,8 @@ export const Errors = {
   NAME_IS_STRING: 'Name must be a string',
   PASSWORD_IS_STRING: 'Password must be a string',
   PASSWORD_LENGTH: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`,
+  REFRESH_TOKEN_SHOULD_BE_JWT:
+    'Refresh token should be a string with valid jwt token',
   ROUTE_IS_FORBIDDEN: 'This route is forbidden for unauthorized users',
   USER_DOES_NOT_EXIST: 'User with this email does not exist',
   USER_EXISTS: 'User with this email already exists',
