@@ -36,9 +36,9 @@ export class UsersService {
   }
 
   buildUserResponseDto(user: User): UserResponseDto {
-    const { id, name, email, isEmailVerified } = user;
+    const { id, name, email, role, isEmailVerified } = user;
 
-    const publicUser = { id, name, email, isEmailVerified };
+    const publicUser = { id, name, email, role, isEmailVerified };
 
     return publicUser;
   }
