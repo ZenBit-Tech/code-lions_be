@@ -262,6 +262,10 @@ export class AuthService {
     } else {
       const newUser = await this.usersService.registerUserViaGoogle(payload);
 
+      if (!newUser.isEmailVerified) {
+        await this.sendVerificationOtp(newUser);
+      }
+
       return newUser;
     }
   }
