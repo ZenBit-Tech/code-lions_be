@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcryptjs';
+import { OAuth2Client } from 'google-auth-library';
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
@@ -17,6 +18,7 @@ import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
 import { EmailDto } from './dto/email.dto';
+import { GooglePayloadDto } from './dto/google-payload.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
@@ -159,6 +161,8 @@ export class AuthService {
   async resendOtp(id: string): Promise<void> {
     const user = await this.usersService.getUserById(id);
 
+    console.log(user, 'resend');
+
     if (!user) {
       throw new NotFoundException(Errors.USER_NOT_FOUND);
     }
@@ -167,6 +171,8 @@ export class AuthService {
     }
 
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+
+    console.log(otp, 'user');
 
     const isMailSent = await this.mailerService.sendMail({
       receiverEmail: user.email,
@@ -215,5 +221,52 @@ export class AuthService {
     const userWithTokens = await this.generateUserWithTokens(publicUser);
 
     return userWithTokens;
+  }
+
+  private async getGooglePayload(token: string): Promise<GooglePayloadDto> {
+    const GOOGLE_CLIENT_ID = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const GOOGLE_SECRET = this.configService.get<string>('GOOGLE_SECRET');
+
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_SECRET);
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      throw new BadRequestException(Errors.INVALID_GOOGLE_TOKEN);
+    }
+
+    const {
+      sub,
+      email,
+      email_verified: isEmailVerified,
+      given_name: givenName,
+    } = payload;
+
+    return { sub, email, isEmailVerified, givenName };
+  }
+
+  async authenticateViaGoogle(token: string): Promise<PublicUserDto> {
+    const payload = await this.getGooglePayload(token);
+    const email = payload.email;
+    const user = await this.usersService.getUserByEmail(email);
+
+    if (user) {
+      const isGoogleIdValid = user.googleId === payload.sub;
+
+      if (!isGoogleIdValid) {
+        throw new BadRequestException(Errors.INVALID_GOOGLE_ID);
+      }
+
+      return this.usersService.buildPublicUser(user);
+    } else {
+      const newUser = await this.usersService.registerUserViaGoogle(payload);
+
+      return newUser;
+    }
   }
 }

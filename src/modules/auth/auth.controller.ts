@@ -373,4 +373,79 @@ export class AuthController {
 
     return userWithTokens;
   }
+
+  @Post('google')
+  @ApiOperation({
+    summary: 'Authenticate user via Google',
+    tags: ['Auth Endpoints'],
+    description:
+      'This endpoint creates or signs in a user via Google and returns an object with access and refresh tokens if the email is verified, or just the public user details if not.',
+  })
+  @ApiCreatedResponse({
+    status: 201,
+    description: 'User created successfully via Google',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PublicUserDto) },
+        { $ref: getSchemaPath(UserWithTokensDto) },
+      ],
+    },
+  })
+  @ApiOkResponse({
+    status: 200,
+    description: 'User signed in successfully via Google',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PublicUserDto) },
+        { $ref: getSchemaPath(UserWithTokensDto) },
+      ],
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid Google token or payload',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string | string[]',
+          example: 'Invalid Google token payload',
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: 'Failed to authenticate user via Google',
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({
+    schema: {
+      properties: {
+        token: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+    },
+  })
+  async authenticateViaGoogle(
+    @Body('token') token: string,
+  ): Promise<UserWithTokensDto | PublicUserDto> {
+    const userViaGoogle = await this.authService.authenticateViaGoogle(token);
+
+    if (!userViaGoogle.isEmailVerified) {
+      return userViaGoogle;
+    }
+
+    return this.authService.generateUserWithTokens(userViaGoogle);
+  }
 }

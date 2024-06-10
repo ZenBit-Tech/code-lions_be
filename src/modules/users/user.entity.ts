@@ -49,4 +49,11 @@ export class User {
   })
   @Column({ type: 'timestamp', nullable: true })
   otpExpiration: Date;
+
+  @ApiProperty({
+    example: '107289041235675675',
+    description: 'The Google ID of the user',
+  })
+  @Column({ nullable: true, default: null })
+  googleId: string | null;
 }
