@@ -459,6 +459,12 @@ export class AuthController {
   }
 
   @Post('refresh-token')
+  @ApiOperation({
+    summary: 'Refresh token',
+    tags: ['Auth Endpoints'],
+    description:
+      'Get refresh token and return user with access and refresh tokens',
+  })
   @ApiOkResponse({
     description: 'Return user with access and refresh tokens',
     type: UserWithTokensResponseDto,
@@ -501,8 +507,8 @@ export class AuthController {
     description: 'User created successfully via Google',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(PublicUserDto) },
-        { $ref: getSchemaPath(UserWithTokensDto) },
+        { $ref: getSchemaPath(UserResponseDto) },
+        { $ref: getSchemaPath(UserWithTokensResponseDto) },
       ],
     },
   })
@@ -511,8 +517,8 @@ export class AuthController {
     description: 'User signed in successfully via Google',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(PublicUserDto) },
-        { $ref: getSchemaPath(UserWithTokensDto) },
+        { $ref: getSchemaPath(UserResponseDto) },
+        { $ref: getSchemaPath(UserWithTokensResponseDto) },
       ],
     },
   })
@@ -554,7 +560,7 @@ export class AuthController {
   })
   async authenticateViaGoogle(
     @Request() request: Request & { googlePayload: GooglePayloadDto },
-  ): Promise<UserWithTokensDto | PublicUserDto> {
+  ): Promise<UserWithTokensResponseDto | UserResponseDto> {
     const userViaGoogle = await this.authService.authenticateViaGoogle(
       request.googlePayload,
     );
@@ -563,6 +569,6 @@ export class AuthController {
       return userViaGoogle;
     }
 
-    return this.authService.generateUserWithTokens(userViaGoogle);
+    return this.authService.generateUserWithTokensResponseDto(userViaGoogle);
   }
 }

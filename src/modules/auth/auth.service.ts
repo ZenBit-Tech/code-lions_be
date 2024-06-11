@@ -11,7 +11,6 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
-import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
@@ -19,6 +18,7 @@ import { UsersService } from 'src/modules/users/users.service';
 import { GooglePayloadDto } from './dto/google-payload.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetOtpDto } from './dto/reset-otp';
+import { UserResponseDto } from './dto/user-response.dto';
 import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -260,7 +260,7 @@ export class AuthService {
 
   async authenticateViaGoogle(
     payload: GooglePayloadDto,
-  ): Promise<PublicUserDto> {
+  ): Promise<UserResponseDto> {
     const email = payload.email;
     const user = await this.usersService.getUserByEmail(email);
 
@@ -271,7 +271,7 @@ export class AuthService {
         throw new BadRequestException(Errors.INVALID_GOOGLE_ID);
       }
 
-      return this.usersService.buildPublicUser(user);
+      return this.usersService.buildUserResponseDto(user);
     } else {
       const newUser = await this.usersService.registerUserViaGoogle(payload);
 

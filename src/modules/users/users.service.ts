@@ -11,6 +11,8 @@ import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
+import { UserResponseDto } from '../auth/dto/user-response.dto';
+
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './user.entity';
@@ -112,7 +114,7 @@ export class UsersService {
 
   async registerUserViaGoogle(
     googlePayloadDto: GooglePayloadDto,
-  ): Promise<PublicUserDto> {
+  ): Promise<UserResponseDto> {
     try {
       const password = await this.hashPassword(googlePayloadDto.sub);
 
@@ -126,7 +128,7 @@ export class UsersService {
 
       const createdUser = await this.userRepository.save(user);
 
-      const publicUser = this.buildPublicUser(createdUser);
+      const publicUser = this.buildUserResponseDto(createdUser);
 
       return publicUser;
     } catch (error) {
