@@ -11,8 +11,7 @@ import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
-import { UserResponseDto } from '../auth/dto/user-response.dto';
-
+import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './user.entity';
 
@@ -108,6 +107,32 @@ export class UsersService {
       } else {
         throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_USER);
       }
+    }
+  }
+
+  async registerUserViaGoogle(
+    googlePayloadDto: GooglePayloadDto,
+  ): Promise<PublicUserDto> {
+    try {
+      const password = await this.hashPassword(googlePayloadDto.sub);
+
+      const user = new User();
+
+      user.name = googlePayloadDto.givenName;
+      user.email = googlePayloadDto.email;
+      user.password = password;
+      user.googleId = googlePayloadDto.sub;
+      user.isEmailVerified = googlePayloadDto.isEmailVerified;
+
+      const createdUser = await this.userRepository.save(user);
+
+      const publicUser = this.buildPublicUser(createdUser);
+
+      return publicUser;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CREATE_USER_VIA_GOOGLE,
+      );
     }
   }
 

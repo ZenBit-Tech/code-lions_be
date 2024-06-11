@@ -62,4 +62,11 @@ export class User {
     nullable: true,
   })
   role: Role;
+
+  @ApiProperty({
+    example: '107289041235675675',
+    description: 'The Google ID of the user',
+  })
+  @Column({ nullable: true, default: null })
+  googleId: string | null;
 }

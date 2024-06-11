@@ -34,6 +34,7 @@ import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { JwtAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { EmailDto } from './dto/email.dto';
+import { GooglePayloadDto } from './dto/google-payload.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { PasswordDto } from './dto/password.dto';
@@ -41,6 +42,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { GoogleAuthGuard } from './google-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -484,5 +486,83 @@ export class AuthController {
     );
 
     return user;
+  }
+
+  @Post('google')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({
+    summary: 'Authenticate user via Google',
+    tags: ['Auth Endpoints'],
+    description:
+      'This endpoint creates or signs in a user via Google and returns an object with access and refresh tokens if the email is verified, or just the public user details if not.',
+  })
+  @ApiCreatedResponse({
+    status: 201,
+    description: 'User created successfully via Google',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PublicUserDto) },
+        { $ref: getSchemaPath(UserWithTokensDto) },
+      ],
+    },
+  })
+  @ApiOkResponse({
+    status: 200,
+    description: 'User signed in successfully via Google',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PublicUserDto) },
+        { $ref: getSchemaPath(UserWithTokensDto) },
+      ],
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid Google token or payload',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string | string[]',
+          example: 'Invalid Google token payload',
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: 'Failed to authenticate user via Google',
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({
+    schema: {
+      properties: {
+        token: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+    },
+  })
+  async authenticateViaGoogle(
+    @Request() request: Request & { googlePayload: GooglePayloadDto },
+  ): Promise<UserWithTokensDto | PublicUserDto> {
+    const userViaGoogle = await this.authService.authenticateViaGoogle(
+      request.googlePayload,
+    );
+
+    if (!userViaGoogle.isEmailVerified) {
+      return userViaGoogle;
+    }
+
+    return this.authService.generateUserWithTokens(userViaGoogle);
   }
 }
