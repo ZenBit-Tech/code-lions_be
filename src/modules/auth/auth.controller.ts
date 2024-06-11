@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
@@ -23,11 +31,13 @@ import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
 import { AuthService } from './auth.service';
 import { EmailDto } from './dto/email.dto';
+import { GooglePayloadDto } from './dto/google-payload.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { GoogleAuthGuard } from './google-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -375,6 +385,7 @@ export class AuthController {
   }
 
   @Post('google')
+  @UseGuards(GoogleAuthGuard)
   @ApiOperation({
     summary: 'Authenticate user via Google',
     tags: ['Auth Endpoints'],
@@ -438,9 +449,11 @@ export class AuthController {
     },
   })
   async authenticateViaGoogle(
-    @Body('token') token: string,
+    @Request() request: Request & { googlePayload: GooglePayloadDto },
   ): Promise<UserWithTokensDto | PublicUserDto> {
-    const userViaGoogle = await this.authService.authenticateViaGoogle(token);
+    const userViaGoogle = await this.authService.authenticateViaGoogle(
+      request.googlePayload,
+    );
 
     if (!userViaGoogle.isEmailVerified) {
       return userViaGoogle;

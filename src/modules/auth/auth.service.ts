@@ -9,7 +9,6 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcryptjs';
-import { OAuth2Client } from 'google-auth-library';
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
@@ -219,35 +218,9 @@ export class AuthService {
     return userWithTokens;
   }
 
-  private async getGooglePayload(token: string): Promise<GooglePayloadDto> {
-    const GOOGLE_CLIENT_ID = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const GOOGLE_SECRET = this.configService.get<string>('GOOGLE_SECRET');
-
-    const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_SECRET);
-
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-
-    if (!payload) {
-      throw new BadRequestException(Errors.INVALID_GOOGLE_TOKEN);
-    }
-
-    const {
-      sub,
-      email,
-      email_verified: isEmailVerified,
-      given_name: givenName,
-    } = payload;
-
-    return { sub, email, isEmailVerified, givenName };
-  }
-
-  async authenticateViaGoogle(token: string): Promise<PublicUserDto> {
-    const payload = await this.getGooglePayload(token);
+  async authenticateViaGoogle(
+    payload: GooglePayloadDto,
+  ): Promise<PublicUserDto> {
     const email = payload.email;
     const user = await this.usersService.getUserByEmail(email);
 
