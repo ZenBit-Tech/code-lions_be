@@ -31,4 +31,7 @@ export const Errors = {
   USER_NOT_FOUND: 'User not found',
   USER_NOT_VERIFIED: 'User not verified email yet',
   WRONG_CODE: 'Wrong or expired OTP code',
+  FAILED_TO_CREATE_USER_VIA_GOOGLE: 'Failed to create user via google',
+  INVALID_GOOGLE_TOKEN: 'Invalid Google token payload',
+  INVALID_GOOGLE_ID: 'Invalid google id',
 };

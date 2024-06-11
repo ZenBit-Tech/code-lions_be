@@ -17,6 +17,7 @@ import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
 import { EmailDto } from './dto/email.dto';
+import { GooglePayloadDto } from './dto/google-payload.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetOtpDto } from './dto/reset-otp';
 import { UserWithTokensDto } from './dto/user-with-tokens.dto';
@@ -215,5 +216,30 @@ export class AuthService {
     const userWithTokens = await this.generateUserWithTokens(publicUser);
 
     return userWithTokens;
+  }
+
+  async authenticateViaGoogle(
+    payload: GooglePayloadDto,
+  ): Promise<PublicUserDto> {
+    const email = payload.email;
+    const user = await this.usersService.getUserByEmail(email);
+
+    if (user) {
+      const isGoogleIdValid = user.googleId === payload.sub;
+
+      if (!isGoogleIdValid) {
+        throw new BadRequestException(Errors.INVALID_GOOGLE_ID);
+      }
+
+      return this.usersService.buildPublicUser(user);
+    } else {
+      const newUser = await this.usersService.registerUserViaGoogle(payload);
+
+      if (!newUser.isEmailVerified) {
+        await this.sendVerificationOtp(newUser);
+      }
+
+      return newUser;
+    }
   }
 }
