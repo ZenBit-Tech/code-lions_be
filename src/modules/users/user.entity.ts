@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Role } from 'src/modules/roles/role.enum';
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
@@ -49,6 +50,18 @@ export class User {
   })
   @Column({ type: 'timestamp', nullable: true })
   otpExpiration: Date;
+
+  @ApiProperty({
+    example: Role.BUYER,
+    description: 'The role of the user',
+    enum: Role,
+  })
+  @Column({
+    type: 'enum',
+    enum: Role,
+    nullable: true,
+  })
+  role: Role;
 
   @ApiProperty({
     example: '107289041235675675',

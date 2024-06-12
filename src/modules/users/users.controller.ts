@@ -7,6 +7,7 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -18,21 +19,44 @@ import {
   ApiParam,
   ApiConflictResponse,
   ApiNotFoundResponse,
+  ApiBearerAuth,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
 
 import { ErrorResponse } from 'src/common/error-response';
 import { responseDescrptions } from 'src/common/response-descriptions';
+import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { Role } from 'src/modules/roles/role.enum';
+import { Roles } from 'src/modules/roles/roles.decorator';
+import { RolesGuard } from 'src/modules/roles/roles.guard';
+
+import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
-import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
 @Controller('users')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 @ApiInternalServerErrorResponse({
   description: responseDescrptions.error,
   type: ErrorResponse,
+})
+@ApiForbiddenResponse({
+  description: 'User does not have permission to access this resource',
+  schema: {
+    properties: {
+      statusCode: { type: 'integer', example: 403 },
+      message: {
+        type: 'string',
+        example: 'Forbidden resource',
+      },
+      error: { type: 'string', example: 'Forbidden' },
+    },
+  },
 })
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -61,15 +85,17 @@ export class UsersController {
   @ApiResponse({
     status: 201,
     description: responseDescrptions.success,
-    type: PublicUserDto,
+    type: UserResponseDto,
   })
   @ApiConflictResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
   })
   @ApiBody({ type: CreateUserDto })
-  async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
-    return await this.usersService.registerUser(dto);
+  async register(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.registerUser(createUserDto);
   }
 
   @Delete(':id')

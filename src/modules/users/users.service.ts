@@ -11,9 +11,10 @@ import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
+import { UserResponseDto } from '../auth/dto/user-response.dto';
+
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
-import { PublicUserDto } from './dto/public-user.dto';
 import { User } from './user.entity';
 
 @Injectable()
@@ -35,10 +36,10 @@ export class UsersService {
     }
   }
 
-  buildPublicUser(user: User): PublicUserDto {
-    const { id, name, email, isEmailVerified } = user;
+  buildUserResponseDto(user: User): UserResponseDto {
+    const { id, name, email, role, isEmailVerified } = user;
 
-    const publicUser = { id, name, email, isEmailVerified };
+    const publicUser = { id, name, email, role, isEmailVerified };
 
     return publicUser;
   }
@@ -79,25 +80,27 @@ export class UsersService {
     }
   }
 
-  async registerUser(dto: CreateUserDto): Promise<PublicUserDto> {
+  async registerUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+    const { name, email, password } = createUserDto;
+
     try {
-      const userExists = await this.getUserByEmail(dto.email);
+      const userExists = await this.getUserByEmail(email);
 
       if (userExists) {
         throw new ConflictException(Errors.USER_EXISTS);
       }
 
-      dto.password = await this.hashPassword(dto.password);
+      const hashedPassword = await this.hashPassword(password);
 
       const user = new User();
 
-      user.name = dto.name;
-      user.email = dto.email;
-      user.password = dto.password;
+      user.name = name;
+      user.email = email;
+      user.password = hashedPassword;
 
       const createdUser = await this.userRepository.save(user);
 
-      const publicUser = this.buildPublicUser(createdUser);
+      const publicUser = this.buildUserResponseDto(createdUser);
 
       return publicUser;
     } catch (error) {
@@ -111,7 +114,7 @@ export class UsersService {
 
   async registerUserViaGoogle(
     googlePayloadDto: GooglePayloadDto,
-  ): Promise<PublicUserDto> {
+  ): Promise<UserResponseDto> {
     try {
       const password = await this.hashPassword(googlePayloadDto.sub);
 
@@ -125,7 +128,7 @@ export class UsersService {
 
       const createdUser = await this.userRepository.save(user);
 
-      const publicUser = this.buildPublicUser(createdUser);
+      const publicUser = this.buildUserResponseDto(createdUser);
 
       return publicUser;
     } catch (error) {
@@ -181,6 +184,16 @@ export class UsersService {
       );
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CONFIRM_USER);
+    }
+  }
+
+  async changePassword(id: string, password: string): Promise<void> {
+    try {
+      const hashedPassword = await this.hashPassword(password);
+
+      await this.userRepository.update({ id }, { password: hashedPassword });
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_PASSWORD);
     }
   }
 }

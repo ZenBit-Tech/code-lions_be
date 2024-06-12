@@ -13,14 +13,13 @@ import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_LENGTH } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
-import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
-import { EmailDto } from './dto/email.dto';
 import { GooglePayloadDto } from './dto/google-payload.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetOtpDto } from './dto/reset-otp';
-import { UserWithTokensDto } from './dto/user-with-tokens.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @Injectable()
@@ -43,7 +42,7 @@ export class AuthService {
     return result;
   }
 
-  private async sendVerificationOtp(user: PublicUserDto): Promise<void> {
+  private async sendVerificationOtp(user: UserResponseDto): Promise<void> {
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
     const isMailSent = await this.mailerService.sendMail({
       receiverEmail: user.email,
@@ -63,7 +62,7 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  private async sendResetPasswordOtp(user: PublicUserDto): Promise<void> {
+  private async sendResetPasswordOtp(user: UserResponseDto): Promise<void> {
     const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
     const isMailSent = await this.mailerService.sendMail({
       receiverEmail: user.email,
@@ -83,9 +82,16 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  async generateUserWithTokens(
-    publicUser: PublicUserDto,
-  ): Promise<UserWithTokensDto> {
+  private makeUserVerified(user: UserResponseDto): UserResponseDto {
+    return {
+      ...user,
+      isEmailVerified: true,
+    };
+  }
+
+  async generateUserWithTokensResponseDto(
+    publicUser: UserResponseDto,
+  ): Promise<UserWithTokensResponseDto> {
     const payload = { ...publicUser };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET_KEY'),
@@ -104,8 +110,8 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto): Promise<PublicUserDto> {
-    const { email, password } = dto;
+  async login(loginDto: LoginDto): Promise<UserResponseDto> {
+    const { email, password } = loginDto;
     const user = await this.usersService.getUserByEmail(email);
 
     if (!user) {
@@ -118,19 +124,21 @@ export class AuthService {
       throw new BadRequestException(Errors.INVALID_CREDENTIALS);
     }
 
-    return this.usersService.buildPublicUser(user);
+    return this.usersService.buildUserResponseDto(user);
   }
 
-  async register(dto: CreateUserDto): Promise<PublicUserDto> {
-    const user = await this.usersService.registerUser(dto);
+  async register(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+    const user = await this.usersService.registerUser(createUserDto);
 
     await this.sendVerificationOtp(user);
 
     return user;
   }
 
-  async verifyOtp(dto: VerifyOtpDto): Promise<UserWithTokensDto> {
-    const { id, otp } = dto;
+  async verifyOtp(
+    verifyOtpDto: VerifyOtpDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const { id, otp } = verifyOtpDto;
     const user = await this.usersService.getUserById(id);
 
     if (!user) {
@@ -151,8 +159,10 @@ export class AuthService {
       },
     });
 
-    const publicUser = this.usersService.buildPublicUser(user);
-    const userWithTokens = await this.generateUserWithTokens(publicUser);
+    const publicUser = this.usersService.buildUserResponseDto(user);
+    const verifiedUser = this.makeUserVerified(publicUser);
+    const userWithTokens =
+      await this.generateUserWithTokensResponseDto(verifiedUser);
 
     return userWithTokens;
   }
@@ -188,8 +198,8 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  async sendResetPasswordEmail(dto: EmailDto): Promise<void> {
-    const user = await this.usersService.getUserByEmail(dto.email);
+  async sendResetPasswordEmail(email: string): Promise<void> {
+    const user = await this.usersService.getUserByEmail(email);
 
     if (!user) {
       throw new NotFoundException(Errors.USER_NOT_FOUND);
@@ -198,8 +208,10 @@ export class AuthService {
     await this.sendResetPasswordOtp(user);
   }
 
-  async resetPassword(dto: ResetOtpDto): Promise<UserWithTokensDto> {
-    const { email, otp } = dto;
+  async resetPassword(
+    resetOtpDto: ResetOtpDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const { email, otp } = resetOtpDto;
 
     const user = await this.usersService.getUserByEmail(email);
 
@@ -212,15 +224,43 @@ export class AuthService {
     }
 
     await this.usersService.confirmUser(user.id);
-    const publicUser = this.usersService.buildPublicUser(user);
-    const userWithTokens = await this.generateUserWithTokens(publicUser);
+
+    const publicUser = this.usersService.buildUserResponseDto(user);
+    const verifiedUser = this.makeUserVerified(publicUser);
+    const userWithTokens =
+      await this.generateUserWithTokensResponseDto(verifiedUser);
 
     return userWithTokens;
   }
 
+  async changePassword(id: string, password: string): Promise<void> {
+    await this.usersService.changePassword(id, password);
+  }
+
+  async refreshToken(refreshToken: string): Promise<UserWithTokensResponseDto> {
+    try {
+      const { id } = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_SECRET_REFRESH_KEY'),
+      });
+      const user = await this.usersService.getUserById(id);
+
+      if (!user) {
+        throw new Error();
+      }
+
+      const publicUser = this.usersService.buildUserResponseDto(user);
+      const userWithTokens =
+        await this.generateUserWithTokensResponseDto(publicUser);
+
+      return userWithTokens;
+    } catch (error) {
+      throw new BadRequestException(Errors.INVALID_REFRESH_TOKEN);
+    }
+  }
+
   async authenticateViaGoogle(
     payload: GooglePayloadDto,
-  ): Promise<PublicUserDto> {
+  ): Promise<UserResponseDto> {
     const email = payload.email;
     const user = await this.usersService.getUserByEmail(email);
 
@@ -231,7 +271,7 @@ export class AuthService {
         throw new BadRequestException(Errors.INVALID_GOOGLE_ID);
       }
 
-      return this.usersService.buildPublicUser(user);
+      return this.usersService.buildUserResponseDto(user);
     } else {
       const newUser = await this.usersService.registerUserViaGoogle(payload);
 

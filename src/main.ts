@@ -11,12 +11,21 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { cors: true });
   const config = new DocumentBuilder()
     .setTitle('CodeLions')
-    .setDescription('The API description')
+    .setDescription('API for Black Circle project')
     .setVersion('1.0')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    })
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
   app.useGlobalPipes(new ValidationPipe());
   await app.listen(configService.get('PORT'));
 }

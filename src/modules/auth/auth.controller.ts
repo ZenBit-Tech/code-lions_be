@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -19,6 +20,7 @@ import {
   ApiOperation,
   ApiServiceUnavailableResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
@@ -26,16 +28,19 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
-import { PublicUserDto } from 'src/modules/users/dto/public-user.dto';
 
+import { JwtAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { EmailDto } from './dto/email.dto';
 import { GooglePayloadDto } from './dto/google-payload.dto';
 import { IdDto } from './dto/id.dto';
 import { LoginDto } from './dto/login.dto';
+import { PasswordDto } from './dto/password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetOtpDto } from './dto/reset-otp';
-import { UserWithTokensDto } from './dto/user-with-tokens.dto';
+import { UserWithTokensResponseDto } from './dto/user-with-tokens-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { GoogleAuthGuard } from './google-auth.guard';
 
@@ -58,7 +63,7 @@ export class AuthController {
   @ApiCreatedResponse({
     status: 201,
     description: 'User created successfully',
-    type: PublicUserDto,
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -101,8 +106,10 @@ export class AuthController {
   })
   @ApiBody({ type: CreateUserDto })
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() dto: CreateUserDto): Promise<PublicUserDto> {
-    const user = await this.authService.register(dto);
+  async register(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.authService.register(createUserDto);
 
     return user;
   }
@@ -117,7 +124,7 @@ export class AuthController {
   @ApiOkResponse({
     status: 200,
     description: 'OTP verified successfully, return access and refresh tokens',
-    type: UserWithTokensDto,
+    type: UserWithTokensResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -164,10 +171,12 @@ export class AuthController {
   })
   @ApiBody({ type: VerifyOtpDto })
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<UserWithTokensDto> {
-    const tokens = await this.authService.verifyOtp(dto);
+  async verifyOtp(
+    @Body() verifyOtpDto: VerifyOtpDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const userWithTokens = await this.authService.verifyOtp(verifyOtpDto);
 
-    return tokens;
+    return userWithTokens;
   }
 
   @Post('resend-otp')
@@ -221,8 +230,8 @@ export class AuthController {
   })
   @ApiBody({ type: IdDto })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async resendOtp(@Body() dto: IdDto): Promise<void> {
-    await this.authService.resendOtp(dto.id);
+  async resendOtp(@Body() idDto: IdDto): Promise<void> {
+    await this.authService.resendOtp(idDto.id);
   }
 
   @Post('login')
@@ -238,8 +247,8 @@ export class AuthController {
       'Login successful, return user with or without access and refresh tokens',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(PublicUserDto) },
-        { $ref: getSchemaPath(UserWithTokensDto) },
+        { $ref: getSchemaPath(UserResponseDto) },
+        { $ref: getSchemaPath(UserWithTokensResponseDto) },
       ],
     },
   })
@@ -259,15 +268,15 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body() dto: LoginDto,
-  ): Promise<PublicUserDto | UserWithTokensDto> {
-    const user = await this.authService.login(dto);
+    @Body() loginDto: LoginDto,
+  ): Promise<UserResponseDto | UserWithTokensResponseDto> {
+    const user = await this.authService.login(loginDto);
 
     if (!user.isEmailVerified) {
       return user;
     }
 
-    return this.authService.generateUserWithTokens(user);
+    return this.authService.generateUserWithTokensResponseDto(user);
   }
 
   @Post('forgot-password')
@@ -321,8 +330,8 @@ export class AuthController {
   })
   @ApiBody({ type: EmailDto })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async forgotPassword(@Body() dto: EmailDto): Promise<void> {
-    await this.authService.sendResetPasswordEmail(dto);
+  async forgotPassword(@Body() emailDto: EmailDto): Promise<void> {
+    await this.authService.sendResetPasswordEmail(emailDto.email);
   }
 
   @Post('reset-password')
@@ -335,7 +344,7 @@ export class AuthController {
     status: 200,
     description:
       'Password reset successfully, return user with access and refresh tokens',
-    type: UserWithTokensDto,
+    type: UserWithTokensResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid or otp is invalid',
@@ -378,10 +387,111 @@ export class AuthController {
   })
   @ApiBody({ type: ResetOtpDto })
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() dto: ResetOtpDto): Promise<UserWithTokensDto> {
-    const userWithTokens = await this.authService.resetPassword(dto);
+  async resetPassword(
+    @Body() resetOtpDto: ResetOtpDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const userWithTokens = await this.authService.resetPassword(resetOtpDto);
 
     return userWithTokens;
+  }
+
+  @Post('new-password')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Change password upon successful otp verification',
+    tags: ['Auth Endpoints'],
+    description: 'This endpoint changes password if otp is valid.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Password changed successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid or short password',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.PASSWORD_LENGTH, Errors.PASSWORD_IS_STRING],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.INVALID_TOKEN,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to change password',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_CHANGE_PASSWORD,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: PasswordDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async changePassword(
+    @Request() request: Request & { user: UserResponseDto },
+    @Body() passwordDto: PasswordDto,
+  ): Promise<void> {
+    await this.authService.changePassword(
+      request.user.id,
+      passwordDto.password,
+    );
+  }
+
+  @Post('refresh-token')
+  @ApiOperation({
+    summary: 'Refresh token',
+    tags: ['Auth Endpoints'],
+    description:
+      'Get refresh token and return user with access and refresh tokens',
+  })
+  @ApiOkResponse({
+    description: 'Return user with access and refresh tokens',
+    type: UserWithTokensResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid refresh token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string[]',
+          example: [Errors.REFRESH_TOKEN_SHOULD_BE_JWT],
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const user = await this.authService.refreshToken(
+      refreshTokenDto.refreshToken,
+    );
+
+    return user;
   }
 
   @Post('google')
@@ -397,8 +507,8 @@ export class AuthController {
     description: 'User created successfully via Google',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(PublicUserDto) },
-        { $ref: getSchemaPath(UserWithTokensDto) },
+        { $ref: getSchemaPath(UserResponseDto) },
+        { $ref: getSchemaPath(UserWithTokensResponseDto) },
       ],
     },
   })
@@ -407,8 +517,8 @@ export class AuthController {
     description: 'User signed in successfully via Google',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(PublicUserDto) },
-        { $ref: getSchemaPath(UserWithTokensDto) },
+        { $ref: getSchemaPath(UserResponseDto) },
+        { $ref: getSchemaPath(UserWithTokensResponseDto) },
       ],
     },
   })
@@ -450,7 +560,7 @@ export class AuthController {
   })
   async authenticateViaGoogle(
     @Request() request: Request & { googlePayload: GooglePayloadDto },
-  ): Promise<UserWithTokensDto | PublicUserDto> {
+  ): Promise<UserWithTokensResponseDto | UserResponseDto> {
     const userViaGoogle = await this.authService.authenticateViaGoogle(
       request.googlePayload,
     );
@@ -459,6 +569,6 @@ export class AuthController {
       return userViaGoogle;
     }
 
-    return this.authService.generateUserWithTokens(userViaGoogle);
+    return this.authService.generateUserWithTokensResponseDto(userViaGoogle);
   }
 }
