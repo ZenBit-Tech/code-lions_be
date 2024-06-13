@@ -39,4 +39,7 @@ export const Errors = {
   FAILED_TO_CREATE_USER_VIA_GOOGLE: 'Failed to create user via google',
   INVALID_GOOGLE_TOKEN: 'Invalid Google token payload',
   INVALID_GOOGLE_ID: 'Invalid google id',
+  USER_UNAUTHORIZED: 'User is unauthorized',
+  FAILED_TO_UPDATE_ROLE: 'Failed to update user role',
+  INCORRECT_ROLE: 'There is no such role',
 };

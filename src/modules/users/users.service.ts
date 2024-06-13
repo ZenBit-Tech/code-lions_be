@@ -12,6 +12,7 @@ import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
 import { UserResponseDto } from '../auth/dto/user-response.dto';
+import { Role } from '../roles/role.enum';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -194,6 +195,29 @@ export class UsersService {
       await this.userRepository.update({ id }, { password: hashedPassword });
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_PASSWORD);
+    }
+  }
+
+  async updatePhotoUrl(id: string, photoUrl: string): Promise<void> {
+    await this.userRepository.update(id, { photoUrl });
+  }
+
+  async updateUserRole(id: string, role: Role): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(id, { role });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ROLE);
     }
   }
 }
