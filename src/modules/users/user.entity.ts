@@ -119,14 +119,14 @@ export class User {
   country: string;
 
   @ApiProperty({
-    example: 'California',
+    example: 'Ontario',
     description: 'State of the user',
   })
   @Column({ nullable: true })
   state: string;
 
   @ApiProperty({
-    example: 'Los Angeles',
+    example: 'Toronto',
     description: 'City of the user',
   })
   @Column({ nullable: true })
