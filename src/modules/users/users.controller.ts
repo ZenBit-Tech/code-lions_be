@@ -44,6 +44,7 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
@@ -266,5 +267,60 @@ export class UsersController {
     @Body() updateUserRoleDto: UpdateUserRoleDto,
   ): Promise<void> {
     await this.usersService.updateUserRole(id, updateUserRoleDto.role);
+  }
+
+  @Post(':id/phone')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update user phone number',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the phone number of a user.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Phone number updated successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_PHONE },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update phone number',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_CHANGE_PHOTO },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserPhoneDto })
+  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  async updateUserPhoneNumber(
+    @Param('id') id: string,
+    @Body() updateUserPhoneDto: UpdateUserPhoneDto,
+  ): Promise<void> {
+    await this.usersService.updateUserPhoneNumber(
+      id,
+      updateUserPhoneDto.phoneNumber,
+    );
   }
 }

@@ -42,4 +42,10 @@ export const Errors = {
   USER_UNAUTHORIZED: 'User is unauthorized',
   FAILED_TO_UPDATE_ROLE: 'Failed to update user role',
   INCORRECT_ROLE: 'There is no such role',
+  FAILED_TO_UPDATE_PHONE_NUMBER: 'Failed to update user phone number',
+  INCORRECT_PHONE: 'Phone number must be in E.164 format',
+  FAILED_TO_UPDATE_PHOTO_URL: 'Incorrect photo',
+  FAILED_TO_CHANGE_PHOTO: 'Failed to change photo',
+  PHONE_IS_STRING: 'Phone number must be a string',
+  PHONE_CANNOT_BE_EMPTY: "User's phone number cannot be empty",
 };
