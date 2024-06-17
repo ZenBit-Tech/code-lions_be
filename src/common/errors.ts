@@ -39,4 +39,13 @@ export const Errors = {
   FAILED_TO_CREATE_USER_VIA_GOOGLE: 'Failed to create user via google',
   INVALID_GOOGLE_TOKEN: 'Invalid Google token payload',
   INVALID_GOOGLE_ID: 'Invalid google id',
+  USER_UNAUTHORIZED: 'User is unauthorized',
+  FAILED_TO_UPDATE_ROLE: 'Failed to update user role',
+  INCORRECT_ROLE: 'There is no such role',
+  FAILED_TO_UPDATE_PHONE_NUMBER: 'Failed to update user phone number',
+  INCORRECT_PHONE: 'Phone number must be in E.164 format',
+  FAILED_TO_UPDATE_PHOTO_URL: 'Incorrect photo',
+  FAILED_TO_CHANGE_PHOTO: 'Failed to change photo',
+  PHONE_IS_STRING: 'Phone number must be a string',
+  PHONE_CANNOT_BE_EMPTY: "User's phone number cannot be empty",
 };

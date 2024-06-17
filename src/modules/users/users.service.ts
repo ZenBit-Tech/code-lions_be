@@ -12,6 +12,7 @@ import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Repository } from 'typeorm';
 
 import { UserResponseDto } from '../auth/dto/user-response.dto';
+import { Role } from '../roles/role.enum';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -37,9 +38,43 @@ export class UsersService {
   }
 
   buildUserResponseDto(user: User): UserResponseDto {
-    const { id, name, email, role, isEmailVerified } = user;
+    const {
+      id,
+      name,
+      email,
+      role,
+      isEmailVerified,
+      photoUrl,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      country,
+      state,
+      city,
+      clothesSize,
+      jeansSize,
+      shoesSize,
+      isAccountActive,
+    } = user;
 
-    const publicUser = { id, name, email, role, isEmailVerified };
+    const publicUser: UserResponseDto = {
+      id,
+      name,
+      email,
+      role,
+      isEmailVerified,
+      photoUrl,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      country,
+      state,
+      city,
+      clothesSize,
+      jeansSize,
+      shoesSize,
+      isAccountActive,
+    };
 
     return publicUser;
   }
@@ -194,6 +229,63 @@ export class UsersService {
       await this.userRepository.update({ id }, { password: hashedPassword });
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_PASSWORD);
+    }
+  }
+
+  async updatePhotoUrl(id: string, photoUrl: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(id, { photoUrl });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PHOTO_URL);
+    }
+  }
+
+  async updateUserRole(id: string, role: Role): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(id, { role });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ROLE);
+    }
+  }
+
+  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(id, { phoneNumber });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPDATE_PHONE_NUMBER,
+      );
     }
   }
 }
