@@ -157,7 +157,7 @@ export class UsersController {
         statusCode: { type: 'integer', example: 400 },
         message: {
           type: 'string',
-          example: 'Bad Request',
+          example: Errors.FAILED_TO_UPDATE_PHOTO_URL,
         },
         error: { type: 'string', example: 'Bad Request' },
       },
