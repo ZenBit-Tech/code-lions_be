@@ -44,6 +44,8 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserAddressLine1Dto } from './dto/update-user-address-line1.dto';
+import { UpdateUserAddressLine2Dto } from './dto/update-user-address-line2.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { User } from './user.entity';
@@ -321,6 +323,122 @@ export class UsersController {
     await this.usersService.updateUserPhoneNumber(
       id,
       updateUserPhoneDto.phoneNumber,
+    );
+  }
+
+  @Post(':id/address-line1')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update user address line 1',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the address line 1 of a user.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Address line 1 updated successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_ADDRESS_LINE1 },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update address line 1',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_ADDRESS_LINE1,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserAddressLine1Dto })
+  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  async updateUserAddressLine1(
+    @Param('id') id: string,
+    @Body() updateUserAddressLine1Dto: UpdateUserAddressLine1Dto,
+  ): Promise<void> {
+    await this.usersService.updateUserAddressLine1(
+      id,
+      updateUserAddressLine1Dto.addressLine1,
+    );
+  }
+
+  @Post(':id/address-line2')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update user address line 2',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the address line 2 of a user.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Address line 2 updated successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_ADDRESS_LINE2 },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update address line 2',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_ADDRESS_LINE2,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserAddressLine2Dto })
+  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  async updateUserAddressLine2(
+    @Param('id') id: string,
+    @Body() updateUserAddressLine2Dto: UpdateUserAddressLine2Dto,
+  ): Promise<void> {
+    await this.usersService.updateUserAddressLine2(
+      id,
+      updateUserAddressLine2Dto.addressLine2,
     );
   }
 }

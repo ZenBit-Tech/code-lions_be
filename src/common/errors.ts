@@ -48,4 +48,13 @@ export const Errors = {
   FAILED_TO_CHANGE_PHOTO: 'Failed to change photo',
   PHONE_IS_STRING: 'Phone number must be a string',
   PHONE_CANNOT_BE_EMPTY: "User's phone number cannot be empty",
+  ADDRESS_IS_STRING: 'Address must be a string',
+  ADDRESS_CANNOT_BE_EMPTY: 'Address cannot be empty',
+  FAILED_TO_UPDATE_ADDRESS_LINE: 'Failed to update user address line',
+  INCORRECT_ADDRESS_LINE1: 'Address line 1 contains invalid characters',
+  INCORRECT_ADDRESS_LINE2: 'Address line 2 contains invalid characters',
+  FAILED_TO_UPDATE_ADDRESS_LINE1: 'Failed to change address line 1',
+  FAILED_TO_UPDATE_ADDRESS_LINE2: 'Failed to change address line 2',
+  TOO_LONG_ADDRESS_LINE1: 'Address line 1 is too long',
+  TOO_LONG_ADDRESS_LINE2: 'Address line 2 is too long',
 };

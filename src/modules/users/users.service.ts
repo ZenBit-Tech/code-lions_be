@@ -288,4 +288,52 @@ export class UsersService {
       );
     }
   }
+
+  async updateUserAddressLine1(
+    id: string,
+    addressLine1: string,
+  ): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(id, { addressLine1 });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPDATE_ADDRESS_LINE,
+      );
+    }
+  }
+
+  async updateUserAddressLine2(
+    id: string,
+    addressLine2: string,
+  ): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(id, { addressLine2 });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPDATE_ADDRESS_LINE,
+      );
+    }
+  }
 }
