@@ -57,4 +57,9 @@ export const Errors = {
   FAILED_TO_UPDATE_ADDRESS_LINE2: 'Failed to change address line 2',
   TOO_LONG_ADDRESS_LINE1: 'Address line 1 is too long',
   TOO_LONG_ADDRESS_LINE2: 'Address line 2 is too long',
+  NO_STATES_FOUND: 'States not found',
+  NO_CITIES_FOUND: 'Cities not found',
+  FAILED_TO_FETCH_CITIES: 'Failed to fetch cities',
+  FAILED_TO_FETCH_ADMIN_CODE: 'Failed to fetch admin code for state',
+  FAILED_TO_FETCH_STATES_CANADA: 'Failed to fetch states in Canada',
 };

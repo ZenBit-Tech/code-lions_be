@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthModule } from './modules/auth/auth.module';
+import { GeoNamesModule } from './modules/geoNames/geoNames.module';
 import { User } from './modules/users/user.entity';
 import { UsersModule } from './modules/users/users.module';
 
@@ -25,6 +26,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     UsersModule,
     AuthModule,
+    GeoNamesModule,
   ],
 })
 export class AppModule {}
