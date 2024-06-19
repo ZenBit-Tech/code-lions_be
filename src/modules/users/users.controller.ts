@@ -12,6 +12,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -45,6 +46,8 @@ import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
+import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
@@ -321,6 +324,27 @@ export class UsersController {
     await this.usersService.updateUserPhoneNumber(
       id,
       updateUserPhoneDto.phoneNumber,
+    );
+  }
+
+  @Put(':id/update-profile')
+  @Roles(Role.BUYER, Role.VENDOR)
+  async updateUserProfile(
+    @Param('id') id: string,
+    @Body() updateProfileDto: UpdateUserProfileDto,
+  ): Promise<User> {
+    return await this.usersService.updateUserProfile(id, updateProfileDto);
+  }
+
+  @Put(':id/update-profile-admin')
+  @Roles(Role.ADMIN)
+  async updateUserProfileByAdmin(
+    @Param('id') id: string,
+    @Body() updateProfileByAdminDto: UpdateUserProfileByAdminDto,
+  ): Promise<User> {
+    return await this.usersService.updateUserProfile(
+      id,
+      updateProfileByAdminDto,
     );
   }
 }

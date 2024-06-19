@@ -16,6 +16,8 @@ import { Role } from '../roles/role.enum';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { User } from './user.entity';
 
 @Injectable()
@@ -286,6 +288,100 @@ export class UsersService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_UPDATE_PHONE_NUMBER,
       );
+    }
+  }
+
+  async updateUserProfile(
+    id: string,
+    updateProfileDto: UpdateUserProfileDto,
+  ): Promise<User> {
+    try {
+      const user = await this.getUserById(id);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const {
+        name,
+        email,
+        phoneNumber,
+        clothesSize,
+        jeansSize,
+        shoesSize,
+        addressLine1,
+        addressLine2,
+        country,
+        state,
+        city,
+        cardNumber,
+        expireDate,
+        cvvCode,
+      } = updateProfileDto;
+
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (phoneNumber) user.phoneNumber = phoneNumber;
+      if (clothesSize) user.clothesSize = clothesSize;
+      if (jeansSize) user.jeansSize = jeansSize;
+      if (shoesSize) user.shoesSize = shoesSize;
+      if (addressLine1) user.addressLine1 = addressLine1;
+      if (addressLine2) user.addressLine2 = addressLine2;
+      if (country) user.country = country;
+      if (state) user.state = state;
+      if (city) user.city = city;
+      if (cardNumber) user.cardNumber = cardNumber;
+      if (expireDate) user.expireDate = expireDate;
+      if (cvvCode) user.cvvCode = cvvCode;
+
+      return await this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  async updateUserProfileByAdmin(
+    id: string,
+    updateProfileByAdminDto: UpdateUserProfileByAdminDto,
+  ): Promise<User> {
+    try {
+      const user = await this.getUserById(id);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const {
+        name,
+        phoneNumber,
+        addressLine1,
+        addressLine2,
+        country,
+        state,
+        city,
+        isAccountActive,
+      } = updateProfileByAdminDto;
+
+      if (name) user.name = name;
+      if (phoneNumber) user.phoneNumber = phoneNumber;
+      if (addressLine1) user.addressLine1 = addressLine1;
+      if (addressLine2) user.addressLine2 = addressLine2;
+      if (country) user.country = country;
+      if (state) user.state = state;
+      if (city) user.city = city;
+      if (user.isAccountActive !== isAccountActive) {
+        user.isAccountActive = isAccountActive;
+      }
+
+      return await this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
     }
   }
 }

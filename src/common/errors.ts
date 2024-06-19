@@ -48,4 +48,5 @@ export const Errors = {
   FAILED_TO_CHANGE_PHOTO: 'Failed to change photo',
   PHONE_IS_STRING: 'Phone number must be a string',
   PHONE_CANNOT_BE_EMPTY: "User's phone number cannot be empty",
+  FAILED_TO_UPDATE_PROFILE: 'Failed to update user profile',
 };
