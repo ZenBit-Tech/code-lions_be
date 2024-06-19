@@ -3,26 +3,34 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
-import { Repository } from 'typeorm';
+import { Role } from 'src/modules/roles/role.enum';
+import { Repository, Like, FindOptionsWhere } from 'typeorm';
 
 import { UserResponseDto } from '../auth/dto/user-response.dto';
-import { Role } from '../roles/role.enum';
+import { MailerService } from '../mailer/mailer.service';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { Order } from './order.enum';
 import { User } from './user.entity';
+
+const limitUsersPerPage: number = 7;
 
 @Injectable()
 export class UsersService {
+  private readonly Limit: number = limitUsersPerPage;
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private mailerService: MailerService,
   ) {}
 
   private async hashPassword(password: string): Promise<string> {
@@ -55,6 +63,9 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      createdAt,
+      lastUpdatedAt,
+      deletedAt,
     } = user;
 
     const publicUser: UserResponseDto = {
@@ -74,6 +85,9 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      createdAt,
+      lastUpdatedAt,
+      deletedAt,
     };
 
     return publicUser;
@@ -83,6 +97,21 @@ export class UsersService {
     try {
       const user = await this.userRepository.findOne({
         where: { email },
+      });
+
+      return user;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_USER_BY_EMAIL,
+      );
+    }
+  }
+
+  async getUserByEmailWithDeleted(email: string): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email },
+        withDeleted: true,
       });
 
       return user;
@@ -107,9 +136,76 @@ export class UsersService {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const users = await this.userRepository.find();
+      const users = await this.userRepository.find({ withDeleted: true });
 
       return users;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
+    }
+  }
+
+  private buildWhereCondition(
+    search?: string,
+    role?: Role,
+  ): FindOptionsWhere<User>[] {
+    let whereCondition: FindOptionsWhere<User>[] = [{}];
+
+    if (role) {
+      whereCondition = whereCondition.map((condition) => ({
+        ...condition,
+        role,
+      }));
+    }
+
+    if (search) {
+      whereCondition = [
+        ...whereCondition.map((condition) => ({
+          ...condition,
+          name: Like(`%${search}%`),
+        })),
+        ...whereCondition.map((condition) => ({
+          ...condition,
+          email: Like(`%${search}%`),
+        })),
+      ];
+    }
+
+    return whereCondition;
+  }
+
+  private async fetchUsers(
+    page: number,
+    order: Order,
+    whereCondition: FindOptionsWhere<User>[],
+  ): Promise<{ users: User[]; pagesCount: number }> {
+    try {
+      const [users, totalCount] = await this.userRepository.findAndCount({
+        where: whereCondition,
+        order: {
+          createdAt: order,
+        },
+        take: this.Limit,
+        skip: (page - 1) * this.Limit,
+      });
+
+      const pagesCount = Math.ceil(totalCount / this.Limit);
+
+      return { users, pagesCount };
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
+    }
+  }
+
+  async getUsersAdmin(
+    page: number,
+    order: Order,
+    role?: Role,
+    search?: string,
+  ): Promise<{ users: User[]; pagesCount: number }> {
+    try {
+      const whereCondition = this.buildWhereCondition(search, role);
+
+      return this.fetchUsers(page, order, whereCondition);
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
     }
@@ -176,6 +272,7 @@ export class UsersService {
   async deleteUser(id: string): Promise<void> {
     try {
       const user = await this.userRepository.findOne({
+        withDeleted: true,
         where: { id },
       });
 
@@ -188,6 +285,41 @@ export class UsersService {
       if (
         error instanceof NotFoundException ||
         error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_DELETE_USER);
+    }
+  }
+
+  async softDeleteUser(id: string): Promise<void> {
+    try {
+      const user = await this.getUserById(id);
+
+      const deleteResponse = await this.userRepository.softDelete(id);
+
+      if (!deleteResponse.affected) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'Account deleted on CodeLions',
+        templateName: 'soft-delete.hbs',
+        context: {
+          name: user.name,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(
+          Errors.FAILED_TO_SEND_EMAIL_TO_DELETED_USER,
+        );
+      }
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
       ) {
         throw error;
       }

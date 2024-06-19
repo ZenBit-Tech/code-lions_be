@@ -15,6 +15,8 @@ export const Errors = {
   FAILED_TO_SEND_FORGET_PASSWORD_EMAIL: 'Failed to send forgot password email',
   FAILED_TO_SEND_VERIFICATION_EMAIL: 'Failed to send verification email',
   FAILED_TO_SAVE_VERIFICATION_CODE: 'Failed to save verification code',
+  FAILED_TO_SEND_EMAIL_TO_DELETED_USER:
+    'Failed to send email to the user deleted by admin',
   INTERNAL_SERVER_ERROR: 'Internal server error',
   INVALID_CREDENTIALS: 'Invalid email or password',
   INVALID_EMAIL: 'Invalid email',
@@ -36,6 +38,7 @@ export const Errors = {
   USER_NOT_FOUND: 'User not found',
   USER_NOT_VERIFIED: 'User not verified email yet',
   WRONG_CODE: 'Wrong or expired OTP code',
+  ACCOUNT_DELETED_BY_ADMIN: 'Your account is deleted by admin',
   FAILED_TO_CREATE_USER_VIA_GOOGLE: 'Failed to create user via google',
   INVALID_GOOGLE_TOKEN: 'Invalid Google token payload',
   INVALID_GOOGLE_ID: 'Invalid google id',
