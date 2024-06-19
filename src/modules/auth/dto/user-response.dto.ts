@@ -95,4 +95,22 @@ export class UserResponseDto {
     description: 'Indicates if the users profile is active',
   })
   isAccountActive: boolean;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The creation date of the user',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The last update date of the user',
+  })
+  lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the user',
+  })
+  deletedAt: Date;
 }

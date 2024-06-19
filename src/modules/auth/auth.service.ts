@@ -112,10 +112,14 @@ export class AuthService {
 
   async login(loginDto: LoginDto): Promise<UserResponseDto> {
     const { email, password } = loginDto;
-    const user = await this.usersService.getUserByEmail(email);
+    const user = await this.usersService.getUserByEmailWithDeleted(email);
 
     if (!user) {
       throw new BadRequestException(Errors.INVALID_CREDENTIALS);
+    }
+
+    if (user && user.deletedAt !== null) {
+      throw new BadRequestException(Errors.ACCOUNT_DELETED_BY_ADMIN);
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
