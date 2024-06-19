@@ -270,6 +270,7 @@ export class UsersService {
       }
 
       user.role = role;
+      user.isRoleFilled = true;
       await this.userRepository.save(user);
 
       return user;
@@ -290,6 +291,7 @@ export class UsersService {
       }
 
       user.phoneNumber = phoneNumber;
+      user.isPhoneNumberFilled = true;
       await this.userRepository.save(user);
 
       return user;
@@ -348,6 +350,35 @@ export class UsersService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_UPDATE_ADDRESS_LINE,
       );
+    }
+  }
+
+  async updateUserAddress(
+    userId: string,
+    addressLine1: string,
+    addressLine2: string,
+    state: string,
+    city: string,
+  ): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+      user.addressLine1 = addressLine1;
+      user.addressLine2 = addressLine2;
+      user.state = state;
+      user.city = city;
+      user.isShippingAddressFilled = true;
+      await this.userRepository.save(user);
+
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ADDRESS);
     }
   }
 }

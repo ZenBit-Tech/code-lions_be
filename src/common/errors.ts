@@ -62,4 +62,10 @@ export const Errors = {
   FAILED_TO_FETCH_CITIES: 'Failed to fetch cities',
   FAILED_TO_FETCH_ADMIN_CODE: 'Failed to fetch admin code for state',
   FAILED_TO_FETCH_STATES_CANADA: 'Failed to fetch states in Canada',
+  INCORRECT_ADDRESS: "The user's address is incorrect",
+  FAILED_TO_UPDATE_ADDRESS: 'Failed to set user`s address',
+  USERS_STATE_CANNOT_BE_EMPTY: 'State cannot be empty',
+  USERS_STATE_IS_STRING: 'State must be a string',
+  USERS_CITY_CANNOT_BE_EMPTY: 'City cannot be empty',
+  USERS_CITY_IS_STRING: 'City must be a string',
 };

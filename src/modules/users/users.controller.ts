@@ -46,6 +46,7 @@ import { UserResponseDto } from '../auth/dto/user-response.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserAddressLine1Dto } from './dto/update-user-address-line1.dto';
 import { UpdateUserAddressLine2Dto } from './dto/update-user-address-line2.dto';
+import { UpdateUserAddressDto } from './dto/update-user-address.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { User } from './user.entity';
@@ -449,5 +450,68 @@ export class UsersController {
       id,
       updateUserAddressLine2Dto.addressLine2,
     );
+  }
+
+  @Post(':id/address')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update user address',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the address information of a user.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Address updated successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_ADDRESS },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update address',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_ADDRESS,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserAddressDto })
+  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  async updateUserAddress(
+    @Param('id') id: string,
+    @Body() updateUserAddressDto: UpdateUserAddressDto,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserAddress(
+      id,
+      updateUserAddressDto.addressLine1,
+      updateUserAddressDto.addressLine2,
+      updateUserAddressDto.state,
+      updateUserAddressDto.city,
+    );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
   }
 }
