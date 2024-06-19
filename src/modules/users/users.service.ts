@@ -55,6 +55,12 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      isRoleFilled,
+      isPhoneNumberFilled,
+      isShippingAddressFilled,
+      isCreditCardFilled,
+      isSizeFilled,
+      isOnboardingFilled,
     } = user;
 
     const publicUser: UserResponseDto = {
@@ -74,6 +80,12 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      isRoleFilled,
+      isPhoneNumberFilled,
+      isShippingAddressFilled,
+      isCreditCardFilled,
+      isSizeFilled,
+      isOnboardingFilled,
     };
 
     return publicUser;
@@ -249,17 +261,18 @@ export class UsersService {
     }
   }
 
-  async updateUserRole(id: string, role: Role): Promise<void> {
+  async updateUserRole(id: string, role: Role): Promise<User> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id },
-      });
+      const user = await this.userRepository.findOne({ where: { id } });
 
       if (!user) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      await this.userRepository.update(id, { role });
+      user.role = role;
+      await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -268,17 +281,18 @@ export class UsersService {
     }
   }
 
-  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<void> {
+  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<User> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id },
-      });
+      const user = await this.userRepository.findOne({ where: { id } });
 
       if (!user) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      await this.userRepository.update(id, { phoneNumber });
+      user.phoneNumber = phoneNumber;
+      await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

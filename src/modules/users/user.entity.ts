@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { Role } from 'src/modules/roles/role.enum';
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, AfterLoad } from 'typeorm';
 
 @Entity()
 export class User {
@@ -173,4 +173,56 @@ export class User {
   })
   @Column({ nullable: true })
   cvvCode: string;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user chose role',
+  })
+  isRoleFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if the user has a phone number',
+  })
+  isPhoneNumberFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered address information',
+  })
+  isShippingAddressFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered credit card information',
+  })
+  isCreditCardFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered size information',
+  })
+  isSizeFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user completed filling profile',
+  })
+  isOnboardingFilled: boolean;
+
+  @AfterLoad()
+  private afterLoad(): void {
+    this.isRoleFilled = !!this.isRoleFilled;
+    this.isPhoneNumberFilled = !!this.phoneNumber;
+    this.isShippingAddressFilled =
+      !!this.addressLine1 ||
+      !!this.addressLine2 ||
+      !!this.city ||
+      !!this.state ||
+      !!this.country;
+    this.isSizeFilled =
+      !!this.clothesSize || !!this.jeansSize || !!this.shoesSize;
+    this.isCreditCardFilled =
+      !!this.cardNumber || !!this.expireDate || !!this.cvvCode;
+  }
 }

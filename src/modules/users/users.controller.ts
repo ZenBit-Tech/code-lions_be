@@ -228,9 +228,10 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the role of a user.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Role updated successfully',
+  @ApiResponse({
+    status: 201,
+    description: responseDescrptions.success,
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
@@ -267,8 +268,13 @@ export class UsersController {
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
-  ): Promise<void> {
-    await this.usersService.updateUserRole(id, updateUserRoleDto.role);
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserRole(
+      id,
+      updateUserRoleDto.role,
+    );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
   }
 
   @Post(':id/phone')
@@ -280,9 +286,10 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the phone number of a user.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Phone number updated successfully',
+  @ApiResponse({
+    status: 201,
+    description: responseDescrptions.success,
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
@@ -319,11 +326,13 @@ export class UsersController {
   async updateUserPhoneNumber(
     @Param('id') id: string,
     @Body() updateUserPhoneDto: UpdateUserPhoneDto,
-  ): Promise<void> {
-    await this.usersService.updateUserPhoneNumber(
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserPhoneNumber(
       id,
       updateUserPhoneDto.phoneNumber,
     );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
   }
 
   @Post(':id/address-line1')

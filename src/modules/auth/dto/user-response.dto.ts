@@ -95,4 +95,40 @@ export class UserResponseDto {
     description: 'Indicates if the users profile is active',
   })
   isAccountActive: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user chose role',
+  })
+  isRoleFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered phone number',
+  })
+  isPhoneNumberFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered address information',
+  })
+  isShippingAddressFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered credit card information',
+  })
+  isCreditCardFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user entered size information',
+  })
+  isSizeFilled: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if user completed filling profile',
+  })
+  isOnboardingFilled: boolean;
 }
