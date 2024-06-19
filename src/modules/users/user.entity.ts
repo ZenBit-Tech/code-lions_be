@@ -1,7 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { Role } from 'src/modules/roles/role.enum';
-import { Entity, Column, PrimaryGeneratedColumn, AfterLoad } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  BeforeInsert,
+  BeforeUpdate,
+  DeleteDateColumn,
+  AfterLoad,
+} from 'typeorm';
 
 @Entity()
 export class User {
@@ -175,6 +183,27 @@ export class User {
   cvvCode: string;
 
   @ApiProperty({
+    example: new Date(),
+    description: 'The creation date of the user',
+  })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The last update date of the user',
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the user',
+  })
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  deletedAt: Date;
+
+  @ApiProperty({
     example: false,
     description: 'Indicates if user chose role',
   })
@@ -212,17 +241,23 @@ export class User {
 
   @AfterLoad()
   private afterLoad(): void {
-    this.isRoleFilled = !!this.isRoleFilled;
+    this.isRoleFilled = !!this.role;
     this.isPhoneNumberFilled = !!this.phoneNumber;
     this.isShippingAddressFilled =
-      !!this.addressLine1 ||
-      !!this.addressLine2 ||
-      !!this.city ||
-      !!this.state ||
-      !!this.country;
+      !!this.addressLine1 || !!this.city || !!this.state || !!this.country;
     this.isSizeFilled =
       !!this.clothesSize || !!this.jeansSize || !!this.shoesSize;
     this.isCreditCardFilled =
       !!this.cardNumber || !!this.expireDate || !!this.cvvCode;
+  
+
+  @BeforeInsert()
+  updateDatesBeforeInsert(): void {
+    this.createdAt = new Date();
+  }
+
+  @BeforeUpdate()
+  updateDatesBeforeUpdate(): void {
+    this.lastUpdatedAt = new Date();
   }
 }

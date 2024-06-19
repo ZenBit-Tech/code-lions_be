@@ -97,6 +97,24 @@ export class UserResponseDto {
   isAccountActive: boolean;
 
   @ApiProperty({
+    example: new Date(),
+    description: 'The creation date of the user',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The last update date of the user',
+  })
+  lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the user',
+  })
+  deletedAt: Date;
+
+  @ApiProperty({
     example: false,
     description: 'Indicates if user chose role',
   })
