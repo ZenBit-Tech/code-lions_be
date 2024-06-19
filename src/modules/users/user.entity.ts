@@ -1,7 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { Role } from 'src/modules/roles/role.enum';
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  BeforeInsert,
+  BeforeUpdate,
+  DeleteDateColumn,
+} from 'typeorm';
 
 @Entity()
 export class User {
@@ -72,14 +79,14 @@ export class User {
 
   @ApiProperty({
     example: true,
-    description: 'Indicates if the users profile is active',
+    description: "Indicates if the user's profile is active",
   })
   @Column({ default: true })
   isAccountActive: boolean;
 
   @ApiProperty({
     example: 'file-1718301871158-882823500.jpg',
-    description: 'The users profile photo',
+    description: "The user's profile photo",
   })
   @Column({
     nullable: false,
@@ -173,4 +180,35 @@ export class User {
   })
   @Column({ nullable: true })
   cvvCode: string;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The creation date of the user',
+  })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The last update date of the user',
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the user',
+  })
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  deletedAt: Date;
+
+  @BeforeInsert()
+  updateDatesBeforeInsert(): void {
+    this.createdAt = new Date();
+  }
+
+  @BeforeUpdate()
+  updateDatesBeforeUpdate(): void {
+    this.lastUpdatedAt = new Date();
+  }
 }

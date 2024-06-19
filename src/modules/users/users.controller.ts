@@ -7,6 +7,7 @@ import {
   Post,
   Delete,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -30,6 +31,9 @@ import {
   ApiNoContentResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
+  getSchemaPath,
+  ApiQuery,
+  ApiServiceUnavailableResponse,
 } from '@nestjs/swagger';
 
 import { diskStorage } from 'multer';
@@ -38,17 +42,17 @@ import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import { RANDOM_NUMBER_MAX } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
-
-import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { Order } from './order.enum';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -91,6 +95,57 @@ export class UsersController {
     return await this.usersService.getAllUsers();
   }
 
+  @Get('admin')
+  @ApiOperation({
+    summary:
+      'Get users from admin panel with pagination, filtering, and sorting',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint returns a paginated list of users with optional filtering by role and search term, and sorting by creation date.',
+  })
+  @ApiOkResponse({
+    description: responseDescrptions.success,
+    schema: {
+      properties: {
+        users: { type: 'array', items: { $ref: getSchemaPath(User) } },
+        pagesCount: { type: 'number', example: 1 },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { type: 'number', default: 1 },
+  })
+  @ApiQuery({
+    name: 'order',
+    required: false,
+    description: 'Sort order for the results',
+    example: Order.ASC,
+  })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    description: 'Role to filter users by',
+    example: Role.BUYER,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search term to filter users by name or email',
+    schema: { type: 'string' },
+  })
+  @Roles(Role.ADMIN)
+  async getUsersAdmin(
+    @Query('page') page: number = 1,
+    @Query('order') order: Order = Order.DESC,
+    @Query('role') role?: Role,
+    @Query('search') search?: string,
+  ): Promise<{ users: User[]; pagesCount: number }> {
+    return this.usersService.getUsersAdmin(page, order, role, search);
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Create a new user',
@@ -108,7 +163,6 @@ export class UsersController {
     type: ErrorResponse,
   })
   @ApiBody({ type: CreateUserDto })
-  @Roles(Role.ADMIN)
   async register(
     @Body() createUserDto: CreateUserDto,
   ): Promise<UserResponseDto> {
@@ -137,6 +191,52 @@ export class UsersController {
   @Roles(Role.ADMIN)
   async deleteUser(@Param('id') id: string): Promise<void> {
     await this.usersService.deleteUser(id);
+  }
+
+  @Delete(':id/soft-delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Soft delete a user',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint softly deletes a user.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL_TO_DELETED_USER,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to soft delete',
+  })
+  @Roles(Role.ADMIN)
+  async softDeleteUser(@Param('id') id: string): Promise<void> {
+    await this.usersService.softDeleteUser(id);
   }
 
   @Post(':id/photo')
