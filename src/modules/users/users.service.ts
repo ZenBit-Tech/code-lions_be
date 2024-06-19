@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
-import { VERIFICATION_CODE_EXPIRATION } from 'src/config';
+import { LIMIT_USERS_PER_PAGE, VERIFICATION_CODE_EXPIRATION } from 'src/config';
 import { Role } from 'src/modules/roles/role.enum';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 
@@ -21,12 +21,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { Order } from './order.enum';
 import { User } from './user.entity';
 
-const limitUsersPerPage: number = 7;
-
 @Injectable()
 export class UsersService {
-  private readonly Limit: number = limitUsersPerPage;
-
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -184,11 +180,11 @@ export class UsersService {
         order: {
           createdAt: order,
         },
-        take: this.Limit,
-        skip: (page - 1) * this.Limit,
+        take: LIMIT_USERS_PER_PAGE,
+        skip: (page - 1) * LIMIT_USERS_PER_PAGE,
       });
 
-      const pagesCount = Math.ceil(totalCount / this.Limit);
+      const pagesCount = Math.ceil(totalCount / LIMIT_USERS_PER_PAGE);
 
       return { users, pagesCount };
     } catch (error) {
