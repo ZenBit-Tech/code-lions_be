@@ -132,6 +132,24 @@ export class UsersService {
     }
   }
 
+  async getPublicUserById(id: string): Promise<UserResponseDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_DOES_NOT_EXIST);
+      }
+
+      const publicUserById = this.buildUserResponseDto(user);
+
+      return publicUserById;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
+    }
+  }
+
   async getAllUsers(): Promise<User[]> {
     try {
       const users = await this.userRepository.find({ withDeleted: true });
@@ -175,7 +193,7 @@ export class UsersService {
     page: number,
     order: Order,
     whereCondition: FindOptionsWhere<User>[],
-  ): Promise<{ users: User[]; pagesCount: number }> {
+  ): Promise<{ users: UserResponseDto[]; pagesCount: number }> {
     try {
       const [users, totalCount] = await this.userRepository.findAndCount({
         where: whereCondition,
@@ -188,7 +206,9 @@ export class UsersService {
 
       const pagesCount = Math.ceil(totalCount / LIMIT_USERS_PER_PAGE);
 
-      return { users, pagesCount };
+      const publicUsers = users.map((user) => this.buildUserResponseDto(user));
+
+      return { users: publicUsers, pagesCount };
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
     }
@@ -199,7 +219,7 @@ export class UsersService {
     order: Order,
     role?: Role,
     search?: string,
-  ): Promise<{ users: User[]; pagesCount: number }> {
+  ): Promise<{ users: UserResponseDto[]; pagesCount: number }> {
     try {
       const whereCondition = this.buildWhereCondition(search, role);
 
@@ -419,10 +439,74 @@ export class UsersService {
     }
   }
 
+  async updateUserFields(
+    user: User,
+    updateDto: Partial<UpdateUserProfileDto>,
+  ): Promise<User> {
+    try {
+      const updateDtoKeys = Object.keys(
+        updateDto,
+      ) as (keyof typeof updateDto)[];
+
+      updateDtoKeys.forEach((key) => {
+        const value = updateDto[key];
+
+        if (value !== undefined) {
+          (user[key as keyof User] as typeof value) = value;
+        }
+      });
+
+      return user;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  async updateUserFieldsAdmin(
+    user: User,
+    updateDto: Partial<UpdateUserProfileByAdminDto>,
+  ): Promise<User> {
+    try {
+      const updateDtoKeys = Object.keys(
+        updateDto,
+      ) as (keyof typeof updateDto)[];
+
+      updateDtoKeys.forEach((key) => {
+        const value = updateDto[key];
+
+        if (value !== undefined) {
+          (user[key as keyof User] as typeof value) = value;
+        }
+      });
+
+      if (updateDto.isAccountActive === false) {
+        console.log('account suspended');
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'Account suspended on CodeLions',
+          templateName: 'suspend-account.hbs',
+          context: {
+            name: user.name,
+          },
+        });
+
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(
+            Errors.FAILED_TO_SEND_EMAIL_TO_SUSPENDED_USER,
+          );
+        }
+      }
+
+      return user;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
   async updateUserProfile(
     id: string,
     updateProfileDto: UpdateUserProfileDto,
-  ): Promise<User> {
+  ): Promise<void> {
     try {
       const user = await this.getUserById(id);
 
@@ -430,39 +514,9 @@ export class UsersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      const {
-        name,
-        email,
-        phoneNumber,
-        clothesSize,
-        jeansSize,
-        shoesSize,
-        addressLine1,
-        addressLine2,
-        country,
-        state,
-        city,
-        cardNumber,
-        expireDate,
-        cvvCode,
-      } = updateProfileDto;
+      const updatedUser = await this.updateUserFields(user, updateProfileDto);
 
-      if (name) user.name = name;
-      if (email) user.email = email;
-      if (phoneNumber) user.phoneNumber = phoneNumber;
-      if (clothesSize) user.clothesSize = clothesSize;
-      if (jeansSize) user.jeansSize = jeansSize;
-      if (shoesSize) user.shoesSize = shoesSize;
-      if (addressLine1) user.addressLine1 = addressLine1;
-      if (addressLine2) user.addressLine2 = addressLine2;
-      if (country) user.country = country;
-      if (state) user.state = state;
-      if (city) user.city = city;
-      if (cardNumber) user.cardNumber = cardNumber;
-      if (expireDate) user.expireDate = expireDate;
-      if (cvvCode) user.cvvCode = cvvCode;
-
-      return await this.userRepository.save(user);
+      await this.userRepository.save(updatedUser);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -474,7 +528,7 @@ export class UsersService {
   async updateUserProfileByAdmin(
     id: string,
     updateProfileByAdminDto: UpdateUserProfileByAdminDto,
-  ): Promise<User> {
+  ): Promise<void> {
     try {
       const user = await this.getUserById(id);
 
@@ -482,29 +536,12 @@ export class UsersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      const {
-        name,
-        phoneNumber,
-        addressLine1,
-        addressLine2,
-        country,
-        state,
-        city,
-        isAccountActive,
-      } = updateProfileByAdminDto;
+      const updatedUser = await this.updateUserFieldsAdmin(
+        user,
+        updateProfileByAdminDto,
+      );
 
-      if (name) user.name = name;
-      if (phoneNumber) user.phoneNumber = phoneNumber;
-      if (addressLine1) user.addressLine1 = addressLine1;
-      if (addressLine2) user.addressLine2 = addressLine2;
-      if (country) user.country = country;
-      if (state) user.state = state;
-      if (city) user.city = city;
-      if (user.isAccountActive !== isAccountActive) {
-        user.isAccountActive = isAccountActive;
-      }
-
-      return await this.userRepository.save(user);
+      await this.userRepository.save(updatedUser);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
