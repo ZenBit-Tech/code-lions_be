@@ -8,7 +8,6 @@ import {
   BeforeInsert,
   BeforeUpdate,
   DeleteDateColumn,
-  AfterLoad,
 } from 'typeorm';
 
 @Entity()
@@ -204,52 +203,12 @@ export class User {
   deletedAt: Date;
 
   @ApiProperty({
-    example: false,
-    description: 'Indicates if user chose role',
+    example: '1',
+    description:
+      'Indicates how many steps user completed filling shipping profile',
   })
-  isRoleFilled: boolean;
-
-  @ApiProperty({
-    example: false,
-    description: 'Indicates if the user has a phone number',
-  })
-  isPhoneNumberFilled: boolean;
-
-  @ApiProperty({
-    example: false,
-    description: 'Indicates if user entered address information',
-  })
-  isShippingAddressFilled: boolean;
-
-  @ApiProperty({
-    example: false,
-    description: 'Indicates if user entered credit card information',
-  })
-  isCreditCardFilled: boolean;
-
-  @ApiProperty({
-    example: false,
-    description: 'Indicates if user entered size information',
-  })
-  isSizeFilled: boolean;
-
-  @ApiProperty({
-    example: false,
-    description: 'Indicates if user completed filling profile',
-  })
-  isOnboardingFilled: boolean;
-
-  @AfterLoad()
-  private afterLoad(): void {
-    this.isRoleFilled = !!this.role;
-    this.isPhoneNumberFilled = !!this.phoneNumber;
-    this.isShippingAddressFilled =
-      !!this.addressLine1 || !!this.city || !!this.state || !!this.country;
-    this.isSizeFilled =
-      !!this.clothesSize || !!this.jeansSize || !!this.shoesSize;
-    this.isCreditCardFilled =
-      !!this.cardNumber || !!this.expireDate || !!this.cvvCode;
-  
+  @Column({ nullable: true })
+  onboardingSteps: string;
 
   @BeforeInsert()
   updateDatesBeforeInsert(): void {

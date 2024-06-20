@@ -71,4 +71,6 @@ export const Errors = {
   USERS_STATE_IS_STRING: 'State must be a string',
   USERS_CITY_CANNOT_BE_EMPTY: 'City cannot be empty',
   USERS_CITY_IS_STRING: 'City must be a string',
+  ACCESS_DENIED: 'You can only update your own profile',
+  ADMIN_NOT_FOUND: 'Admin user not found',
 };

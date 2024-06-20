@@ -59,12 +59,7 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
-      isRoleFilled,
-      isPhoneNumberFilled,
-      isShippingAddressFilled,
-      isCreditCardFilled,
-      isSizeFilled,
-      isOnboardingFilled,
+      onboardingSteps,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -87,12 +82,7 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
-      isRoleFilled,
-      isPhoneNumberFilled,
-      isShippingAddressFilled,
-      isCreditCardFilled,
-      isSizeFilled,
-      isOnboardingFilled,
+      onboardingSteps,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -389,7 +379,11 @@ export class UsersService {
     }
   }
 
-  async updateUserRole(id: string, role: Role): Promise<User> {
+  async updateUserRole(
+    id: string,
+    role: Role,
+    onboardingSteps: string,
+  ): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
 
@@ -398,7 +392,7 @@ export class UsersService {
       }
 
       user.role = role;
-      user.isRoleFilled = true;
+      user.onboardingSteps = onboardingSteps;
       await this.userRepository.save(user);
 
       return user;
@@ -410,7 +404,11 @@ export class UsersService {
     }
   }
 
-  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<User> {
+  async updateUserPhoneNumber(
+    id: string,
+    phoneNumber: string,
+    onboardingSteps: string,
+  ): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
 
@@ -419,7 +417,7 @@ export class UsersService {
       }
 
       user.phoneNumber = phoneNumber;
-      user.isPhoneNumberFilled = true;
+      user.onboardingSteps = onboardingSteps;
       await this.userRepository.save(user);
 
       return user;
@@ -487,6 +485,7 @@ export class UsersService {
     addressLine2: string,
     state: string,
     city: string,
+    onboardingSteps: string,
   ): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -498,7 +497,7 @@ export class UsersService {
       user.addressLine2 = addressLine2;
       user.state = state;
       user.city = city;
-      user.isShippingAddressFilled = true;
+      user.onboardingSteps = onboardingSteps;
       await this.userRepository.save(user);
 
       return user;
@@ -508,5 +507,17 @@ export class UsersService {
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ADDRESS);
     }
+  }
+
+  async getAdminId(): Promise<string> {
+    const adminUser = await this.userRepository.findOne({
+      where: { role: Role.ADMIN },
+    });
+
+    if (!adminUser) {
+      throw new Error(Errors.ADMIN_NOT_FOUND);
+    }
+
+    return adminUser.id;
   }
 }

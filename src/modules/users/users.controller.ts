@@ -53,6 +53,7 @@ import { UpdateUserAddressDto } from './dto/update-user-address.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { Order } from './order.enum';
+import { UserIdGuard } from './user-id.guard';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -93,6 +94,21 @@ export class UsersController {
   @Roles(Role.ADMIN)
   async getUsers(): Promise<User[]> {
     return await this.usersService.getAllUsers();
+  }
+
+  @Get('admin-id')
+  @ApiOperation({
+    summary: 'Get admin ID',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint returns the ID of the admin user.',
+  })
+  @ApiOkResponse({
+    description: responseDescrptions.success,
+    type: String,
+  })
+  @Roles(Role.ADMIN)
+  async getAdminId(): Promise<string> {
+    return this.usersService.getAdminId();
   }
 
   @Get('admin')
@@ -241,7 +257,7 @@ export class UsersController {
 
   @Post(':id/photo')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Upload a user photo',
@@ -322,7 +338,7 @@ export class UsersController {
 
   @Post(':id/role')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user role',
@@ -369,10 +385,12 @@ export class UsersController {
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
+    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserRole(
       id,
       updateUserRoleDto.role,
+      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
@@ -380,7 +398,7 @@ export class UsersController {
 
   @Post(':id/phone')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user phone number',
@@ -427,10 +445,12 @@ export class UsersController {
   async updateUserPhoneNumber(
     @Param('id') id: string,
     @Body() updateUserPhoneDto: UpdateUserPhoneDto,
+    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserPhoneNumber(
       id,
       updateUserPhoneDto.phoneNumber,
+      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
@@ -438,7 +458,7 @@ export class UsersController {
 
   @Post(':id/address-line1')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user address line 1',
@@ -496,7 +516,7 @@ export class UsersController {
 
   @Post(':id/address-line2')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user address line 2',
@@ -554,7 +574,7 @@ export class UsersController {
 
   @Post(':id/address')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user address',
@@ -603,6 +623,7 @@ export class UsersController {
   async updateUserAddress(
     @Param('id') id: string,
     @Body() updateUserAddressDto: UpdateUserAddressDto,
+    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserAddress(
       id,
@@ -610,6 +631,7 @@ export class UsersController {
       updateUserAddressDto.addressLine2,
       updateUserAddressDto.state,
       updateUserAddressDto.city,
+      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
