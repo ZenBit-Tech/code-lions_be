@@ -113,4 +113,11 @@ export class UserResponseDto {
     description: 'The deletion date of the user',
   })
   deletedAt: Date;
+
+  @ApiProperty({
+    example: '1',
+    description:
+      'Indicates how many steps user completed filling shipping profile',
+  })
+  onboardingSteps: string;
 }

@@ -9,7 +9,7 @@ import { Errors } from 'src/common/errors';
 
 @Injectable()
 export class UserIdGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     const userId = request.params.id;
