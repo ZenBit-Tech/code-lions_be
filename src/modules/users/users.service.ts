@@ -431,54 +431,6 @@ export class UsersService {
     }
   }
 
-  async updateUserAddressLine1(
-    id: string,
-    addressLine1: string,
-  ): Promise<void> {
-    try {
-      const user = await this.userRepository.findOne({
-        where: { id },
-      });
-
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
-      await this.userRepository.update(id, { addressLine1 });
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_UPDATE_ADDRESS_LINE,
-      );
-    }
-  }
-
-  async updateUserAddressLine2(
-    id: string,
-    addressLine2: string,
-  ): Promise<void> {
-    try {
-      const user = await this.userRepository.findOne({
-        where: { id },
-      });
-
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
-      await this.userRepository.update(id, { addressLine2 });
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_UPDATE_ADDRESS_LINE,
-      );
-    }
-  }
-
   async updateUserAddress(
     userId: string,
     addressLine1: string,
@@ -507,17 +459,5 @@ export class UsersService {
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ADDRESS);
     }
-  }
-
-  async getAdminId(): Promise<string> {
-    const adminUser = await this.userRepository.findOne({
-      where: { role: Role.ADMIN },
-    });
-
-    if (!adminUser) {
-      throw new Error(Errors.ADMIN_NOT_FOUND);
-    }
-
-    return adminUser.id;
   }
 }

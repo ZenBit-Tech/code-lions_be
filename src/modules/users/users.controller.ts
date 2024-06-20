@@ -47,8 +47,6 @@ import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserAddressLine1Dto } from './dto/update-user-address-line1.dto';
-import { UpdateUserAddressLine2Dto } from './dto/update-user-address-line2.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -94,21 +92,6 @@ export class UsersController {
   @Roles(Role.ADMIN)
   async getUsers(): Promise<User[]> {
     return await this.usersService.getAllUsers();
-  }
-
-  @Get('admin-id')
-  @ApiOperation({
-    summary: 'Get admin ID',
-    tags: ['Users Endpoints'],
-    description: 'This endpoint returns the ID of the admin user.',
-  })
-  @ApiOkResponse({
-    description: responseDescrptions.success,
-    type: String,
-  })
-  @Roles(Role.ADMIN)
-  async getAdminId(): Promise<string> {
-    return this.usersService.getAdminId();
   }
 
   @Get('admin')
@@ -322,7 +305,7 @@ export class UsersController {
       }),
     }),
   )
-  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  @Roles(Role.BUYER, Role.VENDOR)
   async uploadPhoto(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
@@ -381,7 +364,7 @@ export class UsersController {
     },
   })
   @ApiBody({ type: UpdateUserRoleDto })
-  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  @Roles(Role.BUYER, Role.VENDOR)
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
@@ -441,7 +424,7 @@ export class UsersController {
     },
   })
   @ApiBody({ type: UpdateUserPhoneDto })
-  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  @Roles(Role.BUYER, Role.VENDOR)
   async updateUserPhoneNumber(
     @Param('id') id: string,
     @Body() updateUserPhoneDto: UpdateUserPhoneDto,
@@ -454,122 +437,6 @@ export class UsersController {
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
-  }
-
-  @Post(':id/address-line1')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Update user address line 1',
-    tags: ['Users Endpoints'],
-    description: 'This endpoint updates the address line 1 of a user.',
-  })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Address line 1 updated successfully',
-  })
-  @ApiBadRequestResponse({
-    description: 'Invalid request',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 400 },
-        message: { type: 'string', example: Errors.INCORRECT_ADDRESS_LINE1 },
-        error: { type: 'string', example: 'Bad Request' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: { type: 'string', example: Errors.INVALID_TOKEN },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Failed to update address line 1',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 500 },
-        message: {
-          type: 'string',
-          example: Errors.FAILED_TO_UPDATE_ADDRESS_LINE1,
-        },
-        error: { type: 'string', example: 'Internal Server Error' },
-      },
-    },
-  })
-  @ApiBody({ type: UpdateUserAddressLine1Dto })
-  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
-  async updateUserAddressLine1(
-    @Param('id') id: string,
-    @Body() updateUserAddressLine1Dto: UpdateUserAddressLine1Dto,
-  ): Promise<void> {
-    await this.usersService.updateUserAddressLine1(
-      id,
-      updateUserAddressLine1Dto.addressLine1,
-    );
-  }
-
-  @Post(':id/address-line2')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Update user address line 2',
-    tags: ['Users Endpoints'],
-    description: 'This endpoint updates the address line 2 of a user.',
-  })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Address line 2 updated successfully',
-  })
-  @ApiBadRequestResponse({
-    description: 'Invalid request',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 400 },
-        message: { type: 'string', example: Errors.INCORRECT_ADDRESS_LINE2 },
-        error: { type: 'string', example: 'Bad Request' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: { type: 'string', example: Errors.INVALID_TOKEN },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Failed to update address line 2',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 500 },
-        message: {
-          type: 'string',
-          example: Errors.FAILED_TO_UPDATE_ADDRESS_LINE2,
-        },
-        error: { type: 'string', example: 'Internal Server Error' },
-      },
-    },
-  })
-  @ApiBody({ type: UpdateUserAddressLine2Dto })
-  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
-  async updateUserAddressLine2(
-    @Param('id') id: string,
-    @Body() updateUserAddressLine2Dto: UpdateUserAddressLine2Dto,
-  ): Promise<void> {
-    await this.usersService.updateUserAddressLine2(
-      id,
-      updateUserAddressLine2Dto.addressLine2,
-    );
   }
 
   @Post(':id/address')
@@ -619,7 +486,7 @@ export class UsersController {
     },
   })
   @ApiBody({ type: UpdateUserAddressDto })
-  @Roles(Role.ADMIN, Role.BUYER, Role.VENDOR)
+  @Roles(Role.BUYER, Role.VENDOR)
   async updateUserAddress(
     @Param('id') id: string,
     @Body() updateUserAddressDto: UpdateUserAddressDto,

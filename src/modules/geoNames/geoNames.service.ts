@@ -14,7 +14,7 @@ export class GeoNamesService {
 
   async getCitiesByState(adminCode: string): Promise<string[]> {
     try {
-      const response = await axios.get('http://api.geonames.org/searchJSON', {
+      const response = await axios.get(this.configService.get('GEONAMES_URL'), {
         params: {
           adminCode1: adminCode,
           country: 'CA',
@@ -36,7 +36,7 @@ export class GeoNamesService {
 
   async getAllStatesInCanada(): Promise<{ name: string; adminCode: string }[]> {
     try {
-      const response = await axios.get('http://api.geonames.org/searchJSON', {
+      const response = await axios.get(this.configService.get('GEONAMES_URL'), {
         params: {
           country: 'CA',
           featureCode: 'ADM1',
