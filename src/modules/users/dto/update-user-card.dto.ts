@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty } from 'class-validator';
 import { Errors } from 'src/common/errors';
 
-export class UpdateUserCardDtoDto {
+export class UpdateUserCardDto {
   @ApiProperty({
     example: '1234 5678 9012 3456',
     description: 'Card number of the user',

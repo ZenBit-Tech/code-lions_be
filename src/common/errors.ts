@@ -85,4 +85,8 @@ export const Errors = {
   EXPIRE_DATE_IS_STRING: 'Expire date must be a string',
   CVV_CODE_CANNOT_BE_EMPTY: 'CVV code cannot be empty',
   CVV_CODE_IS_STRING: 'CVV code must be a string',
+  FAILED_TO_UPDATE_SIZE: 'Failed to set user`s size information',
+  FAILED_TO_UPDATE_CARD: 'Failed to set user`s credit card information',
+  INCORRECT_SIZE: "The user's size information is incorrect",
+  INCORRECT_CREDIT_CARD: "The user's credit card information is incorrect",
 };

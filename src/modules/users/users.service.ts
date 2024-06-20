@@ -451,4 +451,58 @@ export class UsersService {
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ADDRESS);
     }
   }
+
+  async updateUserSize(
+    userId: string,
+    clothesSize: string,
+    jeansSize: string,
+    shoesSize: string,
+  ): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+      user.clothesSize = clothesSize;
+      user.jeansSize = jeansSize;
+      user.shoesSize = shoesSize;
+      user.onboardingSteps = '4';
+      await this.userRepository.save(user);
+
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_SIZE);
+    }
+  }
+
+  async updateUserCreditCard(
+    userId: string,
+    cardNumber: string,
+    expireDate: string,
+    cvvCode: string,
+  ): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+      user.cardNumber = cardNumber;
+      user.expireDate = expireDate;
+      user.cvvCode = cvvCode;
+      user.onboardingSteps = '5';
+      await this.userRepository.save(user);
+
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_CARD);
+    }
+  }
 }

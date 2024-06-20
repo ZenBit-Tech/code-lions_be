@@ -13,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Patch,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -49,8 +50,10 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
+import { UpdateUserCardDto } from './dto/update-user-card.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserSizeDto } from './dto/update-user-size.dto';
 import { Order } from './order.enum';
 import { UserIdGuard } from './user-id.guard';
 import { User } from './user.entity';
@@ -239,7 +242,7 @@ export class UsersController {
     await this.usersService.softDeleteUser(id);
   }
 
-  @Post(':id/photo')
+  @Patch(':id/photo')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -332,9 +335,9 @@ export class UsersController {
     };
   }
 
-  @Post(':id/role')
+  @Patch(':id/role')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @UseGuards(JwtAuthGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user role',
@@ -377,7 +380,6 @@ export class UsersController {
     },
   })
   @ApiBody({ type: UpdateUserRoleDto })
-  @Roles(Role.BUYER, Role.VENDOR)
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
@@ -390,7 +392,7 @@ export class UsersController {
     return this.usersService.buildUserResponseDto(updatedUser);
   }
 
-  @Post(':id/phone')
+  @Patch(':id/phone')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -448,7 +450,7 @@ export class UsersController {
     return this.usersService.buildUserResponseDto(updatedUser);
   }
 
-  @Post(':id/address')
+  @Patch(':id/address')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -506,6 +508,130 @@ export class UsersController {
       updateUserAddressDto.addressLine2,
       updateUserAddressDto.state,
       updateUserAddressDto.city,
+    );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
+  }
+
+  @Patch(':id/size')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update user size',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the size information of a user.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Size updated successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_SIZE },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update size',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_SIZE,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserSizeDto })
+  @Roles(Role.BUYER)
+  async updateUserSize(
+    @Param('id') id: string,
+    @Body() updateUserSizeDto: UpdateUserSizeDto,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserSize(
+      id,
+      updateUserSizeDto.clothesSize,
+      updateUserSizeDto.jeansSize,
+      updateUserSizeDto.shoesSize,
+    );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
+  }
+
+  @Patch(':id/credit-card')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update user credit card',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the credit card information of a user.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Credit card updated successfully',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_CREDIT_CARD },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update credit card',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_CARD,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserCardDto })
+  @Roles(Role.BUYER, Role.VENDOR)
+  async updateUserCreditCard(
+    @Param('id') id: string,
+    @Body() updateUserCardDto: UpdateUserCardDto,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserCreditCard(
+      id,
+      updateUserCardDto.cardNumber,
+      updateUserCardDto.expireDate,
+      updateUserCardDto.cvvCode,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
