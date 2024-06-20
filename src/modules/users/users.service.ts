@@ -379,11 +379,7 @@ export class UsersService {
     }
   }
 
-  async updateUserRole(
-    id: string,
-    role: Role,
-    onboardingSteps: string,
-  ): Promise<User> {
+  async updateUserRole(id: string, role: Role): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
 
@@ -392,7 +388,7 @@ export class UsersService {
       }
 
       user.role = role;
-      user.onboardingSteps = onboardingSteps;
+      user.onboardingSteps = '1';
       await this.userRepository.save(user);
 
       return user;
@@ -404,11 +400,7 @@ export class UsersService {
     }
   }
 
-  async updateUserPhoneNumber(
-    id: string,
-    phoneNumber: string,
-    onboardingSteps: string,
-  ): Promise<User> {
+  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
 
@@ -417,7 +409,7 @@ export class UsersService {
       }
 
       user.phoneNumber = phoneNumber;
-      user.onboardingSteps = onboardingSteps;
+      user.onboardingSteps = '2';
       await this.userRepository.save(user);
 
       return user;
@@ -437,7 +429,6 @@ export class UsersService {
     addressLine2: string,
     state: string,
     city: string,
-    onboardingSteps: string,
   ): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -449,7 +440,7 @@ export class UsersService {
       user.addressLine2 = addressLine2;
       user.state = state;
       user.city = city;
-      user.onboardingSteps = onboardingSteps;
+      user.onboardingSteps = '3';
       await this.userRepository.save(user);
 
       return user;

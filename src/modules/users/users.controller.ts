@@ -33,6 +33,7 @@ import {
   getSchemaPath,
   ApiQuery,
   ApiServiceUnavailableResponse,
+  ApiConsumes,
 } from '@nestjs/swagger';
 
 import { diskStorage } from 'multer';
@@ -291,6 +292,18 @@ export class UsersController {
       },
     },
   })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -368,12 +381,10 @@ export class UsersController {
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
-    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserRole(
       id,
       updateUserRoleDto.role,
-      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
@@ -428,12 +439,10 @@ export class UsersController {
   async updateUserPhoneNumber(
     @Param('id') id: string,
     @Body() updateUserPhoneDto: UpdateUserPhoneDto,
-    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserPhoneNumber(
       id,
       updateUserPhoneDto.phoneNumber,
-      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
@@ -490,7 +499,6 @@ export class UsersController {
   async updateUserAddress(
     @Param('id') id: string,
     @Body() updateUserAddressDto: UpdateUserAddressDto,
-    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserAddress(
       id,
@@ -498,7 +506,6 @@ export class UsersController {
       updateUserAddressDto.addressLine2,
       updateUserAddressDto.state,
       updateUserAddressDto.city,
-      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
