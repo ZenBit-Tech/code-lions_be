@@ -480,7 +480,7 @@ export class UsersService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ADDRESS);
     }
   }
 
@@ -550,13 +550,15 @@ export class UsersService {
   async updateUserProfile(
     id: string,
     updateProfileDto: UpdateUserProfileDto,
-  ): Promise<void> {
+  ): Promise<UserResponseDto> {
     try {
       const user = await this.getUserById(id);
 
       const updatedUser = await this.updateUserFields(user, updateProfileDto);
+      const savedUser = await this.userRepository.save(updatedUser);
+      const publicUser = this.buildUserResponseDto(savedUser);
 
-      await this.userRepository.save(updatedUser);
+      return publicUser;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -568,7 +570,7 @@ export class UsersService {
   async updateUserProfileByAdmin(
     id: string,
     updateProfileByAdminDto: UpdateUserProfileByAdminDto,
-  ): Promise<void> {
+  ): Promise<UserResponseDto> {
     try {
       const user = await this.getUserById(id);
 
@@ -580,8 +582,10 @@ export class UsersService {
         user,
         updateProfileByAdminDto,
       );
+      const savedUser = await this.userRepository.save(updatedUser);
+      const publicUser = this.buildUserResponseDto(savedUser);
 
-      await this.userRepository.save(updatedUser);
+      return publicUser;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

@@ -111,7 +111,10 @@ export class UsersController {
     description: responseDescrptions.success,
     schema: {
       properties: {
-        users: { type: 'array', items: { $ref: getSchemaPath(User) } },
+        users: {
+          type: 'array',
+          items: { $ref: getSchemaPath(UserResponseDto) },
+        },
         pagesCount: { type: 'number', example: 1 },
       },
     },
@@ -563,9 +566,9 @@ export class UsersController {
     description:
       'This endpoint allows buyers and vendors to update their profiles.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'User profile updated successfully',
+  @ApiOkResponse({
+    description: 'The user has been successfully fetched.',
+    type: UserResponseDto,
   })
   @ApiNotFoundResponse({
     description: 'Not found user with given id',
@@ -605,8 +608,8 @@ export class UsersController {
       }),
     )
     updateProfileDto: UpdateUserProfileDto,
-  ): Promise<void> {
-    await this.usersService.updateUserProfile(id, updateProfileDto);
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateUserProfile(id, updateProfileDto);
   }
 
   @Patch(':id/update-profile-admin')
@@ -617,9 +620,9 @@ export class UsersController {
     description:
       'This endpoint allows admin to update profiles of buyers and vendors.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'User profile updated by admin successfully',
+  @ApiOkResponse({
+    description: 'The user has been successfully fetched.',
+    type: UserResponseDto,
   })
   @ApiNotFoundResponse({
     description: 'Not found user with given id',
@@ -658,8 +661,8 @@ export class UsersController {
       }),
     )
     updateProfileByAdminDto: UpdateUserProfileByAdminDto,
-  ): Promise<void> {
-    await this.usersService.updateUserProfileByAdmin(
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateUserProfileByAdmin(
       id,
       updateProfileByAdminDto,
     );
