@@ -79,14 +79,14 @@ export class User {
 
   @ApiProperty({
     example: true,
-    description: "Indicates if the user's profile is active",
+    description: 'Indicates if the users profile is active',
   })
   @Column({ default: true })
   isAccountActive: boolean;
 
   @ApiProperty({
     example: 'file-1718301871158-882823500.jpg',
-    description: "The user's profile photo",
+    description: 'The users profile photo',
   })
   @Column({
     nullable: false,
@@ -201,6 +201,14 @@ export class User {
   })
   @DeleteDateColumn({ type: 'timestamp', nullable: true })
   deletedAt: Date;
+
+  @ApiProperty({
+    example: '1',
+    description:
+      'Indicates how many steps user completed filling shipping profile',
+  })
+  @Column({ nullable: true })
+  onboardingSteps: string;
 
   @BeforeInsert()
   updateDatesBeforeInsert(): void {

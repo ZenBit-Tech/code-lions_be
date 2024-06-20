@@ -59,6 +59,7 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      onboardingSteps,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -81,6 +82,7 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      onboardingSteps,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -377,17 +379,23 @@ export class UsersService {
     }
   }
 
-  async updateUserRole(id: string, role: Role): Promise<void> {
+  async updateUserRole(
+    id: string,
+    role: Role,
+    onboardingSteps: string,
+  ): Promise<User> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id },
-      });
+      const user = await this.userRepository.findOne({ where: { id } });
 
       if (!user) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      await this.userRepository.update(id, { role });
+      user.role = role;
+      user.onboardingSteps = onboardingSteps;
+      await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -396,17 +404,23 @@ export class UsersService {
     }
   }
 
-  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<void> {
+  async updateUserPhoneNumber(
+    id: string,
+    phoneNumber: string,
+    onboardingSteps: string,
+  ): Promise<User> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id },
-      });
+      const user = await this.userRepository.findOne({ where: { id } });
 
       if (!user) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      await this.userRepository.update(id, { phoneNumber });
+      user.phoneNumber = phoneNumber;
+      user.onboardingSteps = onboardingSteps;
+      await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -414,6 +428,36 @@ export class UsersService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_UPDATE_PHONE_NUMBER,
       );
+    }
+  }
+
+  async updateUserAddress(
+    userId: string,
+    addressLine1: string,
+    addressLine2: string,
+    state: string,
+    city: string,
+    onboardingSteps: string,
+  ): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+      user.addressLine1 = addressLine1;
+      user.addressLine2 = addressLine2;
+      user.state = state;
+      user.city = city;
+      user.onboardingSteps = onboardingSteps;
+      await this.userRepository.save(user);
+
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_ADDRESS);
     }
   }
 }
