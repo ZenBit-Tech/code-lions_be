@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import { LIMIT_USERS_PER_PAGE, VERIFICATION_CODE_EXPIRATION } from 'src/config';
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 
@@ -379,7 +380,7 @@ export class UsersService {
     }
   }
 
-  async updateUserRole(id: string, role: Role): Promise<User> {
+  async updateUserRole(id: string, role: RoleForUser): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
 
