@@ -20,7 +20,7 @@ export class UserResponseDto {
   email: string;
 
   @ApiProperty({
-    example: 'BUYER',
+    example: 'buyer',
     description: 'The role of the user',
   })
   role: Role | RoleForUser;

@@ -6,6 +6,7 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Param,
   Query,
   HttpCode,
@@ -14,6 +15,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Patch,
+  Request,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -49,11 +52,15 @@ import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
 import { UpdateUserCardDto } from './dto/update-user-card.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
+import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserSizeDto } from './dto/update-user-size.dto';
+import { UserCardDto } from './dto/user-card.dto';
 import { Order } from './order.enum';
 import { UserIdGuard } from './user-id.guard';
 import { User } from './user.entity';
@@ -110,7 +117,10 @@ export class UsersController {
     description: responseDescrptions.success,
     schema: {
       properties: {
-        users: { type: 'array', items: { $ref: getSchemaPath(User) } },
+        users: {
+          type: 'array',
+          items: { $ref: getSchemaPath(UserResponseDto) },
+        },
         pagesCount: { type: 'number', example: 1 },
       },
     },
@@ -145,8 +155,53 @@ export class UsersController {
     @Query('order') order: Order = Order.DESC,
     @Query('role') role?: Role,
     @Query('search') search?: string,
-  ): Promise<{ users: User[]; pagesCount: number }> {
+  ): Promise<{ users: UserResponseDto[]; pagesCount: number }> {
     return this.usersService.getUsersAdmin(page, order, role, search);
+  }
+
+  @Get('admin/:id')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Get user by ID (Admin panel)',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint returns a public user by ID for admin panel',
+  })
+  @ApiOkResponse({
+    description: 'The user has been successfully fetched.',
+    type: UserResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_BY_ID_DOES_NOT_EXIST,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to get user by ID from admin panel',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_USER_BY_ID,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to fetch',
+  })
+  async getUserByIdAdmin(@Param('id') id: string): Promise<UserResponseDto> {
+    return await this.usersService.getPublicUserById(id);
   }
 
   @Post()
@@ -629,5 +684,160 @@ export class UsersController {
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
+  }
+
+  @Get(':id/card-data')
+  @UseGuards(UserIdGuard)
+  @Roles(Role.BUYER, Role.VENDOR)
+  @ApiOperation({
+    summary: 'Get user card data by ID',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint retrieves the card data of a user by ID.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved user card data',
+    type: UserCardDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update user profile',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_FETCH_CARD_DATA },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to get card data',
+  })
+  async getUserCardDataById(@Param('id') id: string): Promise<UserCardDto> {
+    return await this.usersService.getUserCardDataById(id);
+  }
+
+  @Patch(':id/update-profile')
+  @UseGuards(UserIdGuard)
+  @Roles(Role.BUYER, Role.VENDOR)
+  @ApiOperation({
+    summary: 'Update user profile',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint allows buyers and vendors to update their profiles.',
+  })
+  @ApiOkResponse({
+    description: 'The user has been successfully updated.',
+    type: PersonalInfoDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update user profile',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_UPDATE_PROFILE },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to update',
+  })
+  async updateUserProfile(
+    @Request() req: Request,
+    @Param('id') id: string,
+    @Body(
+      new ValidationPipe({
+        forbidNonWhitelisted: true,
+        whitelist: true,
+        transform: true,
+      }),
+    )
+    updateProfileDto: UpdateUserProfileDto,
+  ): Promise<PersonalInfoDto> {
+    return await this.usersService.updateUserProfile(id, updateProfileDto);
+  }
+
+  @Patch(':id/update-profile-admin')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Update user profile by admin',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint allows admin to update profiles of buyers and vendors.',
+  })
+  @ApiOkResponse({
+    description: 'The user has been successfully fetched.',
+    type: UserResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update user profile by admin',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_UPDATE_PROFILE },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to update by admin',
+  })
+  async updateUserProfileByAdmin(
+    @Param('id') id: string,
+    @Body(
+      new ValidationPipe({
+        forbidNonWhitelisted: true,
+        whitelist: true,
+        transform: true,
+      }),
+    )
+    updateProfileByAdminDto: UpdateUserProfileByAdminDto,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateUserProfileByAdmin(
+      id,
+      updateProfileByAdminDto,
+    );
   }
 }

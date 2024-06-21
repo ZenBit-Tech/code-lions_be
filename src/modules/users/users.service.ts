@@ -19,6 +19,10 @@ import { MailerService } from '../mailer/mailer.service';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { PersonalInfoDto } from './dto/personal-info.dto';
+import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { UserCardDto } from './dto/user-card.dto';
 import { OnboardingSteps } from './onboarding-steps.enum';
 import { Order } from './order.enum';
 import { User } from './user.entity';
@@ -93,6 +97,62 @@ export class UsersService {
     return publicUser;
   }
 
+  buildPersonalInfoResponseDto(user: User): PersonalInfoDto {
+    const {
+      id,
+      name,
+      email,
+      role,
+      isEmailVerified,
+      photoUrl,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      country,
+      state,
+      city,
+      clothesSize,
+      jeansSize,
+      shoesSize,
+      isAccountActive,
+      onboardingSteps,
+      createdAt,
+      lastUpdatedAt,
+      deletedAt,
+      cardNumber,
+      expireDate,
+      cvvCode,
+    } = user;
+
+    const personalInfo: PersonalInfoDto = {
+      id,
+      name,
+      email,
+      role,
+      isEmailVerified,
+      photoUrl,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      country,
+      state,
+      city,
+      clothesSize,
+      jeansSize,
+      shoesSize,
+      isAccountActive,
+      onboardingSteps,
+      createdAt,
+      lastUpdatedAt,
+      deletedAt,
+      cardNumber,
+      expireDate,
+      cvvCode,
+    };
+
+    return personalInfo;
+  }
+
   async getUserByEmail(email: string): Promise<User> {
     try {
       const user = await this.userRepository.findOne({
@@ -129,6 +189,24 @@ export class UsersService {
       });
 
       return user;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
+    }
+  }
+
+  async getPublicUserById(id: string): Promise<UserResponseDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_DOES_NOT_EXIST);
+      }
+
+      const publicUserById = this.buildUserResponseDto(user);
+
+      return publicUserById;
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
     }
@@ -177,7 +255,7 @@ export class UsersService {
     page: number,
     order: Order,
     whereCondition: FindOptionsWhere<User>[],
-  ): Promise<{ users: User[]; pagesCount: number }> {
+  ): Promise<{ users: UserResponseDto[]; pagesCount: number }> {
     try {
       const [users, totalCount] = await this.userRepository.findAndCount({
         where: whereCondition,
@@ -190,7 +268,9 @@ export class UsersService {
 
       const pagesCount = Math.ceil(totalCount / LIMIT_USERS_PER_PAGE);
 
-      return { users, pagesCount };
+      const publicUsers = users.map((user) => this.buildUserResponseDto(user));
+
+      return { users: publicUsers, pagesCount };
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USERS);
     }
@@ -201,7 +281,7 @@ export class UsersService {
     order: Order,
     role?: Role,
     search?: string,
-  ): Promise<{ users: User[]; pagesCount: number }> {
+  ): Promise<{ users: UserResponseDto[]; pagesCount: number }> {
     try {
       const whereCondition = this.buildWhereCondition(search, role);
 
@@ -507,6 +587,138 @@ export class UsersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_CARD);
+    }
+  }
+
+  async getUserCardDataById(id: string): Promise<UserCardDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_DOES_NOT_EXIST);
+      }
+
+      const userCardData: UserCardDto = {
+        cardNumber: user.cardNumber,
+        expireDate: user.expireDate,
+        cvvCode: user.cvvCode,
+      };
+
+      return userCardData;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
+    }
+  }
+
+  async updateUserFields(
+    user: User,
+    updateDto: Partial<UpdateUserProfileDto>,
+  ): Promise<User> {
+    try {
+      const updateDtoKeys = Object.keys(
+        updateDto,
+      ) as (keyof typeof updateDto)[];
+
+      updateDtoKeys.forEach((key) => {
+        const value = updateDto[key];
+
+        if (value !== undefined) {
+          (user[key as keyof User] as typeof value) = value;
+        }
+      });
+
+      return user;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  async updateUserFieldsAdmin(
+    user: User,
+    updateDto: Partial<UpdateUserProfileByAdminDto>,
+  ): Promise<User> {
+    try {
+      const updateDtoKeys = Object.keys(
+        updateDto,
+      ) as (keyof typeof updateDto)[];
+
+      updateDtoKeys.forEach((key) => {
+        const value = updateDto[key];
+
+        if (value !== undefined) {
+          (user[key as keyof User] as typeof value) = value;
+        }
+      });
+
+      if (updateDto.isAccountActive === false) {
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'Account suspended on CodeLions',
+          templateName: 'suspend-account.hbs',
+          context: {
+            name: user.name,
+          },
+        });
+
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(
+            Errors.FAILED_TO_SEND_EMAIL_TO_SUSPENDED_USER,
+          );
+        }
+      }
+
+      return user;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  async updateUserProfile(
+    id: string,
+    updateProfileDto: UpdateUserProfileDto,
+  ): Promise<PersonalInfoDto> {
+    try {
+      const user = await this.getUserById(id);
+
+      const updatedUser = await this.updateUserFields(user, updateProfileDto);
+      const savedUser = await this.userRepository.save(updatedUser);
+      const userPersonalInfo = this.buildPersonalInfoResponseDto(savedUser);
+
+      return userPersonalInfo;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  async updateUserProfileByAdmin(
+    id: string,
+    updateProfileByAdminDto: UpdateUserProfileByAdminDto,
+  ): Promise<UserResponseDto> {
+    try {
+      const user = await this.getUserById(id);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const updatedUser = await this.updateUserFieldsAdmin(
+        user,
+        updateProfileByAdminDto,
+      );
+      const savedUser = await this.userRepository.save(updatedUser);
+      const publicUser = this.buildUserResponseDto(savedUser);
+
+      return publicUser;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
     }
   }
 }
