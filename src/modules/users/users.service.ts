@@ -18,8 +18,10 @@ import { MailerService } from '../mailer/mailer.service';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { UserCardDto } from './dto/user-card.dto';
 import { Order } from './order.enum';
 import { User } from './user.entity';
 
@@ -91,6 +93,62 @@ export class UsersService {
     };
 
     return publicUser;
+  }
+
+  buildPersonalInfoResponseDto(user: User): PersonalInfoDto {
+    const {
+      id,
+      name,
+      email,
+      role,
+      isEmailVerified,
+      photoUrl,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      country,
+      state,
+      city,
+      clothesSize,
+      jeansSize,
+      shoesSize,
+      isAccountActive,
+      onboardingSteps,
+      createdAt,
+      lastUpdatedAt,
+      deletedAt,
+      cardNumber,
+      expireDate,
+      cvvCode,
+    } = user;
+
+    const personalInfo: PersonalInfoDto = {
+      id,
+      name,
+      email,
+      role,
+      isEmailVerified,
+      photoUrl,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      country,
+      state,
+      city,
+      clothesSize,
+      jeansSize,
+      shoesSize,
+      isAccountActive,
+      onboardingSteps,
+      createdAt,
+      lastUpdatedAt,
+      deletedAt,
+      cardNumber,
+      expireDate,
+      cvvCode,
+    };
+
+    return personalInfo;
   }
 
   async getUserByEmail(email: string): Promise<User> {
@@ -484,6 +542,28 @@ export class UsersService {
     }
   }
 
+  async getUserCardDataById(id: string): Promise<UserCardDto> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_DOES_NOT_EXIST);
+      }
+
+      const userCardData: UserCardDto = {
+        cardNumber: user.cardNumber,
+        expireDate: user.expireDate,
+        cvvCode: user.cvvCode,
+      };
+
+      return userCardData;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
+    }
+  }
+
   async updateUserFields(
     user: User,
     updateDto: Partial<UpdateUserProfileDto>,
@@ -550,15 +630,15 @@ export class UsersService {
   async updateUserProfile(
     id: string,
     updateProfileDto: UpdateUserProfileDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<PersonalInfoDto> {
     try {
       const user = await this.getUserById(id);
 
       const updatedUser = await this.updateUserFields(user, updateProfileDto);
       const savedUser = await this.userRepository.save(updatedUser);
-      const publicUser = this.buildUserResponseDto(savedUser);
+      const userPersonalInfo = this.buildPersonalInfoResponseDto(savedUser);
 
-      return publicUser;
+      return userPersonalInfo;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

@@ -46,26 +46,29 @@ export class UpdateUserProfileDto {
 
   @ApiProperty({
     example: 'M',
-    description: 'The clothes size of the user',
+    description: 'Clothes size of the user',
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: Errors.CLOTHES_SIZE_IS_STRING })
+  @IsNotEmpty({ message: Errors.CLOTHES_SIZE_CANNOT_BE_EMPTY })
   clothesSize?: string;
 
   @ApiProperty({
     example: 'W 27 H 33',
-    description: 'The jeans size of the user',
+    description: 'Jeans size of the user',
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: Errors.JEANS_SIZE_IS_STRING })
+  @IsNotEmpty({ message: Errors.JEANS_SIZE_CANNOT_BE_EMPTY })
   jeansSize?: string;
 
   @ApiProperty({
-    example: '6',
-    description: 'The shoes size of the user',
+    example: '10',
+    description: 'Shoes size of the user',
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: Errors.SHOES_SIZE_IS_STRING })
+  @IsNotEmpty({ message: Errors.SHOES_SIZE_CANNOT_BE_EMPTY })
   shoesSize?: string;
 
   @ApiProperty({
@@ -94,6 +97,15 @@ export class UpdateUserProfileDto {
   addressLine2?: string;
 
   @ApiProperty({
+    example: 'Canada',
+    description: 'The user`s country',
+  })
+  @IsOptional()
+  @IsNotEmpty({ message: Errors.COUNTRY_CANNOT_BE_EMPTY })
+  @IsString({ message: Errors.COUNTRY_IS_STRING })
+  country?: string;
+
+  @ApiProperty({
     example: 'Nunavut',
     description: "The user's state",
   })
@@ -104,7 +116,7 @@ export class UpdateUserProfileDto {
 
   @ApiProperty({
     example: 'Tuktoyaktuk',
-    description: "The user's city",
+    description: 'The city of the user',
   })
   @IsOptional()
   @IsNotEmpty({ message: Errors.USERS_CITY_CANNOT_BE_EMPTY })
@@ -116,7 +128,8 @@ export class UpdateUserProfileDto {
     description: 'Card number of the user',
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: Errors.CARD_NUMBER_IS_STRING })
+  @IsNotEmpty({ message: Errors.CARD_NUMBER_CANNOT_BE_EMPTY })
   cardNumber?: string;
 
   @ApiProperty({
@@ -124,7 +137,8 @@ export class UpdateUserProfileDto {
     description: 'Expiration date of the card',
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: Errors.EXPIRE_DATE_IS_STRING })
+  @IsNotEmpty({ message: Errors.EXPIRE_DATE_CANNOT_BE_EMPTY })
   expireDate?: string;
 
   @ApiProperty({
@@ -132,6 +146,7 @@ export class UpdateUserProfileDto {
     description: 'CVV code of the card',
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: Errors.CVV_CODE_IS_STRING })
+  @IsNotEmpty({ message: Errors.CVV_CODE_CANNOT_BE_EMPTY })
   cvvCode?: string;
 }

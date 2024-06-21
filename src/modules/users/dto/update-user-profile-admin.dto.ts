@@ -64,6 +64,15 @@ export class UpdateUserProfileByAdminDto {
   addressLine2?: string;
 
   @ApiProperty({
+    example: 'Canada',
+    description: 'The user`s country',
+  })
+  @IsOptional()
+  @IsNotEmpty({ message: Errors.COUNTRY_CANNOT_BE_EMPTY })
+  @IsString({ message: Errors.COUNTRY_IS_STRING })
+  country?: string;
+
+  @ApiProperty({
     example: 'Nunavut',
     description: 'The user`s state',
   })

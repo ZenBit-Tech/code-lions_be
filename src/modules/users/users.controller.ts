@@ -50,11 +50,13 @@ import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UserCardDto } from './dto/user-card.dto';
 import { Order } from './order.enum';
 import { UserIdGuard } from './user-id.guard';
 import { User } from './user.entity';
@@ -557,6 +559,50 @@ export class UsersController {
     return this.usersService.buildUserResponseDto(updatedUser);
   }
 
+  @Get(':id/card-data')
+  @UseGuards(UserIdGuard)
+  @Roles(Role.BUYER, Role.VENDOR)
+  @ApiOperation({
+    summary: 'Get user card data by ID',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint retrieves the card data of a user by ID.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved user card data',
+    type: UserCardDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update user profile',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_FETCH_CARD_DATA },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to get card data',
+  })
+  async getUserCardDataById(@Param('id') id: string): Promise<UserCardDto> {
+    return await this.usersService.getUserCardDataById(id);
+  }
+
   @Patch(':id/update-profile')
   @UseGuards(UserIdGuard)
   @Roles(Role.BUYER, Role.VENDOR)
@@ -567,8 +613,8 @@ export class UsersController {
       'This endpoint allows buyers and vendors to update their profiles.',
   })
   @ApiOkResponse({
-    description: 'The user has been successfully fetched.',
-    type: UserResponseDto,
+    description: 'The user has been successfully updated.',
+    type: PersonalInfoDto,
   })
   @ApiNotFoundResponse({
     description: 'Not found user with given id',
@@ -608,7 +654,7 @@ export class UsersController {
       }),
     )
     updateProfileDto: UpdateUserProfileDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<PersonalInfoDto> {
     return await this.usersService.updateUserProfile(id, updateProfileDto);
   }
 
