@@ -19,6 +19,7 @@ import { MailerService } from '../mailer/mailer.service';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { OnboardingSteps } from './onboarding-steps.enum';
 import { Order } from './order.enum';
 import { User } from './user.entity';
 
@@ -389,7 +390,7 @@ export class UsersService {
       }
 
       user.role = role;
-      user.onboardingSteps = '1';
+      user.onboardingSteps = OnboardingSteps.ROLE;
       await this.userRepository.save(user);
 
       return user;
@@ -410,7 +411,7 @@ export class UsersService {
       }
 
       user.phoneNumber = phoneNumber;
-      user.onboardingSteps = '2';
+      user.onboardingSteps = OnboardingSteps.INFO;
       await this.userRepository.save(user);
 
       return user;
@@ -443,7 +444,7 @@ export class UsersService {
       user.country = country;
       user.state = state;
       user.city = city;
-      user.onboardingSteps = '3';
+      user.onboardingSteps = OnboardingSteps.ADDRESS;
       await this.userRepository.save(user);
 
       return user;
@@ -470,7 +471,7 @@ export class UsersService {
       user.clothesSize = clothesSize;
       user.jeansSize = jeansSize;
       user.shoesSize = shoesSize;
-      user.onboardingSteps = '4';
+      user.onboardingSteps = OnboardingSteps.SIZES;
       await this.userRepository.save(user);
 
       return user;
@@ -497,7 +498,7 @@ export class UsersService {
       user.cardNumber = cardNumber;
       user.expireDate = expireDate;
       user.cvvCode = cvvCode;
-      user.onboardingSteps = '5';
+      user.onboardingSteps = OnboardingSteps.CARD;
       await this.userRepository.save(user);
 
       return user;
