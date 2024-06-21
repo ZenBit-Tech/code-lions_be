@@ -30,7 +30,6 @@ import {
   ApiNotFoundResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
-  ApiNoContentResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
   getSchemaPath,
@@ -300,16 +299,15 @@ export class UsersController {
   @Patch(':id/photo')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Upload a user photo',
     tags: ['Users Endpoints'],
     description:
       'This endpoint uploads a photo for a user and updates the photo URL in the database.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Photo uploaded successfully',
+  @ApiOkResponse({
+    description: 'Photo has been successfully updated.',
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid file or request',
@@ -380,14 +378,12 @@ export class UsersController {
   async uploadPhoto(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ url: string }> {
+  ): Promise<UserResponseDto> {
     const photoUrl = `./uploads/avatars/${file.filename}`;
 
-    await this.usersService.updatePhotoUrl(id, photoUrl);
+    const updatedUser = await this.usersService.updatePhotoUrl(id, photoUrl);
 
-    return {
-      url: photoUrl,
-    };
+    return this.usersService.buildUserResponseDto(updatedUser);
   }
 
   @Patch(':id/role')

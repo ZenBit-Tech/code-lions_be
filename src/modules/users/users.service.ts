@@ -470,7 +470,7 @@ export class UsersService {
     }
   }
 
-  async updatePhotoUrl(id: string, photoUrl: string): Promise<void> {
+  async updatePhotoUrl(id: string, photoUrl: string): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
 
@@ -478,7 +478,10 @@ export class UsersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      await this.userRepository.update(id, { photoUrl });
+      user.photoUrl = photoUrl;
+      await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
