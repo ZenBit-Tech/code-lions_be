@@ -427,6 +427,7 @@ export class UsersService {
     userId: string,
     addressLine1: string,
     addressLine2: string,
+    country: string,
     state: string,
     city: string,
   ): Promise<User> {
@@ -438,6 +439,7 @@ export class UsersService {
       }
       user.addressLine1 = addressLine1;
       user.addressLine2 = addressLine2;
+      user.country = country;
       user.state = state;
       user.city = city;
       user.onboardingSteps = '3';

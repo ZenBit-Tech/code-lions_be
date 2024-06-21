@@ -501,6 +501,7 @@ export class UsersController {
       id,
       updateUserAddressDto.addressLine1,
       updateUserAddressDto.addressLine2,
+      updateUserAddressDto.country,
       updateUserAddressDto.state,
       updateUserAddressDto.city,
     );

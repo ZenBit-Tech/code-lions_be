@@ -89,4 +89,6 @@ export const Errors = {
   FAILED_TO_UPDATE_CARD: 'Failed to set user`s credit card information',
   INCORRECT_SIZE: "The user's size information is incorrect",
   INCORRECT_CREDIT_CARD: "The user's credit card information is incorrect",
+  COUNTRY_CANNOT_BE_EMPTY: 'Country cannot be empty',
+  COUNTRY_IS_STRING: 'Country must be a string',
 };
