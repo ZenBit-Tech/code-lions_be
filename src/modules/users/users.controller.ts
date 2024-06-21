@@ -298,7 +298,7 @@ export class UsersController {
 
   @Patch(':id/photo')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, UserIdGuard)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Upload a user photo',
     tags: ['Users Endpoints'],
@@ -388,7 +388,7 @@ export class UsersController {
 
   @Patch(':id/role')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, UserIdGuard)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user role',
     tags: ['Users Endpoints'],
@@ -429,6 +429,7 @@ export class UsersController {
     },
   })
   @ApiBody({ type: UpdateUserRoleDto })
+  @Roles(Role.BUYER, Role.VENDOR)
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
@@ -437,13 +438,14 @@ export class UsersController {
       id,
       updateUserRoleDto.role,
     );
+    const publicUser = this.usersService.buildUserResponseDto(updatedUser);
 
-    return this.usersService.generateUserWithTokensResponseDto(updatedUser);
+    return this.usersService.generateUserWithTokensResponseDto(publicUser);
   }
 
   @Patch(':id/phone')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user phone number',
     tags: ['Users Endpoints'],
@@ -499,7 +501,7 @@ export class UsersController {
 
   @Patch(':id/address')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user address',
     tags: ['Users Endpoints'],
@@ -562,7 +564,7 @@ export class UsersController {
 
   @Patch(':id/size')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user size',
     tags: ['Users Endpoints'],
@@ -623,7 +625,7 @@ export class UsersController {
 
   @Patch(':id/credit-card')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user credit card',
     tags: ['Users Endpoints'],
