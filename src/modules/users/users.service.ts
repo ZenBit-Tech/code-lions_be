@@ -5,6 +5,8 @@ import {
   ConflictException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcryptjs';
@@ -15,6 +17,7 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 
 import { UserResponseDto } from '../auth/dto/user-response.dto';
+import { UserWithTokensResponseDto } from '../auth/dto/user-with-tokens-response.dto';
 import { MailerService } from '../mailer/mailer.service';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
@@ -32,6 +35,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private jwtService: JwtService,
+    private configService: ConfigService,
     private mailerService: MailerService,
   ) {}
 
@@ -151,6 +156,27 @@ export class UsersService {
     };
 
     return personalInfo;
+  }
+
+  async generateUserWithTokensResponseDto(
+    publicUser: UserResponseDto,
+  ): Promise<UserWithTokensResponseDto> {
+    const payload = { ...publicUser };
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_SECRET_KEY'),
+      expiresIn: this.configService.get<string>('TOKEN_EXPIRE_TIME'),
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_SECRET_REFRESH_KEY'),
+      expiresIn: this.configService.get<string>('TOKEN_REFRESH_EXPIRE_TIME'),
+    });
+
+    return {
+      ...payload,
+      accessToken,
+      refreshToken,
+    };
   }
 
   async getUserByEmail(email: string): Promise<User> {

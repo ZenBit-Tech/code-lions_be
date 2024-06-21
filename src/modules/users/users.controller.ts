@@ -14,7 +14,6 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
-  Patch,
   Request,
   ValidationPipe,
 } from '@nestjs/common';
@@ -47,6 +46,7 @@ import { responseDescrptions } from 'src/common/response-descriptions';
 import { RANDOM_NUMBER_MAX } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
+import { UserWithTokensResponseDto } from 'src/modules/auth/dto/user-with-tokens-response.dto';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
@@ -436,13 +436,13 @@ export class UsersController {
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseDto | UserWithTokensResponseDto> {
     const updatedUser = await this.usersService.updateUserRole(
       id,
       updateUserRoleDto.role,
     );
 
-    return this.usersService.buildUserResponseDto(updatedUser);
+    return this.usersService.generateUserWithTokensResponseDto(updatedUser);
   }
 
   @Patch(':id/phone')
