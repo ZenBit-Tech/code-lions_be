@@ -122,6 +122,10 @@ export class AuthService {
       throw new BadRequestException(Errors.ACCOUNT_DELETED_BY_ADMIN);
     }
 
+    if (user && !user.isAccountActive) {
+      throw new BadRequestException(Errors.ACCOUNT_SUSPENDED_BY_ADMIN);
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
