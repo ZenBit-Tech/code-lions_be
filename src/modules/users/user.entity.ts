@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
 import {
   Entity,
@@ -68,7 +69,7 @@ export class User {
     enum: Role,
     nullable: true,
   })
-  role: Role;
+  role: Role | RoleForUser;
 
   @ApiProperty({
     example: '107289041235675675',
@@ -207,7 +208,7 @@ export class User {
     description:
       'Indicates how many steps user completed filling shipping profile',
   })
-  @Column({ nullable: true })
+  @Column({ default: '0', nullable: true })
   onboardingSteps: string;
 
   @BeforeInsert()
