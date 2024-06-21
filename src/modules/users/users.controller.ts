@@ -338,7 +338,6 @@ export class UsersController {
   @Patch(':id/role')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user role',
     tags: ['Users Endpoints'],
@@ -394,7 +393,6 @@ export class UsersController {
   @Patch(':id/phone')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user phone number',
     tags: ['Users Endpoints'],
@@ -451,7 +449,6 @@ export class UsersController {
   @Patch(':id/address')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user address',
     tags: ['Users Endpoints'],
@@ -514,7 +511,6 @@ export class UsersController {
   @Patch(':id/size')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user size',
     tags: ['Users Endpoints'],
@@ -576,7 +572,6 @@ export class UsersController {
   @Patch(':id/credit-card')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Update user credit card',
     tags: ['Users Endpoints'],
