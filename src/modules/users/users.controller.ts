@@ -344,9 +344,8 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the role of a user.',
   })
-  @ApiResponse({
-    status: 201,
-    description: responseDescrptions.success,
+  @ApiOkResponse({
+    description: 'The role has been successfully updated.',
     type: UserResponseDto,
   })
   @ApiBadRequestResponse({
@@ -401,9 +400,8 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the phone number of a user.',
   })
-  @ApiResponse({
-    status: 201,
-    description: responseDescrptions.success,
+  @ApiOkResponse({
+    description: 'The phone numder has been successfully updated.',
     type: UserResponseDto,
   })
   @ApiBadRequestResponse({
@@ -459,9 +457,9 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the address information of a user.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Address updated successfully',
+  @ApiOkResponse({
+    description: 'The user`s address has been successfully updated.',
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
@@ -522,9 +520,9 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the size information of a user.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Size updated successfully',
+  @ApiOkResponse({
+    description: 'The size has been successfully updated.',
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
@@ -584,9 +582,9 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the credit card information of a user.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Credit card updated successfully',
+  @ApiOkResponse({
+    description: 'The credit card has been successfully updated.',
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
