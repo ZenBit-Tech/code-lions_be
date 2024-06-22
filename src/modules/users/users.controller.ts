@@ -429,7 +429,6 @@ export class UsersController {
     },
   })
   @ApiBody({ type: UpdateUserRoleDto })
-  @Roles(Role.BUYER, Role.VENDOR)
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,

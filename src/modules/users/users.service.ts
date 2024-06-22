@@ -499,7 +499,7 @@ export class UsersService {
       }
 
       user.role = role;
-      user.onboardingStep = OnboardingSteps.ROLE;
+      user.onboardingStep = OnboardingSteps.ROLE + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -520,7 +520,7 @@ export class UsersService {
       }
 
       user.phoneNumber = phoneNumber;
-      user.onboardingStep = OnboardingSteps.INFO;
+      user.onboardingStep = OnboardingSteps.INFO + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -553,7 +553,7 @@ export class UsersService {
       user.country = country;
       user.state = state;
       user.city = city;
-      user.onboardingStep = OnboardingSteps.ADDRESS;
+      user.onboardingStep = OnboardingSteps.ADDRESS + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -580,7 +580,7 @@ export class UsersService {
       user.clothesSize = clothesSize;
       user.jeansSize = jeansSize;
       user.shoesSize = shoesSize;
-      user.onboardingStep = OnboardingSteps.SIZES;
+      user.onboardingStep = OnboardingSteps.SIZES + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -607,7 +607,7 @@ export class UsersService {
       user.cardNumber = cardNumber;
       user.expireDate = expireDate;
       user.cvvCode = cvvCode;
-      user.onboardingStep = OnboardingSteps.CARD;
+      user.onboardingStep = OnboardingSteps.CARD + 1;
       await this.userRepository.save(user);
 
       return user;
