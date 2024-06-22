@@ -120,5 +120,5 @@ export class UserResponseDto {
     description:
       'Indicates how many steps user completed filling shipping profile',
   })
-  onboardingSteps: string;
+  onboardingStep: number;
 }

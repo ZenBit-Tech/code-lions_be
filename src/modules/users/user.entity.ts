@@ -208,8 +208,8 @@ export class User {
     description:
       'Indicates how many steps user completed filling shipping profile',
   })
-  @Column({ default: '0', nullable: true })
-  onboardingSteps: string;
+  @Column({ default: 1, nullable: true })
+  onboardingStep: number;
 
   @BeforeInsert()
   updateDatesBeforeInsert(): void {
