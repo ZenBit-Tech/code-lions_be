@@ -30,12 +30,12 @@ import {
   ApiNotFoundResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
-  ApiNoContentResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
   getSchemaPath,
   ApiQuery,
   ApiServiceUnavailableResponse,
+  ApiConsumes,
 } from '@nestjs/swagger';
 
 import { diskStorage } from 'multer';
@@ -45,6 +45,7 @@ import { responseDescrptions } from 'src/common/response-descriptions';
 import { RANDOM_NUMBER_MAX } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
+import { UserWithTokensResponseDto } from 'src/modules/auth/dto/user-with-tokens-response.dto';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
@@ -52,10 +53,12 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
+import { UpdateUserCardDto } from './dto/update-user-card.dto';
 import { UpdateUserPhoneDto } from './dto/update-user-phone.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserSizeDto } from './dto/update-user-size.dto';
 import { UserCardDto } from './dto/user-card.dto';
 import { Order } from './order.enum';
 import { UserIdGuard } from './user-id.guard';
@@ -293,19 +296,18 @@ export class UsersController {
     await this.usersService.softDeleteUser(id);
   }
 
-  @Post(':id/photo')
+  @Patch(':id/photo')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Upload a user photo',
     tags: ['Users Endpoints'],
     description:
       'This endpoint uploads a photo for a user and updates the photo URL in the database.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Photo uploaded successfully',
+  @ApiOkResponse({
+    description: 'Photo has been successfully updated.',
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid file or request',
@@ -346,6 +348,18 @@ export class UsersController {
       },
     },
   })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -364,28 +378,24 @@ export class UsersController {
   async uploadPhoto(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ url: string }> {
+  ): Promise<UserResponseDto> {
     const photoUrl = `./uploads/avatars/${file.filename}`;
 
-    await this.usersService.updatePhotoUrl(id, photoUrl);
+    const updatedUser = await this.usersService.updatePhotoUrl(id, photoUrl);
 
-    return {
-      url: photoUrl,
-    };
+    return this.usersService.buildUserResponseDto(updatedUser);
   }
 
-  @Post(':id/role')
+  @Patch(':id/role')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user role',
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the role of a user.',
   })
-  @ApiResponse({
-    status: 201,
-    description: responseDescrptions.success,
+  @ApiOkResponse({
+    description: 'The role has been successfully updated.',
     type: UserResponseDto,
   })
   @ApiBadRequestResponse({
@@ -423,29 +433,26 @@ export class UsersController {
   async updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
-    @Body('onboardingSteps') onboardingSteps: string,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseDto | UserWithTokensResponseDto> {
     const updatedUser = await this.usersService.updateUserRole(
       id,
       updateUserRoleDto.role,
-      onboardingSteps,
     );
+    const publicUser = this.usersService.buildUserResponseDto(updatedUser);
 
-    return this.usersService.buildUserResponseDto(updatedUser);
+    return this.usersService.generateUserWithTokensResponseDto(publicUser);
   }
 
-  @Post(':id/phone')
+  @Patch(':id/phone')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user phone number',
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the phone number of a user.',
   })
-  @ApiResponse({
-    status: 201,
-    description: responseDescrptions.success,
+  @ApiOkResponse({
+    description: 'The phone numder has been successfully updated.',
     type: UserResponseDto,
   })
   @ApiBadRequestResponse({
@@ -483,29 +490,26 @@ export class UsersController {
   async updateUserPhoneNumber(
     @Param('id') id: string,
     @Body() updateUserPhoneDto: UpdateUserPhoneDto,
-    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserPhoneNumber(
       id,
       updateUserPhoneDto.phoneNumber,
-      onboardingSteps,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);
   }
 
-  @Post(':id/address')
+  @Patch(':id/address')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(UserIdGuard)
   @ApiOperation({
     summary: 'Update user address',
     tags: ['Users Endpoints'],
     description: 'This endpoint updates the address information of a user.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Address updated successfully',
+  @ApiOkResponse({
+    description: 'The user`s address has been successfully updated.',
+    type: UserResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
@@ -545,15 +549,136 @@ export class UsersController {
   async updateUserAddress(
     @Param('id') id: string,
     @Body() updateUserAddressDto: UpdateUserAddressDto,
-    @Body('onboardingSteps') onboardingSteps: string,
   ): Promise<UserResponseDto> {
     const updatedUser = await this.usersService.updateUserAddress(
       id,
       updateUserAddressDto.addressLine1,
       updateUserAddressDto.addressLine2,
+      updateUserAddressDto.country,
       updateUserAddressDto.state,
       updateUserAddressDto.city,
-      onboardingSteps,
+    );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
+  }
+
+  @Patch(':id/size')
+  @ApiBearerAuth()
+  @UseGuards(UserIdGuard)
+  @ApiOperation({
+    summary: 'Update user size',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the size information of a user.',
+  })
+  @ApiOkResponse({
+    description: 'The size has been successfully updated.',
+    type: UserResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_SIZE },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update size',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_SIZE,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserSizeDto })
+  @Roles(Role.BUYER)
+  async updateUserSize(
+    @Param('id') id: string,
+    @Body() updateUserSizeDto: UpdateUserSizeDto,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserSize(
+      id,
+      updateUserSizeDto.clothesSize,
+      updateUserSizeDto.jeansSize,
+      updateUserSizeDto.shoesSize,
+    );
+
+    return this.usersService.buildUserResponseDto(updatedUser);
+  }
+
+  @Patch(':id/credit-card')
+  @ApiBearerAuth()
+  @UseGuards(UserIdGuard)
+  @ApiOperation({
+    summary: 'Update user credit card',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint updates the credit card information of a user.',
+  })
+  @ApiOkResponse({
+    description: 'The credit card has been successfully updated.',
+    type: UserResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: Errors.INCORRECT_CREDIT_CARD },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update credit card',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_CARD,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: UpdateUserCardDto })
+  @Roles(Role.BUYER, Role.VENDOR)
+  async updateUserCreditCard(
+    @Param('id') id: string,
+    @Body() updateUserCardDto: UpdateUserCardDto,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.usersService.updateUserCreditCard(
+      id,
+      updateUserCardDto.cardNumber,
+      updateUserCardDto.expireDate,
+      updateUserCardDto.cvvCode,
     );
 
     return this.usersService.buildUserResponseDto(updatedUser);

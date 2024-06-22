@@ -1,8 +1,14 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 import { IsEnum } from 'class-validator';
 import { Errors } from 'src/common/errors';
-import { Role } from 'src/modules/roles/role.enum';
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
 
 export class UpdateUserRoleDto {
-  @IsEnum(Role, { message: Errors.INCORRECT_ROLE })
-  role: Role;
+  @ApiProperty({
+    example: 'vendor',
+    description: 'Role of user',
+  })
+  @IsEnum(RoleForUser, { message: Errors.INCORRECT_ROLE })
+  role: RoleForUser;
 }

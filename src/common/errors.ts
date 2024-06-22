@@ -86,6 +86,7 @@ export const Errors = {
   USERS_COUNTRY_CANNOT_BE_EMPTY: 'Country cannot be empty',
   USERS_COUNTRY_IS_STRING: 'Country must be a string',
   ACCESS_DENIED: 'You can only update your own profile',
+  ADMIN_NOT_FOUND: 'Admin user not found',
   FAILED_TO_UPDATE_PROFILE: 'Failed to update user profile',
   CLOTHES_SIZE_CANNOT_BE_EMPTY: 'Clothes size cannot be empty',
   CLOTHES_SIZE_IS_STRING: 'Clothes size must be a string',
