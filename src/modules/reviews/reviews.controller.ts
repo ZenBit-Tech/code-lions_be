@@ -20,6 +20,7 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiConflictResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import { ErrorResponse } from 'src/common/error-response';
@@ -51,9 +52,22 @@ import { ReviewsService } from './reviews.service';
       statusCode: { type: 'integer', example: 403 },
       message: {
         type: 'string',
-        example: 'Forbidden resource',
+        example: Errors.ROUTE_IS_FORBIDDEN,
       },
       error: { type: 'string', example: 'Forbidden' },
+    },
+  },
+})
+@ApiUnauthorizedResponse({
+  description: 'Unauthorized - No token or invalid token or expired token',
+  schema: {
+    properties: {
+      statusCode: { type: 'integer', example: 401 },
+      message: {
+        type: 'string',
+        example: Errors.USER_UNAUTHORIZED,
+      },
+      error: { type: 'string', example: 'Unauthorized' },
     },
   },
 })
@@ -92,7 +106,7 @@ export class ReviewsController {
         statusCode: { type: 'integer', example: 409 },
         message: {
           type: 'string',
-          example: 'You cannot review the other user role',
+          example: Errors.CONFLICT_REVIEW_EXAMPLE,
         },
         error: { type: 'string', example: 'Conflict' },
       },

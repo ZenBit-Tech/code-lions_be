@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
 
 import { Errors } from 'src/common/errors';
@@ -18,6 +19,10 @@ export class ReviewCreatorGuard implements CanActivate {
 
     if (!user || user.id !== createReviewDto.reviewerId) {
       throw new UnauthorizedException(Errors.REVIEW_ON_BEHALF_OF_OTHER_USER);
+    }
+
+    if (user.id === createReviewDto.userId) {
+      throw new ConflictException(Errors.REVIEW_YOURSELF);
     }
 
     return true;

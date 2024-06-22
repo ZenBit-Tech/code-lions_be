@@ -123,6 +123,8 @@ export const Errors = {
   FAILED_TO_DELETE_REVIEW: 'Failed to delete review',
   CONFLICT_REVIEW_SAME_ROLE: (role: string): string =>
     `You cannot review the other ${role}s`,
+  CONFLICT_REVIEW_EXAMPLE: 'You cannot review the other user role',
   FAILED_TO_ADD_ORDER: 'Failed to add an order',
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
+  REVIEW_YOURSELF: 'You cannot review yourself',
 };
