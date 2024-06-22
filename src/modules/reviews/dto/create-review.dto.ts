@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsInt, IsString, IsNotEmpty } from 'class-validator';
+import { IsInt, IsString, IsNotEmpty, Min, Max } from 'class-validator';
 import { Errors } from 'src/common/errors';
+import { MAX_RATING, MIN_RATING } from 'src/config';
 
 export class CreateReviewDto {
   @IsString({ message: Errors.REVIEW_TEXT_NOT_STRING })
@@ -13,6 +14,8 @@ export class CreateReviewDto {
   text: string;
 
   @IsInt({ message: Errors.RATING_MUST_BE_AN_INT })
+  @Min(MIN_RATING, { message: Errors.RATING_MIN })
+  @Max(MAX_RATING, { message: Errors.RATING_MAX })
   @ApiProperty({ example: 5, description: 'The rating given in the review' })
   rating: number;
 
