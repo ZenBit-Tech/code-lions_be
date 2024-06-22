@@ -90,8 +90,8 @@ export class User {
     description: 'The users profile photo',
   })
   @Column({
-    nullable: false,
-    default: './uploads/avatars/file-1718301871158-882823500.jpg',
+    nullable: true,
+    default: null,
   })
   photoUrl: string;
 

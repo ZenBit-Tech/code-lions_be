@@ -42,7 +42,7 @@ import { diskStorage } from 'multer';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
-import { RANDOM_NUMBER_MAX } from 'src/config';
+import { IMAGES_PATH, RANDOM_NUMBER_MAX } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { UserWithTokensResponseDto } from 'src/modules/auth/dto/user-with-tokens-response.dto';
@@ -296,7 +296,7 @@ export class UsersController {
     await this.usersService.softDeleteUser(id);
   }
 
-  @Patch(':id/photo')
+  @Post(':id/photo')
   @ApiBearerAuth()
   @UseGuards(UserIdGuard)
   @ApiOperation({
@@ -363,7 +363,7 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: './uploads/avatars',
+        destination: IMAGES_PATH,
         filename: (req, file, callback) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * RANDOM_NUMBER_MAX);
@@ -379,7 +379,7 @@ export class UsersController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UserResponseDto> {
-    const photoUrl = `./uploads/avatars/${file.filename}`;
+    const photoUrl = `${IMAGES_PATH}/${file.filename}`;
 
     const updatedUser = await this.usersService.updatePhotoUrl(id, photoUrl);
 

@@ -7,3 +7,4 @@ export const LIMIT_OF_CHARACTERS_FOR_ADDRESS = 100;
 export const LIMIT_USERS_PER_PAGE = 7;
 export const MAX_NAME_LENGTH = 100;
 export const MAX_EMAIL_LENGTH = 100;
+export const IMAGES_PATH = './uploads/avatars';
