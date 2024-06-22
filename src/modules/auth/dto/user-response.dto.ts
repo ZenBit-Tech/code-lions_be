@@ -97,6 +97,19 @@ export class UserResponseDto {
   isAccountActive: boolean;
 
   @ApiProperty({
+    example: 4.5,
+    description:
+      'The average rating of the user from reviews. It ranges from 0.0 to 5.0.',
+  })
+  rating: number;
+
+  @ApiProperty({
+    example: 1950,
+    description: 'The sum of orders made by the user.',
+  })
+  orders: number;
+
+  @ApiProperty({
     example: new Date(),
     description: 'The creation date of the user',
   })

@@ -713,4 +713,50 @@ export class UsersController {
       updateProfileByAdminDto,
     );
   }
+
+  @Patch(':id/orders')
+  @Roles(Role.BUYER, Role.VENDOR)
+  @ApiOperation({
+    summary: 'Update orders sum of the user',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint allows to update the sum of orders of the user.',
+  })
+  @ApiOkResponse({
+    description: 'The orders has been successfully updated.',
+    type: UserResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update orders of the user',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_ADD_ORDER },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to update the orders',
+  })
+  async updateUserOrders(
+    @Param('id') id: string,
+    @Body('order') order: number,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateUserOrders(id, order);
+  }
 }
