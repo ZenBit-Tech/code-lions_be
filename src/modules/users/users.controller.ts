@@ -16,6 +16,7 @@ import {
   UploadedFile,
   Request,
   ValidationPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -42,7 +43,7 @@ import { diskStorage } from 'multer';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
-import { IMAGES_PATH, RANDOM_NUMBER_MAX } from 'src/config';
+import { IMAGES_PATH, MAX_FILE_SIZE, RANDOM_NUMBER_MAX } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { UserWithTokensResponseDto } from 'src/modules/auth/dto/user-with-tokens-response.dto';
@@ -365,6 +366,12 @@ export class UsersController {
       storage: diskStorage({
         destination: IMAGES_PATH,
         filename: (req, file, callback) => {
+          if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
+            return callback(
+              new BadRequestException(Errors.ONLY_JPG_JPEG_PNG_HEIC),
+              null,
+            );
+          }
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * RANDOM_NUMBER_MAX);
           const ext = extname(file.originalname);
@@ -372,6 +379,7 @@ export class UsersController {
           callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
       }),
+      limits: { fileSize: MAX_FILE_SIZE },
     }),
   )
   @Roles(Role.BUYER, Role.VENDOR)
