@@ -211,6 +211,27 @@ export class User {
   @Column({ default: '0', nullable: true })
   onboardingSteps: string;
 
+  @ApiProperty({
+    example: 4.5,
+    description:
+      'The average rating of the user from reviews. It ranges from 0.0 to 5.0.',
+  })
+  @Column({
+    type: 'decimal',
+    precision: 3,
+    scale: 1,
+    nullable: false,
+    default: 0.0,
+  })
+  rating: number;
+
+  @ApiProperty({
+    example: 2000,
+    description: 'The sum of user orders',
+  })
+  @Column({ type: 'int', default: 0 })
+  orders: number;
+
   @BeforeInsert()
   updateDatesBeforeInsert(): void {
     this.createdAt = new Date();

@@ -70,6 +70,8 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      rating,
+      orders,
       onboardingSteps,
       createdAt,
       lastUpdatedAt,
@@ -93,6 +95,8 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      rating,
+      orders,
       onboardingSteps,
       createdAt,
       lastUpdatedAt,
@@ -120,6 +124,8 @@ export class UsersService {
       jeansSize,
       shoesSize,
       isAccountActive,
+      rating,
+      orders,
       onboardingSteps,
       createdAt,
       lastUpdatedAt,
@@ -145,6 +151,8 @@ export class UsersService {
       clothesSize,
       jeansSize,
       shoesSize,
+      rating,
+      orders,
       isAccountActive,
       onboardingSteps,
       createdAt,
@@ -234,6 +242,9 @@ export class UsersService {
 
       return publicUserById;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
     }
   }
@@ -626,7 +637,7 @@ export class UsersService {
       });
 
       if (!user) {
-        throw new NotFoundException(Errors.USER_DOES_NOT_EXIST);
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
       const userCardData: UserCardDto = {
@@ -637,7 +648,10 @@ export class UsersService {
 
       return userCardData;
     } catch (error) {
-      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_USER_BY_ID);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_CARD_DATA);
     }
   }
 
@@ -700,6 +714,9 @@ export class UsersService {
 
       return user;
     } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
     }
   }
@@ -710,6 +727,10 @@ export class UsersService {
   ): Promise<PersonalInfoDto> {
     try {
       const user = await this.getUserById(id);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
       const updatedUser = await this.updateUserFields(user, updateProfileDto);
       const savedUser = await this.userRepository.save(updatedUser);
@@ -748,6 +769,27 @@ export class UsersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  async updateUserOrders(id: string, order: number): Promise<UserResponseDto> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.orders = user.orders + order;
+      const updatedUser = await this.userRepository.save(user);
+      const publicUser = this.buildUserResponseDto(updatedUser);
+
+      return publicUser;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_ADD_ORDER);
     }
   }
 }

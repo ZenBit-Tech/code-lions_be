@@ -99,6 +99,19 @@ export class UsersController {
     description: responseDescrptions.success,
     type: [User],
   })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
   @Roles(Role.ADMIN)
   async getUsers(): Promise<User[]> {
     return await this.usersService.getAllUsers();
@@ -121,6 +134,19 @@ export class UsersController {
           items: { $ref: getSchemaPath(UserResponseDto) },
         },
         pagesCount: { type: 'number', example: 1 },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
       },
     },
   })
@@ -182,6 +208,19 @@ export class UsersController {
       },
     },
   })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
   @ApiInternalServerErrorResponse({
     description: 'Failed to get user by ID from admin panel',
     schema: {
@@ -237,6 +276,19 @@ export class UsersController {
     status: 204,
     description: responseDescrptions.success,
   })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
   @ApiNotFoundResponse({
     description: responseDescrptions.error,
     type: ErrorResponse,
@@ -260,6 +312,19 @@ export class UsersController {
   @ApiResponse({
     status: 204,
     description: responseDescrptions.success,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
   })
   @ApiNotFoundResponse({
     description: 'Not found user with given id',
@@ -692,8 +757,7 @@ export class UsersController {
     tags: ['Users Endpoints'],
     description: 'This endpoint retrieves the card data of a user by ID.',
   })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: 'Successfully retrieved user card data',
     type: UserCardDto,
   })
@@ -707,6 +771,19 @@ export class UsersController {
           example: Errors.USER_NOT_FOUND,
         },
         error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
       },
     },
   })
@@ -740,6 +817,19 @@ export class UsersController {
   @ApiOkResponse({
     description: 'The user has been successfully updated.',
     type: PersonalInfoDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
   })
   @ApiNotFoundResponse({
     description: 'Not found user with given id',
@@ -795,6 +885,19 @@ export class UsersController {
     description: 'The user has been successfully fetched.',
     type: UserResponseDto,
   })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
   @ApiNotFoundResponse({
     description: 'Not found user with given id',
     schema: {
@@ -837,5 +940,64 @@ export class UsersController {
       id,
       updateProfileByAdminDto,
     );
+  }
+
+  @Patch(':id/orders')
+  @Roles(Role.BUYER, Role.VENDOR)
+  @ApiOperation({
+    summary: 'Update orders sum of the user',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint allows to update the sum of orders of the user.',
+  })
+  @ApiOkResponse({
+    description: 'The orders has been successfully updated.',
+    type: UserResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update orders of the user',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_ADD_ORDER },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to update the orders',
+  })
+  async updateUserOrders(
+    @Param('id') id: string,
+    @Body('order') order: number,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateUserOrders(id, order);
   }
 }
