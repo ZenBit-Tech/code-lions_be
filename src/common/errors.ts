@@ -107,6 +107,7 @@ export const Errors = {
   INCORRECT_CREDIT_CARD: "The user's credit card information is incorrect",
   COUNTRY_CANNOT_BE_EMPTY: 'Country cannot be empty',
   COUNTRY_IS_STRING: 'Country must be a string',
+  ONLY_JPG_JPEG_PNG_HEIC: 'Only jpg, jpeg, png, heic files are allowed',
   REVIEW_TEXT_NOT_STRING: 'Review text must be a string',
   REVIEW_TEXT_NOT_EMPTY: 'Review text must not be empty',
   RATING_MUST_BE_AN_INT: 'Rating must be an integer',

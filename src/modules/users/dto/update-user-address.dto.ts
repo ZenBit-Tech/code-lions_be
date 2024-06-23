@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsString, IsNotEmpty, Matches, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
 import { Errors } from 'src/common/errors';
 import { LIMIT_OF_CHARACTERS_FOR_ADDRESS } from 'src/config';
 
@@ -8,9 +8,6 @@ export class UpdateUserAddressDto {
   @ApiProperty({
     example: '123 Main St',
     description: 'First address line of the user',
-  })
-  @Matches(/^[a-zA-Z0-9\s,.'-]*$/, {
-    message: Errors.INCORRECT_ADDRESS_LINE1,
   })
   @MaxLength(LIMIT_OF_CHARACTERS_FOR_ADDRESS, {
     message: Errors.TOO_LONG_ADDRESS_LINE1,
@@ -22,9 +19,6 @@ export class UpdateUserAddressDto {
   @ApiProperty({
     example: 'Apt 101',
     description: 'Second address line of the user',
-  })
-  @Matches(/^[a-zA-Z0-9\s,.'-]*$/, {
-    message: Errors.INCORRECT_ADDRESS_LINE2,
   })
   @MaxLength(LIMIT_OF_CHARACTERS_FOR_ADDRESS, {
     message: Errors.TOO_LONG_ADDRESS_LINE2,

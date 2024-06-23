@@ -90,8 +90,8 @@ export class User {
     description: 'The users profile photo',
   })
   @Column({
-    nullable: false,
-    default: './uploads/avatars/file-1718301871158-882823500.jpg',
+    nullable: true,
+    default: null,
   })
   photoUrl: string;
 
@@ -208,8 +208,8 @@ export class User {
     description:
       'Indicates how many steps user completed filling shipping profile',
   })
-  @Column({ default: '0', nullable: true })
-  onboardingSteps: string;
+  @Column({ default: 1, nullable: true })
+  onboardingStep: number;
 
   @ApiProperty({
     example: 4.5,

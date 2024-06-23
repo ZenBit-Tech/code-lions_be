@@ -110,10 +110,11 @@ module.exports = {
       },
     ],
 
-    'no-magic-numbers': [
+    '@typescript-eslint/no-magic-numbers': [
       'error',
       {
         ignore: [0, 1],
+        ignoreEnums: true,
         ignoreArrayIndexes: true,
         enforceConst: true,
         detectObjects: false,

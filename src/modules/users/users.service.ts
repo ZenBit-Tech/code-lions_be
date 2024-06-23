@@ -72,7 +72,7 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
-      onboardingSteps,
+      onboardingStep,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -97,7 +97,7 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
-      onboardingSteps,
+      onboardingStep,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -126,7 +126,7 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
-      onboardingSteps,
+      onboardingStep,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -154,7 +154,7 @@ export class UsersService {
       rating,
       orders,
       isAccountActive,
-      onboardingSteps,
+      onboardingStep,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -510,7 +510,7 @@ export class UsersService {
       }
 
       user.role = role;
-      user.onboardingSteps = OnboardingSteps.ROLE;
+      user.onboardingStep = OnboardingSteps.ROLE + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -531,7 +531,7 @@ export class UsersService {
       }
 
       user.phoneNumber = phoneNumber;
-      user.onboardingSteps = OnboardingSteps.INFO;
+      user.onboardingStep = OnboardingSteps.INFO + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -564,7 +564,7 @@ export class UsersService {
       user.country = country;
       user.state = state;
       user.city = city;
-      user.onboardingSteps = OnboardingSteps.ADDRESS;
+      user.onboardingStep = OnboardingSteps.ADDRESS + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -591,7 +591,7 @@ export class UsersService {
       user.clothesSize = clothesSize;
       user.jeansSize = jeansSize;
       user.shoesSize = shoesSize;
-      user.onboardingSteps = OnboardingSteps.SIZES;
+      user.onboardingStep = OnboardingSteps.SIZES + 1;
       await this.userRepository.save(user);
 
       return user;
@@ -618,7 +618,7 @@ export class UsersService {
       user.cardNumber = cardNumber;
       user.expireDate = expireDate;
       user.cvvCode = cvvCode;
-      user.onboardingSteps = OnboardingSteps.CARD;
+      user.onboardingStep = OnboardingSteps.CARD + 1;
       await this.userRepository.save(user);
 
       return user;
