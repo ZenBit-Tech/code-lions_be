@@ -243,6 +243,64 @@ export class UsersController {
     return await this.usersService.getPublicUserById(id);
   }
 
+  @Get(':id')
+  @Roles(Role.BUYER, Role.VENDOR)
+  @ApiOperation({
+    summary: 'Get user by ID',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint returns a public user by ID',
+  })
+  @ApiOkResponse({
+    description: 'The user has been successfully fetched.',
+    type: UserResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_BY_ID_DOES_NOT_EXIST,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to get user by ID',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_USER_BY_ID,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to fetch',
+  })
+  async getUserById(@Param('id') id: string): Promise<UserResponseDto> {
+    return await this.usersService.getPublicUserById(id);
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Create a new user',
