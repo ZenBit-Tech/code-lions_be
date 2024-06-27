@@ -42,6 +42,20 @@ export class Review {
   @Column('uuid')
   reviewerId: string;
 
+  @ApiProperty({ example: 'John Doe', description: 'The name of the user' })
+  @Column()
+  reviewerName: string;
+
+  @ApiProperty({
+    example: 'file-1718301871158-882823500.jpg',
+    description: 'The reviewer profile photo',
+  })
+  @Column({
+    nullable: true,
+    default: null,
+  })
+  reviewerAvatar: string;
+
   @ApiProperty({
     example: new Date(),
     description: 'The date of the review',

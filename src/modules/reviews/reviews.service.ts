@@ -47,6 +47,8 @@ export class ReviewsService {
         reviewerId: reviewer.id,
         text,
         rating,
+        reviewerName: reviewer.name,
+        reviewerAvatar: reviewer.photoUrl,
       });
 
       const createdReview = await this.reviewRepository.save(review);
