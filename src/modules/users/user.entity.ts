@@ -25,10 +25,11 @@ export class User {
   name: string;
 
   @ApiProperty({
+    uniqueItems: true,
     example: 'john.doe@example.com',
     description: 'The email of the user',
   })
-  @Column()
+  @Column({ unique: true })
   email: string;
 
   @ApiProperty({
