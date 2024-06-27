@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
+import { Product } from 'src/products/entities/product.entity';
 import {
   Entity,
   Column,
@@ -9,6 +10,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
   DeleteDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 @Entity()
@@ -242,4 +244,7 @@ export class User {
   updateDatesBeforeUpdate(): void {
     this.lastUpdatedAt = new Date();
   }
+
+  @OneToMany(() => Product, (product) => product.user)
+  products: Product[];
 }

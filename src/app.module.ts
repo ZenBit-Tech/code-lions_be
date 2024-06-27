@@ -8,6 +8,8 @@ import { Review } from './modules/reviews/review.entity';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { User } from './modules/users/user.entity';
 import { UsersModule } from './modules/users/users.module';
+import { Product } from './products/entities/product.entity';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -21,7 +23,7 @@ import { UsersModule } from './modules/users/users.module';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        entities: [User, Review],
+        entities: [User, Review, Product],
         synchronize: true,
       }),
       inject: [ConfigService],
@@ -30,6 +32,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     GeoNamesModule,
     ReviewsModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}
