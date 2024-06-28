@@ -1,9 +1,8 @@
-import { join } from 'path';
-
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { TypeOrmConfigService } from 'src/config/typeorm';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
 import { ProductsModule } from 'src/modules/products/products.module';
@@ -14,19 +13,7 @@ import { UsersModule } from 'src/modules/users/users.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
-        entities: [join(__dirname + '/**/*.entity.ts')],
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
-      inject: [ConfigService],
+      useClass: TypeOrmConfigService,
     }),
     UsersModule,
     AuthModule,
