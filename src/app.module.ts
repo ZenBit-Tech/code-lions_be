@@ -4,11 +4,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AuthModule } from './modules/auth/auth.module';
-import { GeoNamesModule } from './modules/geoNames/geoNames.module';
-import { ReviewsModule } from './modules/reviews/reviews.module';
-import { UsersModule } from './modules/users/users.module';
-import { ProductsModule } from './products/products.module';
+import { AuthModule } from 'src/modules/auth/auth.module';
+import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
+import { ProductsModule } from 'src/modules/products/products.module';
+import { ReviewsModule } from 'src/modules/reviews/reviews.module';
+import { UsersModule } from 'src/modules/users/users.module';
 
 @Module({
   imports: [

@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 
-import { Product } from 'src/products/entities/product.entity';
-import { ProductsService } from 'src/products/products.service';
+import { Product } from 'src/modules/products/entities/product.entity';
+import { ProductsService } from 'src/modules/products/products.service';
 
 @Controller('products')
 export class ProductsController {

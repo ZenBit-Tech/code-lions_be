@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
-import { Product } from 'src/products/entities/product.entity';
 import {
   Entity,
   Column,

@@ -1,4 +1,4 @@
-import { Colors } from 'src/products/entities/colors.enum';
+import { Colors } from 'src/modules/products/entities/colors.enum';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class PopulateColors1719552500314 implements MigrationInterface {

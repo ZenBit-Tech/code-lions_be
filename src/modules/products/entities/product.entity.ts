@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Color } from 'src/modules/products/entities/color.entity';
+import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
-import { Color } from 'src/products/entities/color.entity';
-import { Styles } from 'src/products/entities/styles.enum';
 import {
   Entity,
   PrimaryGeneratedColumn,
