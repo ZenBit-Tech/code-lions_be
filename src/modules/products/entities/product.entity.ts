@@ -86,4 +86,7 @@ export class Product {
     },
   })
   color: Color[];
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
 }
