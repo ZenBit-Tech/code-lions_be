@@ -1,14 +1,13 @@
+import { join } from 'path';
+
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { GeoNamesModule } from './modules/geoNames/geoNames.module';
-import { Review } from './modules/reviews/review.entity';
 import { ReviewsModule } from './modules/reviews/reviews.module';
-import { User } from './modules/users/user.entity';
 import { UsersModule } from './modules/users/users.module';
-import { Product } from './products/entities/product.entity';
 import { ProductsModule } from './products/products.module';
 
 @Module({
@@ -23,7 +22,8 @@ import { ProductsModule } from './products/products.module';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        entities: [User, Review, Product],
+        entities: [join(__dirname + '/**/*.entity.ts')],
+        autoLoadEntities: true,
         synchronize: true,
       }),
       inject: [ConfigService],

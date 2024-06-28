@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { User } from 'src/modules/users/user.entity';
+import { Color } from 'src/products/entities/color.entity';
 import { Styles } from 'src/products/entities/styles.enum';
 import {
   Entity,
@@ -8,6 +9,8 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 
 @Entity()
@@ -37,7 +40,7 @@ export class Product {
     example: 12300,
     description: 'The price of the product in cents',
   })
-  @Column({ type: 'int' })
+  @Column({ nullable: true, type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
   @ApiProperty({
@@ -65,4 +68,22 @@ export class Product {
   })
   @Column({ type: 'enum', enum: Styles, nullable: true })
   style: string;
+
+  @ApiProperty({
+    example: 'black,blue',
+    description: 'The colors of the product',
+  })
+  @ManyToMany(() => Color, (color) => color.products, { eager: false })
+  @JoinTable({
+    name: 'product_colors',
+    joinColumn: {
+      name: 'product_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'color_id',
+      referencedColumnName: 'id',
+    },
+  })
+  color: Color[];
 }
