@@ -14,7 +14,11 @@ export class ProductsService {
 
   async findAll(): Promise<Product[]> {
     try {
-      const products = await this.productRepository.find();
+      const products = await this.productRepository
+        .createQueryBuilder('p')
+        .leftJoinAndSelect('p.user', 'u')
+        .select(['p.*', 'u.name as vendorName'])
+        .getRawMany();
 
       return products;
     } catch (error) {
