@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Errors } from 'src/common/errors';
+import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Repository } from 'typeorm';
 
@@ -23,12 +24,11 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
   ) {}
 
-  async findAll(): Promise<Product[]> {
+  async findAll(): Promise<ProductResponseDTO[]> {
     return this.getProducts();
   }
 
-  async findBySlug(slug: string): Promise<Product> {
-    console.log(slug);
+  async findBySlug(slug: string): Promise<ProductResponseDTO> {
     const products = await this.getProducts({
       where: {
         key: 'slug',
@@ -43,7 +43,9 @@ export class ProductsService {
     return products[0];
   }
 
-  private async getProducts(options?: GetProductsOptions): Promise<Product[]> {
+  private async getProducts(
+    options?: GetProductsOptions,
+  ): Promise<ProductResponseDTO[]> {
     try {
       const queryBuilder = this.productRepository
         .createQueryBuilder('product')
@@ -51,7 +53,7 @@ export class ProductsService {
         .leftJoinAndSelect('product.user', 'user')
         .leftJoinAndSelect('product.color', 'colors');
 
-      if (options.where) {
+      if (options?.where) {
         queryBuilder
           .where(`product.${options.where.key} = :${options.where.key}`)
           .setParameter(options.where.key, options.where.value);
@@ -61,12 +63,11 @@ export class ProductsService {
 
       return this.groupProducts(rawProducts);
     } catch (error) {
-      console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
 
-  private groupProducts(rawProducts: any[]): Product[] {
+  private groupProducts(rawProducts: any[]): ProductResponseDTO[] {
     const groupedProducts = rawProducts.reduce((acc, row) => {
       const productId = row.product_id;
 
