@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
+import { ApiParam } from '@nestjs/swagger';
 
 import { Product } from 'src/modules/products/entities/product.entity';
 import { ProductsService } from 'src/modules/products/products.service';
@@ -10,5 +11,14 @@ export class ProductsController {
   @Get()
   findAll(): Promise<Product[]> {
     return this.productsService.findAll();
+  }
+
+  @Get(':slug')
+  @ApiParam({
+    name: 'slug',
+    description: 'The slug of the product',
+  })
+  async findBySlug(@Param('slug') slug: string): Promise<Product> {
+    return this.productsService.findBySlug(slug);
   }
 }

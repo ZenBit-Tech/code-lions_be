@@ -129,4 +129,5 @@ export const Errors = {
   FAILED_TO_ADD_ORDER: 'Failed to add an order',
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
   REVIEW_YOURSELF: 'You cannot review yourself',
+  PRODUCT_NOT_FOUND: 'Product not found',
 };
