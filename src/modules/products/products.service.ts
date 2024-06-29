@@ -14,19 +14,51 @@ export class ProductsService {
 
   async findAll(): Promise<Product[]> {
     try {
-      const products = await this.productRepository
-        .createQueryBuilder('p')
-        .leftJoinAndSelect('p.user', 'u')
-        .leftJoinAndSelect('p.color', 'c')
-        .select([
-          'p.*',
-          'u.name as vendorName',
-          'GROUP_CONCAT(c.color) AS colors',
-        ])
-        .groupBy('p.id')
+      const rawProducts = await this.productRepository
+        .createQueryBuilder('product')
+        .leftJoinAndSelect('product.images', 'images')
+        .leftJoinAndSelect('product.user', 'user')
+        .leftJoinAndSelect('product.color', 'colors')
         .getRawMany();
 
-      return products;
+      const products = rawProducts.reduce((acc, row) => {
+        const productId = row.product_id;
+
+        if (!acc[productId]) {
+          acc[productId] = {
+            id: row.product_id,
+            name: row.product_name,
+            slug: row.product_slug,
+            price: row.product_price,
+            description: row.product_description,
+            style: row.product_style,
+            images: [],
+            colors: [],
+            vendor: {
+              id: row.user_id,
+              name: row.user_name,
+              photoUrl: row.user_photoUrl,
+            },
+            createdAt: row.product_createdAt,
+            lastUpdatedAt: row.product_lastUpdatedAt,
+          };
+        }
+
+        if (row.images_id && !acc[productId].images.includes(row.images_url)) {
+          acc[productId].images.push(row.images_url);
+        }
+
+        if (
+          row.colors_color &&
+          !acc[productId].colors.includes(row.colors_color)
+        ) {
+          acc[productId].colors.push(row.colors_color);
+        }
+
+        return acc;
+      }, {});
+
+      return Object.values(products);
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);

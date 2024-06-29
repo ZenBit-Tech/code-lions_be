@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { Product } from './product.entity';
-@Entity({ name: 'color', schema: 'public' })
+@Entity({ name: 'colors', schema: 'public' })
 export class Color {
   @ApiProperty()
   @PrimaryGeneratedColumn()
