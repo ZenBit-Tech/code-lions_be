@@ -1,7 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
+import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
 import {
@@ -78,6 +80,13 @@ export class Product {
   @JoinColumn({ name: 'id' })
   images: Image[];
 
+  @Column({
+    type: 'set',
+    enum: Category,
+    nullable: true,
+  })
+  categories: Category[];
+
   @ApiProperty({
     example: 'casual',
     description: 'The style of the product',
@@ -85,6 +94,27 @@ export class Product {
   })
   @Column({ type: 'enum', enum: Styles, nullable: true })
   style: string;
+
+  @ApiProperty({
+    example: 'dress',
+    description: 'The type of the product',
+    enum: ProductTypes,
+  })
+  @Column({
+    type: 'enum',
+    enum: ProductTypes,
+    nullable: false,
+    default: ProductTypes.OTHER,
+  })
+  type: string;
+
+  @ApiProperty({
+    example: 'M',
+    description: 'The size of the product',
+    type: String,
+  })
+  @Column({ type: 'varchar', length: 15, nullable: true })
+  size: string;
 
   @ApiProperty({
     example: 'black,blue',

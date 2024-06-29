@@ -31,7 +31,10 @@ export class ProductsService {
             slug: row.product_slug,
             price: row.product_price,
             description: row.product_description,
+            categories: row.product_categories.split(','),
             style: row.product_style,
+            type: row.product_type,
+            size: row.product_size,
             images: [],
             colors: [],
             vendor: {
