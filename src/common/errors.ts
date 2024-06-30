@@ -16,6 +16,7 @@ export const Errors = {
   FAILED_TO_FETCH_USER_BY_EMAIL: 'Failed to fetch the user by email',
   FAILED_TO_FETCH_USER_BY_ID: 'Failed to fetch the user by id',
   FAILED_TO_FETCH_USERS: 'Failed to fetch users',
+  FAILED_TO_FETCH_PRODUCTS: 'Failed to fetch products',
   FAILED_TO_HASH: 'Failed to hash the password',
   FAILED_TO_SEND_FORGET_PASSWORD_EMAIL: 'Failed to send forgot password email',
   FAILED_TO_SEND_VERIFICATION_EMAIL: 'Failed to send verification email',
@@ -128,4 +129,5 @@ export const Errors = {
   FAILED_TO_ADD_ORDER: 'Failed to add an order',
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
   REVIEW_YOURSELF: 'You cannot review yourself',
+  PRODUCT_NOT_FOUND: 'Product not found',
 };
