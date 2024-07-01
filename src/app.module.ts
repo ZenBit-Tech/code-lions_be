@@ -8,6 +8,7 @@ import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
 import { ProductsModule } from 'src/modules/products/products.module';
 import { ReviewsModule } from 'src/modules/reviews/reviews.module';
 import { UsersModule } from 'src/modules/users/users.module';
+import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UsersModule } from 'src/modules/users/users.module';
     GeoNamesModule,
     ReviewsModule,
     ProductsModule,
+    WishlistModule,
   ],
 })
 export class AppModule {}

@@ -6,6 +6,7 @@ import { Image } from 'src/modules/products/entities/image.entity';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -150,4 +151,7 @@ export class Product {
   })
   @Column({ type: 'timestamp', default: null, nullable: true })
   lastUpdatedAt: Date;
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.product)
+  wishlistEntries: Wishlist[];
 }

@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 import {
   Entity,
   Column,
@@ -246,4 +247,7 @@ export class User {
 
   @OneToMany(() => Product, (product) => product.user)
   products: Product[];
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
+  wishlist: Wishlist[];
 }

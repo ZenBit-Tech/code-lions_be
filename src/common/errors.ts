@@ -86,7 +86,7 @@ export const Errors = {
   USERS_CITY_IS_STRING: 'City must be a string',
   USERS_COUNTRY_CANNOT_BE_EMPTY: 'Country cannot be empty',
   USERS_COUNTRY_IS_STRING: 'Country must be a string',
-  ACCESS_DENIED: 'You can only update your own profile',
+  ACCESS_DENIED: 'You can only make changes to your own profile',
   ADMIN_NOT_FOUND: 'Admin user not found',
   FAILED_TO_UPDATE_PROFILE: 'Failed to update user profile',
   CLOTHES_SIZE_CANNOT_BE_EMPTY: 'Clothes size cannot be empty',
@@ -130,4 +130,12 @@ export const Errors = {
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
   REVIEW_YOURSELF: 'You cannot review yourself',
   PRODUCT_NOT_FOUND: 'Product not found',
+  USER_OR_PRODUCT_NOT_FOUND: 'User or Product not found',
+  PRODUCT_ALREADY_IN_WISHLIST: 'Product already exists in the wishlist',
+  WISHLIST_ENTRY_NOT_FOUND: 'Wishlist entry not found',
+  WISHLIST_NOT_FOUND: 'Wishlist not found',
+  FAILED_TO_ADD_PRODUCT_TO_WISHLIST: 'Failed to add product to wishlist',
+  FAILED_TO_REMOVE_PRODUCT_FROM_WISHLIST:
+    'Failed to remove product from wishlist',
+  FAILED_TO_RETRIEVE_WISHLIST: 'Failed to retrieve wishlist',
 };
