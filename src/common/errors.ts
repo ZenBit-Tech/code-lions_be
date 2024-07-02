@@ -138,4 +138,10 @@ export const Errors = {
   FAILED_TO_REMOVE_PRODUCT_FROM_WISHLIST:
     'Failed to remove product from wishlist',
   FAILED_TO_RETRIEVE_WISHLIST: 'Failed to retrieve wishlist',
+  PRODUCT_ALREADY_IN_CART: 'Product already exists in the cart',
+  FAILED_TO_ADD_PRODUCT_TO_CART: 'Failed to add product to cart',
+  CART_ENTRY_NOT_FOUND: 'Cart entry not found',
+  FAILED_TO_REMOVE_PRODUCT_FROM_CART: 'Failed to remove product from cart',
+  CART_NOT_FOUND: 'Cart not found',
+  FAILED_TO_RETRIEVE_CART: 'Failed to retrieve cart',
 };

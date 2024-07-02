@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Cart } from 'src/modules/cart/cart.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
@@ -151,6 +152,9 @@ export class Product {
   })
   @Column({ type: 'timestamp', default: null, nullable: true })
   lastUpdatedAt: Date;
+
+  @OneToMany(() => Cart, (cart) => cart.product)
+  cart: Cart[];
 
   @OneToMany(() => Wishlist, (wishlist) => wishlist.product)
   wishlistEntries: Wishlist[];

@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { TypeOrmConfigService } from 'src/config/typeorm';
 import { AuthModule } from 'src/modules/auth/auth.module';
+import { CartModule } from 'src/modules/cart/cart.module';
 import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
 import { ProductsModule } from 'src/modules/products/products.module';
 import { ReviewsModule } from 'src/modules/reviews/reviews.module';
@@ -22,6 +23,7 @@ import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
     ReviewsModule,
     ProductsModule,
     WishlistModule,
+    CartModule,
   ],
 })
 export class AppModule {}

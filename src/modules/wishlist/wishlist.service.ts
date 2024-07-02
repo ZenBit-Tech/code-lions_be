@@ -112,7 +112,9 @@ export class WishlistService {
         }),
       );
 
-      return validProducts.filter((product) => product !== null);
+      const validWishlist = validProducts.filter((product) => product !== null);
+
+      return validWishlist;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

@@ -3,8 +3,8 @@ import {
   Post,
   Delete,
   Get,
-  Body,
   Param,
+  Body,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -26,15 +26,15 @@ import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
-import { Product } from 'src/modules/products/entities/product.entity';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
 
-import { WishlistService } from './wishlist.service';
+import { CartService } from './cart.service';
+import { ResponseCartItemDto } from './response-cart.dto';
 
-@ApiTags('wishlist')
+@ApiTags('cart')
 @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
 @Roles(Role.BUYER)
 @ApiBearerAuth()
@@ -68,16 +68,16 @@ import { WishlistService } from './wishlist.service';
     },
   },
 })
-@Controller('wishlist')
-export class WishlistController {
-  constructor(private readonly wishlistService: WishlistService) {}
+@Controller('cart')
+export class CartController {
+  constructor(private readonly cartService: CartService) {}
 
   @Post(':id')
   @ApiOperation({
-    summary: 'Add product to wishlist',
-    tags: ['Wishlists Endpoints'],
+    summary: 'Add product to cart',
+    tags: ['Cart Endpoints'],
     description:
-      'This endpoint adds the product to the wishlist of the particular user',
+      'This endpoint adds a product to the cart of the particular user',
   })
   @ApiResponse({
     status: 204,
@@ -97,147 +97,143 @@ export class WishlistController {
     },
   })
   @ApiConflictResponse({
-    description: 'The product is already in the wishlist of the user',
+    description: 'The product is already in the cart of the user',
     schema: {
       properties: {
         statusCode: { type: 'integer', example: 409 },
         message: {
           type: 'string',
-          example: Errors.PRODUCT_ALREADY_IN_WISHLIST,
+          example: Errors.PRODUCT_ALREADY_IN_CART,
         },
         error: { type: 'string', example: 'Conflict' },
       },
     },
   })
   @ApiInternalServerErrorResponse({
-    description: 'Failed to add product to wishlist',
+    description: 'Failed to add product to cart',
     schema: {
       properties: {
         statusCode: { type: 'integer', example: 500 },
         message: {
           type: 'string',
-          example: Errors.FAILED_TO_ADD_PRODUCT_TO_WISHLIST,
+          example: Errors.FAILED_TO_ADD_PRODUCT_TO_CART,
         },
         error: { type: 'string', example: 'Internal Server Error' },
       },
     },
   })
-  @ApiParam({ name: 'id', description: 'The ID of the wishlist owner' })
+  @ApiParam({ name: 'id', description: 'The ID of the cart owner' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        productId: {
-          type: 'string',
-        },
+        productId: { type: 'string' },
+        duration: { type: 'number' },
       },
-
-      required: ['productId'],
+      required: ['productId', 'duration'],
     },
   })
-  async addToWishlist(
+  async addToCart(
     @Param('id') userId: string,
     @Body('productId') productId: string,
+    @Body('duration') duration: number,
   ): Promise<void> {
-    await this.wishlistService.addToWishlist(userId, productId);
+    return this.cartService.addToCart(userId, productId, duration);
   }
 
   @Delete(':id')
   @ApiOperation({
-    summary: 'Remove product from wishlist',
-    tags: ['Wishlists Endpoints'],
+    summary: 'Remove product from cart',
+    tags: ['Cart Endpoints'],
     description:
-      'This endpoint removes the product from the wishlist of the particular user',
+      'This endpoint removes a product from the cart of the particular user',
   })
   @ApiResponse({
     status: 204,
     description: responseDescrptions.success,
   })
   @ApiNotFoundResponse({
-    description: 'Wishlist not found',
+    description: 'Cart entry not found',
     schema: {
       properties: {
         statusCode: { type: 'integer', example: 404 },
         message: {
           type: 'string',
-          example: Errors.WISHLIST_ENTRY_NOT_FOUND,
+          example: Errors.CART_ENTRY_NOT_FOUND,
         },
         error: { type: 'string', example: 'Not Found' },
       },
     },
   })
   @ApiInternalServerErrorResponse({
-    description: 'Failed to remove the product from wishlist',
+    description: 'Failed to remove product from cart',
     schema: {
       properties: {
         statusCode: { type: 'integer', example: 500 },
         message: {
           type: 'string',
-          example: Errors.FAILED_TO_REMOVE_PRODUCT_FROM_WISHLIST,
+          example: Errors.FAILED_TO_REMOVE_PRODUCT_FROM_CART,
         },
         error: { type: 'string', example: 'Internal Server Error' },
       },
     },
   })
-  @ApiParam({ name: 'id', description: 'The ID of the wishlist owner' })
+  @ApiParam({ name: 'id', description: 'The ID of the cart owner' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        productId: {
-          type: 'string',
-        },
+        productId: { type: 'string' },
       },
-
       required: ['productId'],
     },
   })
-  async removeFromWishlist(
+  async removeFromCart(
     @Param('id') userId: string,
     @Body('productId') productId: string,
   ): Promise<void> {
-    await this.wishlistService.removeFromWishlist(userId, productId);
+    return this.cartService.removeFromCart(userId, productId);
   }
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Get products from the wishlist of the particular user',
-    tags: ['Wishlists Endpoints'],
+    summary: 'Get products from the cart of the particular user',
+    tags: ['Cart Endpoints'],
     description:
-      'This endpoint returns the products from the wishlist of the particular user',
+      'This endpoint returns the products from the cart of the particular user',
   })
   @ApiOkResponse({
     description: responseDescrptions.success,
-    type: [Product],
+    type: [ResponseCartItemDto],
   })
   @ApiNotFoundResponse({
-    description: 'Wishlist not found',
+    description: 'Cart not found',
     schema: {
       properties: {
         statusCode: { type: 'integer', example: 404 },
         message: {
           type: 'string',
-          example: Errors.WISHLIST_NOT_FOUND,
+          example: Errors.CART_NOT_FOUND,
         },
         error: { type: 'string', example: 'Not Found' },
       },
     },
   })
   @ApiInternalServerErrorResponse({
-    description: 'Failed to get products from wishlist',
+    description: 'Failed to retrieve cart',
     schema: {
       properties: {
         statusCode: { type: 'integer', example: 500 },
         message: {
           type: 'string',
-          example: Errors.FAILED_TO_RETRIEVE_WISHLIST,
+          example: Errors.FAILED_TO_RETRIEVE_CART,
         },
         error: { type: 'string', example: 'Internal Server Error' },
       },
     },
   })
-  @ApiParam({ name: 'id', description: 'The ID of the wishlist owner' })
-  async getWishlist(@Param('id') userId: string): Promise<Product[]> {
-    return this.wishlistService.getWishlist(userId);
+  @ApiParam({ name: 'id', description: 'The ID of the cart owner' })
+  async getCart(@Param('id') userId: string): Promise<ResponseCartItemDto[]> {
+    return this.cartService.getCart(userId);
   }
 }
