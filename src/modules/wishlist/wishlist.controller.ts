@@ -26,6 +26,7 @@ import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
@@ -237,7 +238,9 @@ export class WishlistController {
     },
   })
   @ApiParam({ name: 'id', description: 'The ID of the wishlist owner' })
-  async getWishlist(@Param('id') userId: string): Promise<Product[]> {
+  async getWishlist(
+    @Param('id') userId: string,
+  ): Promise<ProductResponseDTO[]> {
     return this.wishlistService.getWishlist(userId);
   }
 }

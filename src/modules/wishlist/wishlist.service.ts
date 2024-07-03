@@ -7,7 +7,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Errors } from 'src/common/errors';
+import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
 import { Repository } from 'typeorm';
 
@@ -82,7 +85,7 @@ export class WishlistService {
     }
   }
 
-  async getWishlist(userId: string): Promise<Product[]> {
+  async getWishlist(userId: string): Promise<ProductResponseDTO[]> {
     try {
       const wishlist = await this.wishlistRepository.find({
         where: { userId },
@@ -100,6 +103,7 @@ export class WishlistService {
         wishlist.map(async (entry) => {
           const product = await this.productRepository.findOne({
             where: { id: entry.productId },
+            relations: ['user', 'images', 'color'],
           });
 
           if (!product) {
@@ -108,7 +112,7 @@ export class WishlistService {
             return null;
           }
 
-          return product;
+          return this.transformProduct(product);
         }),
       );
 
@@ -123,5 +127,30 @@ export class WishlistService {
         Errors.FAILED_TO_RETRIEVE_WISHLIST,
       );
     }
+  }
+
+  private transformProduct(inputProduct: Product): ProductResponseDTO {
+    return {
+      id: inputProduct.id,
+      name: inputProduct.name,
+      slug: inputProduct.slug,
+      price: inputProduct.price,
+      description: inputProduct.description,
+      categories: inputProduct.categories,
+      style: inputProduct.style as Styles,
+      type: inputProduct.type as ProductTypes,
+      size: inputProduct.size,
+      images: inputProduct.images.map((image) => image.url),
+      colors: inputProduct.color.map((c) => c.color),
+      vendor: inputProduct.user
+        ? {
+            id: inputProduct.user.id,
+            name: inputProduct.user.name,
+            photoUrl: inputProduct.user.photoUrl,
+          }
+        : null,
+      createdAt: inputProduct.createdAt,
+      lastUpdatedAt: inputProduct.lastUpdatedAt,
+    };
   }
 }
