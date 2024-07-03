@@ -38,6 +38,14 @@ export class Cart {
   productId: string;
 
   @ApiProperty({
+    example: '5c674384-f944-401b-949b-b76e8793bdc5',
+    description: 'The ID of the vendor',
+    type: String,
+  })
+  @Column('uuid')
+  vendorId: string;
+
+  @ApiProperty({
     example:
       'https://img.kwcdn.com/thumbnail/s/f09fce1e307adcde849148ecad30f7d5_fdd36fbfe57d.jpg?imageView2/2/w/650/q/50/format/webp',
     description: 'The URL of the product image',

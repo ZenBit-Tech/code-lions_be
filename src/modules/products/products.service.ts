@@ -43,6 +43,21 @@ export class ProductsService {
     return products[0];
   }
 
+  async findById(id: string): Promise<ProductResponseDTO> {
+    const product = await this.getProducts({
+      where: {
+        key: 'id',
+        value: id,
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+    }
+
+    return product[0];
+  }
+
   private async getProducts(
     options?: GetProductsOptions,
   ): Promise<ProductResponseDTO[]> {

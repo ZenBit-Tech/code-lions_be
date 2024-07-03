@@ -57,6 +57,7 @@ export class CartService {
       const cartEntry = this.cartRepository.create({
         userId,
         productId,
+        vendorId: product.vendorId,
         productUrl,
         size,
         color: productColor,
@@ -81,8 +82,6 @@ export class CartService {
   async removeFromCart(userId: string, productId: string): Promise<void> {
     try {
       const result = await this.cartRepository.delete({ userId, productId });
-
-      console.log(result);
 
       if (result.affected === 0) {
         throw new NotFoundException(Errors.CART_ENTRY_NOT_FOUND);
@@ -124,11 +123,13 @@ export class CartService {
             id: item.id,
             userId: item.userId,
             productId: item.productId,
+            vendorId: item.vendorId,
             productUrl: item.productUrl,
             size: item.size,
             color: item.color,
             duration: item.duration,
             price: item.price,
+            createdAt: item.createdAt,
           };
         }),
       );
