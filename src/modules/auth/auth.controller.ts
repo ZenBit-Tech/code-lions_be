@@ -283,11 +283,20 @@ export class AuthController {
   @ApiOperation({
     summary: 'Send email to reset password',
     tags: ['Auth Endpoints'],
-    description: 'This endpoint sends an email with a otp to reset password.',
+    description:
+      'This endpoint sends an email with an OTP to reset the password.',
   })
-  @ApiNoContentResponse({
-    status: 204,
-    description: 'Email sent successfully',
+  @ApiOkResponse({
+    status: 200,
+    description: 'Email sent successfully, user ID returned',
+    schema: {
+      properties: {
+        userId: {
+          type: 'string',
+          example: 'ae112653-dd7b-4a36-a7ab-08c901ad0305',
+        },
+      },
+    },
   })
   @ApiBadRequestResponse({
     description: 'Request body is not valid',
@@ -329,9 +338,15 @@ export class AuthController {
     },
   })
   @ApiBody({ type: EmailDto })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async forgotPassword(@Body() emailDto: EmailDto): Promise<void> {
-    await this.authService.sendResetPasswordEmail(emailDto.email);
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() emailDto: EmailDto,
+  ): Promise<{ userId: string }> {
+    const userId = await this.authService.sendResetPasswordEmail(
+      emailDto.email,
+    );
+
+    return { userId };
   }
 
   @Post('reset-password')
