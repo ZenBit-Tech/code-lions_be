@@ -489,7 +489,12 @@ export class UsersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      user.photoUrl = photoUrl;
+      const siteHost = this.configService.get<string>('SITE_HOST');
+
+      user.photoUrl = photoUrl.replace('./', siteHost);
+      if (user.onboardingStep !== OnboardingSteps.FINISH) {
+        user.onboardingStep = OnboardingSteps.INFO;
+      }
       await this.userRepository.save(user);
 
       return user;
