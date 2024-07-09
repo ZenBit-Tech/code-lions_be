@@ -29,6 +29,7 @@ export class CartService {
     userId: string,
     productId: string,
     duration: number,
+    price: number,
   ): Promise<void> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -37,7 +38,7 @@ export class CartService {
         relations: ['images', 'color'],
       });
 
-      const { images, size, color, price } = product;
+      const { images, size, color } = product;
 
       if (!user || !product) {
         throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
@@ -125,6 +126,7 @@ export class CartService {
             productId: item.productId,
             vendorId: item.vendorId,
             productUrl: item.productUrl,
+            name: product.name,
             size: item.size,
             color: item.color,
             duration: item.duration,

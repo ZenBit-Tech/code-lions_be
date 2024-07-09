@@ -40,6 +40,12 @@ export class ResponseCartItemDto {
   productUrl: string;
 
   @ApiProperty({
+    example: 'Cool product',
+    description: 'The name of the product',
+  })
+  name: string;
+
+  @ApiProperty({
     example: 'M',
     description: 'The size of the product',
   })

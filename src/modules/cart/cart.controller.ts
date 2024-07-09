@@ -129,6 +129,7 @@ export class CartController {
       properties: {
         productId: { type: 'string' },
         duration: { type: 'number' },
+        price: { type: 'number' },
       },
       required: ['productId', 'duration'],
     },
@@ -137,8 +138,9 @@ export class CartController {
     @Param('id') userId: string,
     @Body('productId') productId: string,
     @Body('duration') duration: number,
+    @Body('price') price: number,
   ): Promise<void> {
-    return this.cartService.addToCart(userId, productId, duration);
+    return this.cartService.addToCart(userId, productId, duration, price);
   }
 
   @Delete(':id')
