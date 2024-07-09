@@ -4,17 +4,26 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import { PRODUCTS_ON_PAGE } from 'src/config';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
-import { Repository } from 'typeorm';
 
 interface GetProductsOptions {
   where?: {
     key: keyof Product;
     value: string;
   };
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ProductsResponse {
+  products: ProductResponseDTO[];
+  count: number;
 }
 
 @Injectable()
@@ -24,8 +33,12 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
   ) {}
 
-  async findAll(): Promise<ProductResponseDTO[]> {
-    return this.getProducts();
+  async findAll(
+    page: number,
+    limit: number,
+    search: string,
+  ): Promise<ProductsResponse> {
+    return this.getProducts({ page, limit, search });
   }
 
   async findBySlug(slug: string): Promise<ProductResponseDTO> {
@@ -36,80 +49,95 @@ export class ProductsService {
       },
     });
 
-    if (products.length === 0) {
+    if (products.count === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return products[0];
+    return products.products[0];
   }
 
   private async getProducts(
     options?: GetProductsOptions,
-  ): Promise<ProductResponseDTO[]> {
+  ): Promise<ProductsResponse> {
     try {
       const queryBuilder = this.productRepository
         .createQueryBuilder('product')
         .leftJoinAndSelect('product.images', 'images')
         .leftJoinAndSelect('product.user', 'user')
-        .leftJoinAndSelect('product.color', 'colors');
+        .leftJoinAndSelect('product.color', 'colors')
+        .select([
+          'product.id',
+          'product.name',
+          'product.slug',
+          'product.price',
+          'product.description',
+          'product.vendorId',
+          'product.categories',
+          'product.style',
+          'product.type',
+          'product.size',
+          'product.createdAt',
+          'product.lastUpdatedAt',
+          'images',
+          'user.id',
+          'user.name',
+          'user.photoUrl',
+          'colors',
+        ]);
 
       if (options?.where) {
         queryBuilder
-          .where(`product.${options.where.key} = :${options.where.key}`)
+          .andWhere(`product.${options.where.key} = :${options.where.key}`)
           .setParameter(options.where.key, options.where.value);
       }
 
-      const rawProducts = await queryBuilder.getRawMany();
+      if (options?.search) {
+        queryBuilder.andWhere(
+          'product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search',
+          { search: `%${options.search}%` },
+        );
+      }
 
-      return this.groupProducts(rawProducts);
+      const page = options?.page || 1;
+      const limit = options?.limit || PRODUCTS_ON_PAGE;
+      const offset = (page - 1) * limit;
+
+      queryBuilder.skip(offset).take(limit);
+
+      const [products, count] = await queryBuilder.getManyAndCount();
+
+      return {
+        products: this.mapProducts(products),
+        count: count,
+      };
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
 
-  private groupProducts(rawProducts: any[]): ProductResponseDTO[] {
-    const groupedProducts = rawProducts.reduce((acc, row) => {
-      const productId = row.product_id;
+  private mapProducts(products: Product[]): ProductResponseDTO[] {
+    const mappedProducts: ProductResponseDTO[] = products.map((product) => {
+      const imageUrls = product.images.map((image) => image.url).sort();
 
-      if (!acc[productId]) {
-        acc[productId] = {
-          id: row.product_id,
-          name: row.product_name,
-          slug: row.product_slug,
-          price: row.product_price,
-          description: row.product_description,
-          categories: row.product_categories
-            ? row.product_categories.split(',')
-            : [],
-          style: row.product_style,
-          type: row.product_type,
-          size: row.product_size,
-          images: [],
-          colors: [],
-          vendor: {
-            id: row.user_id,
-            name: row.user_name,
-            photoUrl: row.user_photoUrl,
-          },
-          createdAt: row.product_createdAt,
-          lastUpdatedAt: row.product_lastUpdatedAt,
-        };
-      }
+      const vendor = {
+        id: product.user?.id || '',
+        name: product.user?.name || '',
+        photoUrl: product.user?.photoUrl || '',
+      };
+      const colors = product.color;
 
-      if (row.images_id && !acc[productId].images.includes(row.images_url)) {
-        acc[productId].images.push(row.images_url);
-      }
+      delete product.user;
+      delete product.vendorId;
+      delete product.color;
 
-      if (
-        row.colors_color &&
-        !acc[productId].colors.includes(row.colors_color)
-      ) {
-        acc[productId].colors.push(row.colors_color);
-      }
+      return {
+        ...product,
+        images: imageUrls,
+        colors: colors,
+        vendor: vendor,
+      };
+    });
 
-      return acc;
-    }, {});
-
-    return Object.values(groupedProducts);
+    return mappedProducts;
   }
 }

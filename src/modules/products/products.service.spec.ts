@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
+import { PRODUCTS_ON_PAGE } from 'src/config';
+
 import { ProductResponseDTO } from './dto/product-response.dto';
 import { Category } from './entities/category.enum';
 import { ProductTypes } from './entities/product-types.enum';
@@ -84,7 +86,7 @@ describe('ProductsService', () => {
   describe('findAll', () => {
     it('should return an array of products', async () => {
       const expectedProducts = mockProducts;
-      const products = await service.findAll();
+      const products = await service.findAll(1, PRODUCTS_ON_PAGE, '');
 
       expect(products).toEqual(expectedProducts);
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledTimes(1);
