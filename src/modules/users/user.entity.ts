@@ -1,8 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-
-import { Product } from 'src/modules/products/entities/product.entity';
-import { RoleForUser } from 'src/modules/roles/role-user.enum';
-import { Role } from 'src/modules/roles/role.enum';
 import {
   Entity,
   Column,
@@ -12,6 +8,10 @@ import {
   DeleteDateColumn,
   OneToMany,
 } from 'typeorm';
+
+import { Product } from 'src/modules/products/entities/product.entity';
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
+import { Role } from 'src/modules/roles/role.enum';
 
 @Entity()
 export class User {

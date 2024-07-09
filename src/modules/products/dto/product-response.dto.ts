@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Color } from 'src/modules/products/entities/color.entity';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 
@@ -94,7 +95,7 @@ export class ProductResponseDTO {
     example: ['black', 'white'],
     description: 'The colors of the product',
   })
-  colors: string[];
+  colors: Color[];
 
   @ApiProperty({
     type: VendorDTO,

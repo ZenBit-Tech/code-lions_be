@@ -1,5 +1,6 @@
-import dataSource from 'src/db/data-source';
 import { DataSource } from 'typeorm';
+
+import dataSource from 'src/db/data-source';
 import { Seeder, runSeeder } from 'typeorm-extension';
 
 import ColorSeeder from './color.seeder';

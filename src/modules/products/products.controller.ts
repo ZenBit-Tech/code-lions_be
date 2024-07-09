@@ -1,15 +1,20 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 
+import { PRODUCTS_ON_PAGE } from 'src/config';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
-import { ProductsService } from 'src/modules/products/products.service';
+import {
+  ProductsService,
+  ProductsResponse,
+} from 'src/modules/products/products.service';
 
 @ApiTags('products')
 @Controller('products')
@@ -29,8 +34,30 @@ export class ProductsController {
     description: 'The list of products',
     type: [ProductResponseDTO],
   })
-  findAll(): Promise<ProductResponseDTO[]> {
-    return this.productsService.findAll();
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { type: 'number', default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Products on a page limit',
+    schema: { type: 'number', default: PRODUCTS_ON_PAGE },
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search query',
+    schema: { type: 'string' },
+  })
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = PRODUCTS_ON_PAGE,
+    @Query('search') search?: string,
+  ): Promise<ProductsResponse> {
+    return this.productsService.findAll(page, limit, search);
   }
 
   @Get(':slug')

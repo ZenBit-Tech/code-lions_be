@@ -1,6 +1,7 @@
+import { DataSource } from 'typeorm';
+
 import { Color } from 'src/modules/products/entities/color.entity';
 import { colors } from 'src/modules/products/entities/colors.type';
-import { DataSource } from 'typeorm';
 import { Seeder } from 'typeorm-extension';
 
 export default class ColorSeeder implements Seeder {

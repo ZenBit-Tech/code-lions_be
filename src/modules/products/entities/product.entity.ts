@@ -1,11 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-
-import { Category } from 'src/modules/products/entities/category.enum';
-import { Color } from 'src/modules/products/entities/color.entity';
-import { Image } from 'src/modules/products/entities/image.entity';
-import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
-import { Styles } from 'src/modules/products/entities/styles.enum';
-import { User } from 'src/modules/users/user.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -16,6 +9,13 @@ import {
   JoinTable,
   OneToMany,
 } from 'typeorm';
+
+import { Category } from 'src/modules/products/entities/category.enum';
+import { Color } from 'src/modules/products/entities/color.entity';
+import { Image } from 'src/modules/products/entities/image.entity';
+import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
+import { Styles } from 'src/modules/products/entities/styles.enum';
+import { User } from 'src/modules/users/user.entity';
 
 @Entity('products')
 export class Product {
@@ -93,7 +93,7 @@ export class Product {
     enum: Styles,
   })
   @Column({ type: 'enum', enum: Styles, nullable: true })
-  style: string;
+  style: Styles;
 
   @ApiProperty({
     example: 'dress',
@@ -106,7 +106,7 @@ export class Product {
     nullable: false,
     default: ProductTypes.OTHER,
   })
-  type: string;
+  type: ProductTypes;
 
   @ApiProperty({
     example: 'M',
