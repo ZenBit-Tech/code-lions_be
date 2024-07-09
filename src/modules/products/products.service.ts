@@ -7,14 +7,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
-import { PRODUCTS_ON_PAGE } from 'src/config';
+import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 
 interface GetProductsOptions {
   where?: {
     key: keyof Product;
-    value: string;
+    value: any;
   };
   search?: string;
   page?: number;
@@ -56,6 +56,68 @@ export class ProductsService {
     return products.products[0];
   }
 
+  async findLatest(): Promise<ProductsResponse> {
+    const today = new Date();
+    const someDaysAgo = new Date();
+
+    someDaysAgo.setDate(today.getDate() - DAYS_JUST_IN);
+
+    const products = await this.getProducts({
+      where: {
+        key: 'createdAt',
+        value: {
+          lower: someDaysAgo,
+          upper: today,
+        },
+      },
+    });
+
+    if (products.count === 0) {
+      throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+    }
+
+    return products;
+  }
+
+  async findBySize(
+    clothesSize: string,
+    jeansSize: string,
+    shoesSize: string,
+  ): Promise<ProductsResponse> {
+    const productsClothes = await this.getProducts({
+      where: {
+        key: 'size',
+        value: clothesSize,
+      },
+    });
+
+    const productsJeans = await this.getProducts({
+      where: {
+        key: 'size',
+        value: jeansSize,
+      },
+    });
+
+    const productsShoes = await this.getProducts({
+      where: {
+        key: 'size',
+        value: shoesSize,
+      },
+    });
+
+    const products = [
+      ...productsClothes.products,
+      ...productsJeans.products,
+      ...productsShoes.products,
+    ];
+
+    if (products.length === 0) {
+      throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+    }
+
+    return { products, count: products.length };
+  }
+
   private async getProducts(
     options?: GetProductsOptions,
   ): Promise<ProductsResponse> {
@@ -86,9 +148,19 @@ export class ProductsService {
         ]);
 
       if (options?.where) {
-        queryBuilder
-          .andWhere(`product.${options.where.key} = :${options.where.key}`)
-          .setParameter(options.where.key, options.where.value);
+        if (options.where.key === 'createdAt') {
+          queryBuilder.where(
+            `product.${options.where.key} BETWEEN :startDate AND :endDate`,
+            {
+              startDate: options.where.value.lower,
+              endDate: options.where.value.upper,
+            },
+          );
+        } else {
+          queryBuilder
+            .andWhere(`product.${options.where.key} = :${options.where.key}`)
+            .setParameter(options.where.key, options.where.value);
+        }
       }
 
       if (options?.search) {
