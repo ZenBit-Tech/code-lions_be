@@ -1,7 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-
-import { RoleForUser } from 'src/modules/roles/role-user.enum';
-import { Role } from 'src/modules/roles/role.enum';
 import {
   Entity,
   Column,
@@ -9,7 +6,12 @@ import {
   BeforeInsert,
   BeforeUpdate,
   DeleteDateColumn,
+  OneToMany,
 } from 'typeorm';
+
+import { Product } from 'src/modules/products/entities/product.entity';
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
+import { Role } from 'src/modules/roles/role.enum';
 
 @Entity()
 export class User {
@@ -25,10 +27,11 @@ export class User {
   name: string;
 
   @ApiProperty({
+    uniqueItems: true,
     example: 'john.doe@example.com',
     description: 'The email of the user',
   })
-  @Column()
+  @Column({ unique: true })
   email: string;
 
   @ApiProperty({
@@ -241,4 +244,7 @@ export class User {
   updateDatesBeforeUpdate(): void {
     this.lastUpdatedAt = new Date();
   }
+
+  @OneToMany(() => Product, (product) => product.user)
+  products: Product[];
 }

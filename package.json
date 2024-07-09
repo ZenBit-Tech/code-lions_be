@@ -13,6 +13,11 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "migration:create": "npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/db/migrations/migrations",
+    "migration:generate": "npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d ./src/db/data-source.ts ./src/db/migrations/migrations",
+    "migration:run": "npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d ./src/db/data-source.ts",
+    "migration:revert": "npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d ./src/db/data-source.ts",
+    "seed:run": "npx ts-node -r tsconfig-paths/register ./src/db/seeds/index.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -45,7 +50,8 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.0",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "typeorm-extension": "^3.5.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
