@@ -1,10 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-
-import { Cart } from 'src/modules/cart/cart.entity';
-import { Product } from 'src/modules/products/entities/product.entity';
-import { RoleForUser } from 'src/modules/roles/role-user.enum';
-import { Role } from 'src/modules/roles/role.enum';
-import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 import {
   Entity,
   Column,
@@ -14,6 +8,12 @@ import {
   DeleteDateColumn,
   OneToMany,
 } from 'typeorm';
+
+import { Cart } from 'src/modules/cart/cart.entity';
+import { Product } from 'src/modules/products/entities/product.entity';
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
+import { Role } from 'src/modules/roles/role.enum';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
 @Entity()
 export class User {
@@ -29,10 +29,11 @@ export class User {
   name: string;
 
   @ApiProperty({
+    uniqueItems: true,
     example: 'john.doe@example.com',
     description: 'The email of the user',
   })
-  @Column()
+  @Column({ unique: true })
   email: string;
 
   @ApiProperty({

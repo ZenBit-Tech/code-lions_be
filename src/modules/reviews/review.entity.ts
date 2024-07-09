@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert } from 'typeorm';
 
 import { IsInt, Max, Min } from 'class-validator';
 import { Errors } from 'src/common/errors';
 import { MAX_RATING, MIN_RATING } from 'src/config';
-import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert } from 'typeorm';
 
 @Entity()
 export class Review {

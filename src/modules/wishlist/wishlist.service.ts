@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
@@ -12,7 +13,6 @@ import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
-import { Repository } from 'typeorm';
 
 import { Wishlist } from './wishlist.entity';
 
@@ -141,7 +141,7 @@ export class WishlistService {
       type: inputProduct.type as ProductTypes,
       size: inputProduct.size,
       images: inputProduct.images.map((image) => image.url),
-      colors: inputProduct.color.map((c) => c.color),
+      colors: inputProduct.color,
       vendor: inputProduct.user
         ? {
             id: inputProduct.user.id,
