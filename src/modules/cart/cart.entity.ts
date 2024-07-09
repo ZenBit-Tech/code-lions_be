@@ -1,7 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-
-import { Product } from 'src/modules/products/entities/product.entity';
-import { User } from 'src/modules/users/user.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -10,6 +7,9 @@ import {
   JoinColumn,
   BeforeInsert,
 } from 'typeorm';
+
+import { Product } from 'src/modules/products/entities/product.entity';
+import { User } from 'src/modules/users/user.entity';
 
 @Entity('cart')
 export class Cart {

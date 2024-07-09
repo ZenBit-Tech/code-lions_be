@@ -5,11 +5,11 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
-import { Repository } from 'typeorm';
 
 import { Cart } from './cart.entity';
 import { ResponseCartItemDto } from './response-cart.dto';

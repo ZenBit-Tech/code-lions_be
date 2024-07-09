@@ -80,4 +80,25 @@ export class ProductsController {
   async findBySlug(@Param('slug') slug: string): Promise<ProductResponseDTO> {
     return this.productsService.findBySlug(slug);
   }
+
+  @Get('item/:id')
+  @ApiOperation({
+    summary: 'Get product by id',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint returns a product.',
+  })
+  @ApiOkResponse({
+    description: 'The product',
+    type: ProductResponseDTO,
+  })
+  @ApiNotFoundResponse({
+    description: 'Product not found',
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'The slug of the product',
+  })
+  async findById(@Param('id') id: string): Promise<ProductResponseDTO> {
+    return this.productsService.findById(id);
+  }
 }
