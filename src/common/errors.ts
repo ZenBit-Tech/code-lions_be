@@ -130,4 +130,5 @@ export const Errors = {
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
   REVIEW_YOURSELF: 'You cannot review yourself',
   PRODUCT_NOT_FOUND: 'Product not found',
+  FAILED_TO_FETCH_BEST_VENDORS: 'Failed to fetch best vendors',
 };
