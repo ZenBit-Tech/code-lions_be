@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
-import { PRODUCTS_ON_PAGE } from 'src/config';
+import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 
 import { ProductResponseDTO } from './dto/product-response.dto';
 import { Category } from './entities/category.enum';
@@ -101,6 +101,38 @@ describe('ProductsService', () => {
       const product = await service.findBySlug(slug);
 
       expect(product).toEqual(expectedProduct);
+    });
+  });
+
+  describe('findLatest', () => {
+    it('should return the latest products', async () => {
+      const today = new Date();
+      const someDaysAgo = new Date();
+
+      someDaysAgo.setDate(today.getDate() - DAYS_JUST_IN);
+
+      const expectedProducts = mockProducts;
+      const products = await service.findLatest();
+
+      expect(products).toEqual(expectedProducts);
+    });
+  });
+
+  describe('findBySize', () => {
+    it('should return products by size', async () => {
+      const clothesSize = 'M';
+      const jeansSize = '32';
+      const shoesSize = '10';
+
+      const expectedProducts = mockProducts;
+
+      const products = await service.findBySize(
+        clothesSize,
+        jeansSize,
+        shoesSize,
+      );
+
+      expect(products).toEqual(expectedProducts);
     });
   });
 });
