@@ -19,6 +19,11 @@ interface GetProductsOptions {
   search?: string;
   page?: number;
   limit?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  color?: string;
+  style?: string;
+  size?: string;
 }
 
 export interface ProductsResponse {
@@ -37,8 +42,22 @@ export class ProductsService {
     page: number,
     limit: number,
     search: string,
+    minPrice: number,
+    maxPrice: number,
+    color: string,
+    style: string,
+    size: string,
   ): Promise<ProductsResponse> {
-    return this.getProducts({ page, limit, search });
+    return this.getProducts({
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+    });
   }
 
   async findBySlug(slug: string): Promise<ProductResponseDTO> {
@@ -93,9 +112,37 @@ export class ProductsService {
 
       if (options?.search) {
         queryBuilder.andWhere(
-          'product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search',
+          '(product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search)',
           { search: `%${options.search}%` },
         );
+      }
+
+      if (options?.minPrice) {
+        queryBuilder.andWhere('product.price >= :minPrice', {
+          minPrice: options.minPrice,
+        });
+      }
+
+      if (options?.maxPrice) {
+        queryBuilder.andWhere('product.price <= :maxPrice', {
+          maxPrice: options.maxPrice,
+        });
+      }
+
+      if (options?.style) {
+        queryBuilder.andWhere('product.style = :style', {
+          style: options.style,
+        });
+      }
+
+      if (options?.size) {
+        queryBuilder.andWhere('product.size = :size', { size: options.size });
+      }
+
+      if (options?.color) {
+        queryBuilder.andWhere('colors.color = :color', {
+          color: options.color,
+        });
       }
 
       const page = options?.page || 1;
@@ -111,6 +158,7 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }

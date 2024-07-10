@@ -52,12 +52,56 @@ export class ProductsController {
     description: 'Search query',
     schema: { type: 'string' },
   })
+  @ApiQuery({
+    name: 'minPrice',
+    required: false,
+    description: 'Minimum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'maxPrice',
+    required: false,
+    description: 'Maximum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'color',
+    required: false,
+    description: 'Product color',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'style',
+    required: false,
+    description: 'Product style',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'size',
+    required: false,
+    description: 'Product size',
+    schema: { type: 'string' },
+  })
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = PRODUCTS_ON_PAGE,
     @Query('search') search?: string,
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('color') color?: string,
+    @Query('style') style?: string,
+    @Query('size') size?: string,
   ): Promise<ProductsResponse> {
-    return this.productsService.findAll(page, limit, search);
+    return this.productsService.findAll(
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+    );
   }
 
   @Get(':slug')
