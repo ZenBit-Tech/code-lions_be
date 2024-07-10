@@ -95,8 +95,8 @@ export class ProductsController {
     description: 'Product not found',
   })
   @ApiParam({
-    name: 'slug',
-    description: 'The slug of the product',
+    name: 'id',
+    description: 'The id of the product',
   })
   async findById(@Param('id') id: string): Promise<ProductResponseDTO> {
     return this.productsService.findById(id);
