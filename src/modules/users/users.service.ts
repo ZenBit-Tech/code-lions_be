@@ -22,6 +22,7 @@ import { MailerService } from '../mailer/mailer.service';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { BestVendorsResponseDto } from './dto/get-best-vendors.dto';
 import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
@@ -790,6 +791,34 @@ export class UsersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_ADD_ORDER);
+    }
+  }
+
+  async getBestVendors(): Promise<BestVendorsResponseDto[]> {
+    try {
+      const bestVendors = await this.userRepository.find({
+        where: { role: Role.VENDOR, rating: 5.0 },
+        relations: [
+          'products',
+          'products.images',
+          'products.color',
+          'products.user',
+        ],
+      });
+
+      return bestVendors.map((vendor) => ({
+        vendorId: vendor.id,
+        vendorName: vendor.name,
+        photoUrl: vendor.photoUrl,
+        products: vendor.products.map((product) => ({
+          ...product,
+          vendor: product.user,
+        })),
+      }));
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_BEST_VENDORS,
+      );
     }
   }
 }
