@@ -12,7 +12,6 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiBearerAuth,
   ApiInternalServerErrorResponse,
   ApiForbiddenResponse,
   ApiOkResponse,
@@ -39,8 +38,6 @@ import { ReviewsService } from './reviews.service';
 
 @ApiTags('reviews')
 @Controller('reviews')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiInternalServerErrorResponse({
   description: responseDescrptions.error,
   type: ErrorResponse,
@@ -74,7 +71,7 @@ import { ReviewsService } from './reviews.service';
 export class ReviewsController {
   constructor(private readonly reviewService: ReviewsService) {}
 
-  @UseGuards(ReviewCreatorGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, ReviewCreatorGuard)
   @Post()
   @ApiOperation({
     summary: 'Create a new review',
@@ -132,6 +129,7 @@ export class ReviewsController {
     return this.reviewService.createReview(createReviewDto);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
   @ApiOperation({
     summary: 'Get all reviews',
@@ -184,11 +182,11 @@ export class ReviewsController {
       },
     },
   })
-  @Roles(Role.BUYER, Role.VENDOR)
   async getReviewsByUserId(@Param('userId') userId: string): Promise<Review[]> {
     return this.reviewService.getReviewsByUserId(userId);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a review by ID' })

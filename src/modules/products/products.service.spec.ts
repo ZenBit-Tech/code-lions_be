@@ -103,4 +103,15 @@ describe('ProductsService', () => {
       expect(product).toEqual(expectedProduct);
     });
   });
+
+  describe('findById', () => {
+    it('should return a product by id', async () => {
+      const id = '61c674384-f944-401b-949b-b76e8793bdc9';
+      const expectedProduct = mockProducts[0];
+
+      const product = await service.findById(id);
+
+      expect(product).toEqual(expectedProduct);
+    });
+  });
 });
