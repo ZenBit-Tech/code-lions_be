@@ -56,6 +56,21 @@ export class ProductsService {
     return products.products[0];
   }
 
+  async findById(id: string): Promise<ProductResponseDTO> {
+    const products = await this.getProducts({
+      where: {
+        key: 'id',
+        value: id,
+      },
+    });
+
+    if (products.count === 0) {
+      throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+    }
+
+    return products.products[0];
+  }
+
   private async getProducts(
     options?: GetProductsOptions,
   ): Promise<ProductsResponse> {

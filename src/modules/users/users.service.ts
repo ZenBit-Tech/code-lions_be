@@ -333,7 +333,7 @@ export class UsersService {
     const { name, email, password } = createUserDto;
 
     try {
-      const userExists = await this.getUserByEmail(email);
+      const userExists = await this.getUserByEmailWithDeleted(email);
 
       if (userExists) {
         throw new ConflictException(Errors.USER_EXISTS);

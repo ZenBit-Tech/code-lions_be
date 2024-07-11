@@ -9,9 +9,11 @@ import {
   OneToMany,
 } from 'typeorm';
 
+import { Cart } from 'src/modules/cart/cart.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
 @Entity()
 export class User {
@@ -247,4 +249,10 @@ export class User {
 
   @OneToMany(() => Product, (product) => product.user)
   products: Product[];
+
+  @OneToMany(() => Cart, (cart) => cart.user)
+  cart: Cart[];
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
+  wishlist: Wishlist[];
 }
