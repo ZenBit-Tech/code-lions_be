@@ -11,10 +11,12 @@ import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 
+type DateRange = { lower: Date; upper: Date };
+
 interface GetProductsOptions {
   where?: {
     key: keyof Product;
-    value: any;
+    value: string | DateRange;
   };
   search?: string;
   page?: number;
@@ -149,11 +151,13 @@ export class ProductsService {
 
       if (options?.where) {
         if (options.where.key === 'createdAt') {
+          const dateRange = options.where.value as DateRange;
+
           queryBuilder.where(
             `product.${options.where.key} BETWEEN :startDate AND :endDate`,
             {
-              startDate: options.where.value.lower,
-              endDate: options.where.value.upper,
+              startDate: dateRange.lower,
+              endDate: dateRange.upper,
             },
           );
         } else {
