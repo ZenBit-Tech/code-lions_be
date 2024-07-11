@@ -10,12 +10,14 @@ import {
   OneToMany,
 } from 'typeorm';
 
+import { Cart } from 'src/modules/cart/cart.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
 @Entity('products')
 export class Product {
@@ -150,4 +152,10 @@ export class Product {
   })
   @Column({ type: 'timestamp', default: null, nullable: true })
   lastUpdatedAt: Date;
+
+  @OneToMany(() => Cart, (cart) => cart.product)
+  cart: Cart[];
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.product)
+  wishlistEntries: Wishlist[];
 }
