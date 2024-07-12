@@ -24,6 +24,8 @@ interface GetProductsOptions {
   color?: string;
   style?: string;
   size?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export interface ProductsResponse {
@@ -47,6 +49,8 @@ export class ProductsService {
     color: string,
     style: string,
     size: string,
+    sortBy: string,
+    sortOrder: string,
   ): Promise<ProductsResponse> {
     return this.getProducts({
       page,
@@ -57,6 +61,8 @@ export class ProductsService {
       color,
       style,
       size,
+      sortBy,
+      sortOrder,
     });
   }
 
@@ -158,6 +164,14 @@ export class ProductsService {
         queryBuilder.andWhere('colors.color = :color', {
           color: options.color,
         });
+      }
+
+      if (options?.sortBy && options?.sortOrder) {
+        queryBuilder.orderBy(
+          `product.${options.sortBy}`,
+          options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
+        );
+        console.log(options?.sortBy, options?.sortOrder);
       }
 
       const page = options?.page || 1;

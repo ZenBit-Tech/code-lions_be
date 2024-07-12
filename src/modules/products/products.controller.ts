@@ -82,6 +82,18 @@ export class ProductsController {
     description: 'Product size',
     schema: { type: 'string' },
   })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
+  })
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = PRODUCTS_ON_PAGE,
@@ -91,6 +103,8 @@ export class ProductsController {
     @Query('color') color?: string,
     @Query('style') style?: string,
     @Query('size') size?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ): Promise<ProductsResponse> {
     return this.productsService.findAll(
       page,
@@ -101,6 +115,8 @@ export class ProductsController {
       color,
       style,
       size,
+      sortBy,
+      sortOrder,
     );
   }
 
