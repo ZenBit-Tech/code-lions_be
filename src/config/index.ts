@@ -12,3 +12,4 @@ export const MAX_FILE_SIZE = 52428800;
 export const MIN_RATING = 1;
 export const MAX_RATING = 5;
 export const PRODUCTS_ON_PAGE = 12;
+export const DAYS_JUST_IN = 7;
