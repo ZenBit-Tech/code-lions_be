@@ -202,6 +202,7 @@ export class ProductsService {
         photoUrl: product.user?.photoUrl || '',
       };
       const colors = product.color;
+      const mappedColors = colors.map((color) => color.color);
 
       delete product.user;
       delete product.vendorId;
@@ -210,7 +211,7 @@ export class ProductsService {
       return {
         ...product,
         images: imageUrls,
-        colors: colors,
+        colors: mappedColors,
         vendor: vendor,
       };
     });
