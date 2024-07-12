@@ -206,7 +206,7 @@ export class AuthService {
     await this.usersService.saveOtp(user.id, otp);
   }
 
-  async sendResetPasswordEmail(email: string): Promise<void> {
+  async sendResetPasswordEmail(email: string): Promise<string> {
     const user = await this.usersService.getUserByEmail(email);
 
     if (!user) {
@@ -214,6 +214,8 @@ export class AuthService {
     }
 
     await this.sendResetPasswordOtp(user);
+
+    return user.id;
   }
 
   async resetPassword(
