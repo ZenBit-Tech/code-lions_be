@@ -60,6 +60,63 @@ export class ProductsController {
     return this.productsService.findAll(page, limit, search);
   }
 
+  @Get('latest')
+  @ApiOperation({
+    summary: 'Get latest products',
+    tags: ['Products Endpoints'],
+    description:
+      'This endpoint returns a list of products that were published recently.',
+  })
+  @ApiOkResponse({
+    description: 'The list of latest products',
+    type: [ProductResponseDTO],
+  })
+  @ApiNotFoundResponse({
+    description: 'Latest products not found',
+  })
+  async findLatest(): Promise<ProductsResponse> {
+    return this.productsService.findLatest();
+  }
+
+  @Get('sizes')
+  @ApiOperation({
+    summary: 'Get products by all user`s sizes',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint returns a list of products with certain sizes.',
+  })
+  @ApiOkResponse({
+    description: 'The list of the certain size products',
+    type: [ProductResponseDTO],
+  })
+  @ApiNotFoundResponse({
+    description: 'Products by sizes were not found',
+  })
+  @ApiQuery({
+    name: 'clothesSize',
+    required: true,
+    description: 'Clothes size to filter users by',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'jeansSize',
+    required: true,
+    description: 'Jeans size to filter users by',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'shoesSize',
+    required: true,
+    description: 'Shoes size to filter users by',
+    schema: { type: 'string' },
+  })
+  async findBySize(
+    @Query('clothesSize') clothesSize: string,
+    @Query('jeansSize') jeansSize: string,
+    @Query('shoesSize') shoesSize: string,
+  ): Promise<ProductsResponse> {
+    return this.productsService.findBySize(clothesSize, jeansSize, shoesSize);
+  }
+
   @Get(':slug')
   @ApiOperation({
     summary: 'Get product by slug',
