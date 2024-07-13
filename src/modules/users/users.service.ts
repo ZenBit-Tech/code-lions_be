@@ -8,11 +8,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, FindOptionsWhere } from 'typeorm';
+import { Repository, Like, FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
-import { LIMIT_USERS_PER_PAGE, VERIFICATION_CODE_EXPIRATION } from 'src/config';
+import {
+  LIMIT_OF_BEST_VENDORS_PER_PAGE,
+  LIMIT_USERS_PER_PAGE,
+  MAX_RATING,
+  VERIFICATION_CODE_EXPIRATION,
+} from 'src/config';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
 
@@ -802,13 +807,14 @@ export class UsersService {
   async getBestVendors(): Promise<BestVendorsResponseDto[]> {
     try {
       const bestVendors = await this.userRepository.find({
-        where: { role: Role.VENDOR, rating: 5.0 },
+        where: { role: Role.VENDOR, rating: MoreThanOrEqual(MAX_RATING) },
         relations: [
           'products',
           'products.images',
           'products.color',
           'products.user',
         ],
+        take: LIMIT_OF_BEST_VENDORS_PER_PAGE,
       });
 
       return bestVendors.map((vendor) => ({
