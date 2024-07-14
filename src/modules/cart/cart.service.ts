@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
 
@@ -34,7 +35,7 @@ export class CartService {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       const product = await this.productRepository.findOne({
-        where: { id: productId },
+        where: { id: productId, status: Status.PUBLISHED },
         relations: ['images', 'color'],
       });
 
@@ -114,7 +115,7 @@ export class CartService {
             where: { id: item.productId },
           });
 
-          if (!product) {
+          if (!product || product.status === Status.INACTIVE) {
             await this.removeFromCart(userId, item.id);
 
             return null;
