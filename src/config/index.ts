@@ -12,3 +12,5 @@ export const MAX_FILE_SIZE = 52428800;
 export const MIN_RATING = 1;
 export const MAX_RATING = 5;
 export const PRODUCTS_ON_PAGE = 12;
+export const PRODUCTS_PER_VENDOR_PAGE = 5;
+export const FIRST_PAGE = 1;

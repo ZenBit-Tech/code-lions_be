@@ -8,8 +8,12 @@ import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE } from 'src/config';
+import { ProductResponseWithStatusDto } from 'src/modules/products/dto/product-response-with-status.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
+
+import { Order } from './entities/order.enum';
+import { Status } from './entities/product-status.enum';
 
 interface GetProductsOptions {
   where?: {
@@ -19,10 +23,16 @@ interface GetProductsOptions {
   search?: string;
   page?: number;
   limit?: number;
+  order?: Order;
 }
 
 export interface ProductsResponse {
   products: ProductResponseDTO[];
+  count: number;
+}
+
+export interface ProductsWithStatusResponse {
+  products: ProductResponseWithStatusDto[];
   count: number;
 }
 
@@ -38,7 +48,47 @@ export class ProductsService {
     limit: number,
     search: string,
   ): Promise<ProductsResponse> {
-    return this.getProducts({ page, limit, search });
+    return this.getProducts({
+      page,
+      limit,
+      search,
+      where: { key: 'status', value: Status.PUBLISHED },
+    });
+  }
+
+  async findByVendorId(
+    page: number,
+    limit: number,
+    search: string,
+    order: Order,
+    vendorId: string,
+  ): Promise<ProductsWithStatusResponse> {
+    const productsResponse = await this.getProducts({
+      page,
+      limit,
+      search,
+      order,
+      where: { key: 'vendorId', value: vendorId },
+    });
+
+    const productsWithStatus = await Promise.all(
+      productsResponse.products.map(async (product) => {
+        const productWithStatus = await this.productRepository.findOne({
+          select: ['status'],
+          where: { id: product.id },
+        });
+
+        return {
+          ...product,
+          status: productWithStatus?.status,
+        };
+      }),
+    );
+
+    return {
+      products: productsWithStatus,
+      count: productsResponse.count,
+    };
   }
 
   async findBySlug(slug: string): Promise<ProductResponseDTO> {
@@ -113,16 +163,26 @@ export class ProductsService {
         );
       }
 
+      if (options?.order) {
+        queryBuilder.orderBy(
+          'product.createdAt',
+          options.order === Order.ASC ? 'ASC' : 'DESC',
+        );
+      }
+
       const page = options?.page || 1;
       const limit = options?.limit || PRODUCTS_ON_PAGE;
       const offset = (page - 1) * limit;
 
       queryBuilder.skip(offset).take(limit);
 
-      const [products, count] = await queryBuilder.getManyAndCount();
+      const [products] = await queryBuilder.getManyAndCount();
+
+      const mappedProducts = this.mapProducts(products);
+      const count = mappedProducts.length;
 
       return {
-        products: this.mapProducts(products),
+        products: mappedProducts,
         count: count,
       };
     } catch (error) {
