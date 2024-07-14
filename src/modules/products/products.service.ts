@@ -18,6 +18,7 @@ interface GetProductsOptions {
     key: keyof Product;
     value: string | DateRange;
   };
+  category?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -43,6 +44,7 @@ export class ProductsService {
   ) {}
 
   async findAll(
+    category: string,
     page: number,
     limit: number,
     search: string,
@@ -55,6 +57,7 @@ export class ProductsService {
     sortOrder: string,
   ): Promise<ProductsResponse> {
     return this.getProducts({
+      category,
       page,
       limit,
       search,
@@ -207,6 +210,11 @@ export class ProductsService {
         }
       }
 
+      if (options?.category) {
+        queryBuilder.andWhere('FIND_IN_SET(:category, product.categories)', {
+          category: options.category,
+        });
+      }
       if (options?.search) {
         queryBuilder.andWhere(
           '(product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search)',
@@ -247,7 +255,6 @@ export class ProductsService {
           `product.${options.sortBy}`,
           options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
         );
-        console.log(options?.sortBy, options?.sortOrder);
       }
 
       const page = options?.page || 1;
@@ -263,7 +270,6 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
-      console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }

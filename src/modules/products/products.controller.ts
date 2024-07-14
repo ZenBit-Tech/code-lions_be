@@ -35,6 +35,12 @@ export class ProductsController {
     type: [ProductResponseDTO],
   })
   @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Product category',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     description: 'Page number for pagination',
@@ -95,6 +101,7 @@ export class ProductsController {
     schema: { type: 'string', enum: ['asc', 'desc'] },
   })
   async findAll(
+    @Query('category') category?: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = PRODUCTS_ON_PAGE,
     @Query('search') search?: string,
@@ -107,6 +114,7 @@ export class ProductsController {
     @Query('sortOrder') sortOrder?: string,
   ): Promise<ProductsResponse> {
     return this.productsService.findAll(
+      category,
       page,
       limit,
       search,
