@@ -8,9 +8,10 @@ import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE } from 'src/config';
-import { ProductResponseWithStatusDto } from 'src/modules/products/dto/product-response-with-status.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { User } from 'src/modules/users/user.entity';
 
 import { Order } from './entities/order.enum';
 import { Status } from './entities/product-status.enum';
@@ -26,28 +27,20 @@ interface GetProductsOptions {
   order?: Order;
 }
 
-export interface ProductsResponse {
-  products: ProductResponseDTO[];
-  count: number;
-}
-
-export interface ProductsWithStatusResponse {
-  products: ProductResponseWithStatusDto[];
-  count: number;
-}
-
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async findAll(
     page: number,
     limit: number,
     search: string,
-  ): Promise<ProductsResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     return this.getProducts({
       page,
       limit,
@@ -62,33 +55,33 @@ export class ProductsService {
     search: string,
     order: Order,
     vendorId: string,
-  ): Promise<ProductsWithStatusResponse> {
-    const productsResponse = await this.getProducts({
-      page,
-      limit,
-      search,
-      order,
-      where: { key: 'vendorId', value: vendorId },
-    });
+  ): Promise<ProductsAndCountResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
 
-    const productsWithStatus = await Promise.all(
-      productsResponse.products.map(async (product) => {
-        const productWithStatus = await this.productRepository.findOne({
-          select: ['status'],
-          where: { id: product.id },
-        });
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-        return {
-          ...product,
-          status: productWithStatus?.status,
-        };
-      }),
-    );
+      const productsByVendorId = await this.getProducts({
+        page,
+        limit,
+        search,
+        order,
+        where: { key: 'vendorId', value: vendorId },
+      });
 
-    return {
-      products: productsWithStatus,
-      count: productsResponse.count,
-    };
+      return productsByVendorId;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_PRODUCTS_BY_VENDOR,
+      );
+    }
   }
 
   async findBySlug(slug: string): Promise<ProductResponseDTO> {
@@ -123,7 +116,7 @@ export class ProductsService {
 
   private async getProducts(
     options?: GetProductsOptions,
-  ): Promise<ProductsResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     try {
       const queryBuilder = this.productRepository
         .createQueryBuilder('product')
@@ -140,6 +133,7 @@ export class ProductsService {
           'product.categories',
           'product.style',
           'product.type',
+          'product.status',
           'product.size',
           'product.createdAt',
           'product.lastUpdatedAt',

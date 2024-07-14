@@ -140,6 +140,7 @@ export class WishlistService {
       categories: inputProduct.categories,
       style: inputProduct.style as Styles,
       type: inputProduct.type as ProductTypes,
+      status: inputProduct.status as Status,
       size: inputProduct.size,
       images: inputProduct.images.map((image) => image.url),
       colors: inputProduct.color,

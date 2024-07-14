@@ -8,6 +8,8 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
 
+import { Status } from '../products/entities/product-status.enum';
+
 import { Wishlist } from './wishlist.entity';
 import { WishlistService } from './wishlist.service';
 
@@ -45,6 +47,7 @@ describe('WishlistService', () => {
   mockProduct.categories = [];
   mockProduct.style = Styles.CASUAL;
   mockProduct.type = ProductTypes.DRESS;
+  mockProduct.status = Status.PUBLISHED;
   mockProduct.size = 'M';
   mockProduct.images = [];
   mockProduct.color = [];
@@ -151,6 +154,7 @@ describe('WishlistService', () => {
           type: mockProduct.type,
           size: mockProduct.size,
           images: mockProduct.images,
+          status: mockProduct.status,
           colors: mockProduct.color,
           vendor: {
             id: mockProduct.user.id,

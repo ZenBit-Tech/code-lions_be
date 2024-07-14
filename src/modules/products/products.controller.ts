@@ -16,17 +16,16 @@ import {
 } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
-import {
-  ProductsService,
-  ProductsResponse,
-} from 'src/modules/products/products.service';
+import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
+import { ProductsService } from 'src/modules/products/products.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
 
+import { Errors } from '../../common/errors';
+
 import { Order } from './entities/order.enum';
-import { ProductsWithStatusResponse } from './products.service';
 
 @ApiTags('products')
 @Controller('products')
@@ -68,7 +67,7 @@ export class ProductsController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = PRODUCTS_ON_PAGE,
     @Query('search') search?: string,
-  ): Promise<ProductsResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     return this.productsService.findAll(page, limit, search);
   }
 
@@ -82,7 +81,33 @@ export class ProductsController {
   })
   @ApiOkResponse({
     description: 'The list of products by vendor ID',
-    // type: [ProductsWithStatusResponse],
+    type: ProductsAndCountResponseDTO,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch products by vendor',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_PRODUCTS_BY_VENDOR,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
   })
   @ApiQuery({
     name: 'page',
@@ -94,7 +119,7 @@ export class ProductsController {
     name: 'limit',
     required: false,
     description: 'Products per page limit',
-    schema: { type: 'number', default: PRODUCTS_ON_PAGE },
+    schema: { type: 'number', default: PRODUCTS_PER_VENDOR_PAGE },
   })
   @ApiQuery({
     name: 'search',
@@ -118,7 +143,7 @@ export class ProductsController {
     @Param('id') vendorId: string,
     @Query('search') search?: string,
     @Query('order') order: Order = Order.DESC,
-  ): Promise<ProductsWithStatusResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     return this.productsService.findByVendorId(
       page,
       limit,
