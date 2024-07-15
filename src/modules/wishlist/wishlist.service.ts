@@ -153,6 +153,7 @@ export class WishlistService {
         : null,
       createdAt: inputProduct.createdAt,
       lastUpdatedAt: inputProduct.lastUpdatedAt,
+      deletedAt: inputProduct.deletedAt,
     };
   }
 }

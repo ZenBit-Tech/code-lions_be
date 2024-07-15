@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
@@ -6,7 +15,9 @@ import {
   ApiOperation,
   ApiParam,
   ApiQuery,
+  ApiResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import {
@@ -24,6 +35,7 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
 
 import { Errors } from '../../common/errors';
+import { responseDescrptions } from '../../common/response-descriptions';
 
 import { Order } from './entities/order.enum';
 
@@ -93,6 +105,19 @@ export class ProductsController {
           example: Errors.USER_NOT_FOUND,
         },
         error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
       },
     },
   })
@@ -193,5 +218,73 @@ export class ProductsController {
   })
   async findById(@Param('id') id: string): Promise<ProductResponseDTO> {
     return this.productsService.findById(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @Roles(Role.VENDOR)
+  @Delete(':id/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a product',
+    tags: ['Product Endpoints'],
+    description:
+      'This endpoint softly deletes published products and deletes inactive products.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to delete the product',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_DELETE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the vendor',
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'The ID of the product',
+  })
+  async deleteProduct(
+    @Param('id') vendorId: string,
+    @Param('productId') productId: string,
+  ): Promise<void> {
+    return this.productsService.deleteProduct(vendorId, productId);
   }
 }

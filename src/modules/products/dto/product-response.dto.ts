@@ -122,4 +122,10 @@ export class ProductResponseDTO {
     description: 'The last update date of the product',
   })
   lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the user',
+  })
+  deletedAt: Date;
 }

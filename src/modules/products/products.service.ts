@@ -8,10 +8,12 @@ import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE } from 'src/config';
+import { Cart } from 'src/modules/cart/cart.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
 import { Order } from './entities/order.enum';
 import { Status } from './entities/product-status.enum';
@@ -34,6 +36,10 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Cart)
+    private readonly cartRepository: Repository<Cart>,
+    @InjectRepository(Wishlist)
+    private readonly wishlistRepository: Repository<Wishlist>,
   ) {}
 
   async findAll(
@@ -100,18 +106,18 @@ export class ProductsService {
   }
 
   async findById(id: string): Promise<ProductResponseDTO> {
-    const products = await this.getProducts({
+    const product = await this.getProducts({
       where: {
         key: 'id',
         value: id,
       },
     });
 
-    if (products.count === 0) {
+    if (product.count === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return products.products[0];
+    return product.products[0];
   }
 
   private async getProducts(
@@ -137,6 +143,7 @@ export class ProductsService {
           'product.size',
           'product.createdAt',
           'product.lastUpdatedAt',
+          'product.deletedAt',
           'images',
           'user.id',
           'user.name',
@@ -170,10 +177,9 @@ export class ProductsService {
 
       queryBuilder.skip(offset).take(limit);
 
-      const [products] = await queryBuilder.getManyAndCount();
+      const [products, count] = await queryBuilder.getManyAndCount();
 
       const mappedProducts = this.mapProducts(products);
-      const count = mappedProducts.length;
 
       return {
         products: mappedProducts,
@@ -208,5 +214,32 @@ export class ProductsService {
     });
 
     return mappedProducts;
+  }
+
+  async deleteProduct(vendorId: string, productId: string): Promise<void> {
+    try {
+      const product = await this.productRepository.findOne({
+        where: { id: productId, vendorId },
+      });
+
+      let deleteResponse;
+
+      if (product.status === Status.INACTIVE) {
+        deleteResponse = await this.productRepository.delete(productId);
+      } else if (product.status === Status.PUBLISHED) {
+        deleteResponse = await this.productRepository.softDelete(productId);
+        await this.cartRepository.delete({ productId });
+        await this.wishlistRepository.delete({ productId });
+      }
+
+      if (!deleteResponse || !deleteResponse.affected) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_DELETE_PRODUCT);
+    }
   }
 }

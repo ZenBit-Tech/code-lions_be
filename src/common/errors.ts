@@ -145,4 +145,5 @@ export const Errors = {
   CART_NOT_FOUND: 'Cart not found',
   FAILED_TO_RETRIEVE_CART: 'Failed to retrieve cart',
   FAILED_TO_FETCH_PRODUCTS_BY_VENDOR: 'Failed to fetch products by vendor',
+  FAILED_TO_DELETE_PRODUCT: 'Failed to delete product',
 };

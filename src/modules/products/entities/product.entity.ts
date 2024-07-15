@@ -8,6 +8,7 @@ import {
   ManyToMany,
   JoinTable,
   OneToMany,
+  DeleteDateColumn,
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -166,6 +167,13 @@ export class Product {
   })
   @Column({ type: 'timestamp', default: null, nullable: true })
   lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the user',
+  })
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  deletedAt: Date;
 
   @OneToMany(() => Cart, (cart) => cart.product)
   cart: Cart[];
