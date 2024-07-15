@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
@@ -42,6 +42,7 @@ export class ProductsService {
     private readonly cartRepository: Repository<Cart>,
     @InjectRepository(Wishlist)
     private readonly wishlistRepository: Repository<Wishlist>,
+    private dataSource: DataSource,
   ) {}
 
   async findAll(
@@ -293,29 +294,45 @@ export class ProductsService {
   }
 
   async deleteProduct(vendorId: string, productId: string): Promise<void> {
-    try {
-      const product = await this.productRepository.findOne({
-        where: { id: productId, vendorId },
-      });
+    await this.dataSource.transaction(
+      async (transactionalEntityManager: EntityManager) => {
+        try {
+          const product = await transactionalEntityManager.findOne(Product, {
+            where: { id: productId, vendorId },
+          });
 
-      let deleteResponse;
+          if (!product) {
+            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+          }
 
-      if (product.status === Status.INACTIVE) {
-        deleteResponse = await this.productRepository.delete(productId);
-      } else if (product.status === Status.PUBLISHED) {
-        deleteResponse = await this.productRepository.softDelete(productId);
-        await this.cartRepository.delete({ productId });
-        await this.wishlistRepository.delete({ productId });
-      }
+          let deleteResponse;
 
-      if (!deleteResponse || !deleteResponse.affected) {
-        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
-      }
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(Errors.FAILED_TO_DELETE_PRODUCT);
-    }
+          if (product.status === Status.INACTIVE) {
+            deleteResponse = await transactionalEntityManager.delete(
+              Product,
+              productId,
+            );
+          } else if (product.status === Status.PUBLISHED) {
+            deleteResponse = await transactionalEntityManager.softDelete(
+              Product,
+              productId,
+            );
+            await transactionalEntityManager.delete(Cart, { productId });
+            await transactionalEntityManager.delete(Wishlist, { productId });
+          }
+
+          if (!deleteResponse || !deleteResponse.affected) {
+            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+          }
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            throw error;
+          }
+          throw new InternalServerErrorException(
+            Errors.FAILED_TO_DELETE_PRODUCT,
+          );
+        }
+      },
+    );
   }
 }
