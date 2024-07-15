@@ -125,7 +125,7 @@ export class ProductResponseDTO {
 
   @ApiProperty({
     example: new Date(),
-    description: 'The deletion date of the user',
+    description: 'The deletion date of the product',
   })
   deletedAt: Date;
 }
