@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, UpdateResult } from 'typeorm';
 
-import { PRODUCTS_ON_PAGE } from 'src/config';
+import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 import { Cart } from 'src/modules/cart/cart.entity';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
@@ -260,6 +260,38 @@ describe('ProductsService', () => {
       expect(productRepository.softDelete).toHaveBeenCalledWith(productId);
       expect(cartRepository.delete).toHaveBeenCalledWith({ productId });
       expect(wishlistRepository.delete).toHaveBeenCalledWith({ productId });
+    });
+  });
+
+  describe('findLatest', () => {
+    it('should return the latest products', async () => {
+      const today = new Date();
+      const someDaysAgo = new Date();
+
+      someDaysAgo.setDate(today.getDate() - DAYS_JUST_IN);
+
+      const expectedProducts = mockProducts;
+      const products = await service.findLatest();
+
+      expect(products).toEqual(expectedProducts);
+    });
+  });
+
+  describe('findBySize', () => {
+    it('should return products by size', async () => {
+      const clothesSize = 'M';
+      const jeansSize = '32';
+      const shoesSize = '10';
+
+      const expectedProducts = mockProducts;
+
+      const products = await service.findBySize(
+        clothesSize,
+        jeansSize,
+        shoesSize,
+      );
+
+      expect(products).toEqual(expectedProducts);
     });
   });
 });
