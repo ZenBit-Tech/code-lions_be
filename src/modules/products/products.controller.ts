@@ -20,6 +20,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { Errors } from 'src/common/errors';
+import { responseDescrptions } from 'src/common/response-descriptions';
 import {
   FIRST_PAGE,
   PRODUCTS_ON_PAGE,
@@ -33,9 +35,6 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
-
-import { Errors } from '../../common/errors';
-import { responseDescrptions } from '../../common/response-descriptions';
 
 import { Order } from './entities/order.enum';
 

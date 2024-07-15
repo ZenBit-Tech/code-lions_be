@@ -3,12 +3,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
-
-import { Status } from '../products/entities/product-status.enum';
 
 import { Wishlist } from './wishlist.entity';
 import { WishlistService } from './wishlist.service';
