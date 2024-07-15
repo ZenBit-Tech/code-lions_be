@@ -274,7 +274,7 @@ export class ProductsService {
     }
   }
 
-  private mapProducts(products: Product[]): ProductResponseDTO[] {
+  mapProducts(products: Product[]): ProductResponseDTO[] {
     const mappedProducts: ProductResponseDTO[] = products.map((product) => {
       const imageUrls = product.images.map((image) => image.url).sort();
 
@@ -283,7 +283,7 @@ export class ProductsService {
         name: product.user?.name || '',
         photoUrl: product.user?.photoUrl || '',
       };
-      const colors = product.color;
+      const colors = product.color || [];
       const mappedColors = colors.map((color) => color.color);
 
       delete product.user;
