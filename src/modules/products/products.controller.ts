@@ -5,17 +5,20 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiInternalServerErrorResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -40,6 +43,8 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
+
+import { Status } from './entities/product-status.enum';
 
 @ApiTags('products')
 @Controller('products')
@@ -254,6 +259,320 @@ export class ProductsController {
       sortBy,
       vendorId,
     );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/:list')
+  @ApiOperation({
+    summary: 'Get product requests and published products list by admin',
+    tags: ['Products Endpoints'],
+    description:
+      'This endpoint returns a list of product requests or published products list for admin.',
+  })
+  @ApiOkResponse({
+    description: 'The list of product requests or products for admin',
+    type: ProductsAndCountResponseDTO,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch product requests or products for admin',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_PRODUCTS,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { type: 'number', default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Products per page limit',
+    schema: { type: 'number', default: PRODUCTS_PER_VENDOR_PAGE },
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search query',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
+  })
+  @ApiParam({
+    name: 'list',
+    description:
+      'The list of product fetched for admin(requests or published products)',
+  })
+  async findAdmin(
+    @Query('page') page: number = FIRST_PAGE,
+    @Query('limit') limit: number = PRODUCTS_PER_VENDOR_PAGE,
+    @Query('sortBy') sortBy: string = DEFAULT_SORT,
+    @Query('sortOrder') sortOrder: string = DEFAULT_ORDER,
+    @Param('list') list: Status,
+    @Query('search') search?: string,
+  ): Promise<ProductsAndCountResponseDTO> {
+    return this.productsService.findAdminList(
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+      list,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch('admin/approve/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update status of the product to published',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint updates the status of product to published.',
+  })
+  @ApiNoContentResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The product request is approved successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor or product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_OR_PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to approve the product request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_APPROVE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of product to approve',
+  })
+  async approveRequest(@Param('productId') productId: string): Promise<void> {
+    return this.productsService.approveRequest(productId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete('admin/reject/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Reject the product request by admin',
+    tags: ['Products Endpoints'],
+    description:
+      'This endpoint deletes the product request if admin rejects it.',
+  })
+  @ApiNoContentResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The product request is rejected successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor or product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_OR_PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to reject the product request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_REJECT_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of product to reject',
+  })
+  async rejectRequest(@Param('productId') productId: string): Promise<void> {
+    return this.productsService.rejectRequest(productId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete('admin/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete the product by admin',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint soft deletes the product by admin.',
+  })
+  @ApiNoContentResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The product is soft deleted successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor or product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_OR_PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to delete the product',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_DELETE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of product to soft delete',
+  })
+  async deleteProductByAdmin(
+    @Param('productId') productId: string,
+  ): Promise<void> {
+    return this.productsService.deleteProductByAdmin(productId);
   }
 
   @Get('latest')

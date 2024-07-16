@@ -146,4 +146,7 @@ export const Errors = {
   FAILED_TO_RETRIEVE_CART: 'Failed to retrieve cart',
   FAILED_TO_FETCH_PRODUCTS_BY_VENDOR: 'Failed to fetch products by vendor',
   FAILED_TO_DELETE_PRODUCT: 'Failed to delete product',
+  FAILED_TO_APPROVE_PRODUCT: 'Failed to approve product',
+  FAILED_TO_SEND_EMAIL: 'Failed to send email',
+  FAILED_TO_REJECT_PRODUCT: 'Failed to reject product',
 };
