@@ -1,12 +1,15 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, UpdateResult } from 'typeorm';
+import { DataSource, EntityManager, Repository, UpdateResult } from 'typeorm';
 
 import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 import { Cart } from 'src/modules/cart/cart.entity';
+import { MailerService } from 'src/modules/mailer/mailer.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
+import { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
 
 import { ProductResponseDTO } from './dto/product-response.dto';
 import { Category } from './entities/category.enum';
@@ -23,6 +26,7 @@ describe('ProductsService', () => {
   let userRepository: Repository<User>;
   let cartRepository: Repository<Cart>;
   let wishlistRepository: Repository<Wishlist>;
+  let dataSource: DataSource;
 
   const mockProducts: ProductResponseDTO[] = [
     {
@@ -82,6 +86,8 @@ describe('ProductsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductsService,
+        MailerService,
+        ConfigService,
         {
           provide: getRepositoryToken(Product),
           useValue: mockRepository,
@@ -97,6 +103,12 @@ describe('ProductsService', () => {
         {
           provide: getRepositoryToken(Wishlist),
           useClass: Repository,
+        },
+        {
+          provide: DataSource,
+          useValue: {
+            transaction: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -260,6 +272,148 @@ describe('ProductsService', () => {
       expect(productRepository.softDelete).toHaveBeenCalledWith(productId);
       expect(cartRepository.delete).toHaveBeenCalledWith({ productId });
       expect(wishlistRepository.delete).toHaveBeenCalledWith({ productId });
+    });
+  });
+
+  describe('approveRequest', () => {
+    it('should approve a product and set its status to PUBLISHED', async () => {
+      const productId = '61c674384-f944-401b-949b-b76e8793bdc9';
+      const vendorId = '44c674384-f944-401b-949b-b76e8793bdc9';
+      const product = {
+        id: productId,
+        vendorId,
+        status: Status.INACTIVE,
+        name: 'Test Product',
+      } as Product;
+      const vendor = { id: vendorId, email: 'vendor@example.com' } as User;
+
+      const transactionalEntityManager = {
+        findOne: jest.fn().mockImplementation((entity) => {
+          if (entity === Product) return product;
+          if (entity === User) return vendor;
+        }),
+        save: jest.fn().mockResolvedValue(product),
+      } as unknown as EntityManager;
+
+      jest
+        .spyOn(dataSource, 'transaction')
+        .mockImplementation(
+          async (
+            isolationLevelOrRunInTransaction:
+              | IsolationLevel
+              | ((transactionalEntityManager: EntityManager) => Promise<void>),
+            runInTransaction?: (
+              transactionalEntityManager: EntityManager,
+            ) => Promise<void>,
+          ) => {
+            if (typeof isolationLevelOrRunInTransaction === 'function') {
+              await isolationLevelOrRunInTransaction(
+                transactionalEntityManager,
+              );
+            } else if (runInTransaction) {
+              await runInTransaction(transactionalEntityManager);
+            }
+          },
+        );
+
+      await service.approveRequest(productId);
+
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('rejectRequest', () => {
+    it('should reject a product and delete it', async () => {
+      const productId = '61c674384-f944-401b-949b-b76e8793bdc9';
+      const vendorId = '44c674384-f944-401b-949b-b76e8793bdc9';
+      const product = {
+        id: productId,
+        vendorId,
+        status: Status.INACTIVE,
+        name: 'Test Product',
+      } as Product;
+      const vendor = { id: vendorId, email: 'vendor@example.com' } as User;
+
+      const transactionalEntityManager = {
+        findOne: jest.fn().mockImplementation((entity) => {
+          if (entity === Product) return product;
+          if (entity === User) return vendor;
+        }),
+        delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      } as unknown as EntityManager;
+
+      jest
+        .spyOn(dataSource, 'transaction')
+        .mockImplementation(
+          async (
+            isolationLevelOrRunInTransaction:
+              | IsolationLevel
+              | ((transactionalEntityManager: EntityManager) => Promise<void>),
+            runInTransaction?: (
+              transactionalEntityManager: EntityManager,
+            ) => Promise<void>,
+          ) => {
+            if (typeof isolationLevelOrRunInTransaction === 'function') {
+              await isolationLevelOrRunInTransaction(
+                transactionalEntityManager,
+              );
+            } else if (runInTransaction) {
+              await runInTransaction(transactionalEntityManager);
+            }
+          },
+        );
+
+      await service.rejectRequest(productId);
+
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('deleteProductByAdmin', () => {
+    it('should delete a published product and related cart and wishlist entries', async () => {
+      const productId = '61c674384-f944-401b-949b-b76e8793bdc9';
+      const vendorId = '44c674384-f944-401b-949b-b76e8793bdc9';
+      const product = {
+        id: productId,
+        vendorId,
+        status: Status.PUBLISHED,
+        name: 'Test Product',
+      } as Product;
+      const vendor = { id: vendorId, email: 'vendor@example.com' } as User;
+
+      const transactionalEntityManager = {
+        findOne: jest.fn().mockImplementation((entity) => {
+          if (entity === Product) return product;
+          if (entity === User) return vendor;
+        }),
+        softDelete: jest.fn().mockResolvedValue({ affected: 1 }),
+        delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      } as unknown as EntityManager;
+
+      jest
+        .spyOn(dataSource, 'transaction')
+        .mockImplementation(
+          async (
+            isolationLevelOrRunInTransaction:
+              | IsolationLevel
+              | ((transactionalEntityManager: EntityManager) => Promise<void>),
+            runInTransaction?: (
+              transactionalEntityManager: EntityManager,
+            ) => Promise<void>,
+          ) => {
+            if (typeof isolationLevelOrRunInTransaction === 'function') {
+              await isolationLevelOrRunInTransaction(
+                transactionalEntityManager,
+              );
+            } else if (runInTransaction) {
+              await runInTransaction(transactionalEntityManager);
+            }
+          },
+        );
+
+      await service.deleteProductByAdmin(productId);
+
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
     });
   });
 
