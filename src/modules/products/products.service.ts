@@ -342,11 +342,15 @@ export class ProductsService {
       },
     });
 
-    if (products.count === 0) {
+    const publishedProducts = products.products.filter(
+      (item) => item.status === Status.PUBLISHED,
+    );
+
+    if (publishedProducts.length === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return products;
+    return { products: publishedProducts, count: publishedProducts.length };
   }
 
   async findBySize(
@@ -375,17 +379,17 @@ export class ProductsService {
       },
     });
 
-    const products = [
+    const publishedProducts = [
       ...productsClothes.products,
       ...productsJeans.products,
       ...productsShoes.products,
-    ];
+    ].filter((item) => item.status === Status.PUBLISHED);
 
-    if (products.length === 0) {
+    if (publishedProducts.length === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return { products, count: products.length };
+    return { products: publishedProducts, count: publishedProducts.length };
   }
 
   private async getProducts(
