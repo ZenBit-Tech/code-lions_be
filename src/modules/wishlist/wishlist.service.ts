@@ -141,7 +141,7 @@ export class WishlistService {
       type: inputProduct.type as ProductTypes,
       size: inputProduct.size,
       images: inputProduct.images.map((image) => image.url),
-      colors: inputProduct.color,
+      colors: inputProduct.color.map((color) => color.color),
       vendor: inputProduct.user
         ? {
             id: inputProduct.user.id,

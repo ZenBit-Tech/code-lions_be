@@ -18,9 +18,17 @@ interface GetProductsOptions {
     key: keyof Product;
     value: string | DateRange;
   };
+  category?: string;
   search?: string;
   page?: number;
   limit?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  color?: string;
+  style?: string;
+  size?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export interface ProductsResponse {
@@ -36,11 +44,31 @@ export class ProductsService {
   ) {}
 
   async findAll(
+    category: string,
     page: number,
     limit: number,
     search: string,
+    minPrice: number,
+    maxPrice: number,
+    color: string,
+    style: string,
+    size: string,
+    sortBy: string,
+    sortOrder: string,
   ): Promise<ProductsResponse> {
-    return this.getProducts({ page, limit, search });
+    return this.getProducts({
+      category,
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+      sortBy,
+      sortOrder,
+    });
   }
 
   async findBySlug(slug: string): Promise<ProductResponseDTO> {
@@ -182,10 +210,50 @@ export class ProductsService {
         }
       }
 
+      if (options?.category) {
+        queryBuilder.andWhere('FIND_IN_SET(:category, product.categories)', {
+          category: options.category,
+        });
+      }
       if (options?.search) {
         queryBuilder.andWhere(
-          'product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search',
+          '(product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search)',
           { search: `%${options.search}%` },
+        );
+      }
+
+      if (options?.minPrice) {
+        queryBuilder.andWhere('product.price >= :minPrice', {
+          minPrice: options.minPrice,
+        });
+      }
+
+      if (options?.maxPrice) {
+        queryBuilder.andWhere('product.price <= :maxPrice', {
+          maxPrice: options.maxPrice,
+        });
+      }
+
+      if (options?.style) {
+        queryBuilder.andWhere('product.style = :style', {
+          style: options.style,
+        });
+      }
+
+      if (options?.size) {
+        queryBuilder.andWhere('product.size = :size', { size: options.size });
+      }
+
+      if (options?.color) {
+        queryBuilder.andWhere('colors.color = :color', {
+          color: options.color,
+        });
+      }
+
+      if (options?.sortBy && options?.sortOrder) {
+        queryBuilder.orderBy(
+          `product.${options.sortBy}`,
+          options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
         );
       }
 
@@ -206,7 +274,7 @@ export class ProductsService {
     }
   }
 
-  private mapProducts(products: Product[]): ProductResponseDTO[] {
+  mapProducts(products: Product[]): ProductResponseDTO[] {
     const mappedProducts: ProductResponseDTO[] = products.map((product) => {
       const imageUrls = product.images.map((image) => image.url).sort();
 
@@ -215,7 +283,8 @@ export class ProductsService {
         name: product.user?.name || '',
         photoUrl: product.user?.photoUrl || '',
       };
-      const colors = product.color;
+      const colors = product.color || [];
+      const mappedColors = colors.map((color) => color.color);
 
       delete product.user;
       delete product.vendorId;
@@ -224,7 +293,7 @@ export class ProductsService {
       return {
         ...product,
         images: imageUrls,
-        colors: colors,
+        colors: mappedColors,
         vendor: vendor,
       };
     });

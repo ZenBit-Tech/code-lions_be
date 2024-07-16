@@ -35,6 +35,12 @@ export class ProductsController {
     type: [ProductResponseDTO],
   })
   @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Product category',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     description: 'Page number for pagination',
@@ -52,12 +58,74 @@ export class ProductsController {
     description: 'Search query',
     schema: { type: 'string' },
   })
+  @ApiQuery({
+    name: 'minPrice',
+    required: false,
+    description: 'Minimum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'maxPrice',
+    required: false,
+    description: 'Maximum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'color',
+    required: false,
+    description: 'Product color',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'style',
+    required: false,
+    description: 'Product style',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'size',
+    required: false,
+    description: 'Product size',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
+  })
   async findAll(
+    @Query('category') category?: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = PRODUCTS_ON_PAGE,
     @Query('search') search?: string,
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('color') color?: string,
+    @Query('style') style?: string,
+    @Query('size') size?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ): Promise<ProductsResponse> {
-    return this.productsService.findAll(page, limit, search);
+    return this.productsService.findAll(
+      category,
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+      sortBy,
+      sortOrder,
+    );
   }
 
   @Get('latest')
