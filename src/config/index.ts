@@ -15,3 +15,5 @@ export const PRODUCTS_ON_PAGE = 12;
 export const PRODUCTS_PER_VENDOR_PAGE = 5;
 export const FIRST_PAGE = 1;
 export const DAYS_JUST_IN = 7;
+export const DEFAULT_ORDER = 'DESC';
+export const DEFAULT_SORT = 'createdAt';
