@@ -2,7 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, UpdateResult } from 'typeorm';
 
-import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
+import {
+  PRODUCTS_ON_PAGE,
+  DAYS_JUST_IN,
+  DEFAULT_SORT,
+  DEFAULT_ORDER,
+} from 'src/config';
+import { mockProduct } from 'src/mocks/mock-product';
 import { Cart } from 'src/modules/cart/cart.entity';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
@@ -10,7 +16,6 @@ import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
 import { ProductResponseDTO } from './dto/product-response.dto';
 import { Category } from './entities/category.enum';
-import { Order } from './entities/order.enum';
 import { Status } from './entities/product-status.enum';
 import { ProductTypes } from './entities/product-types.enum';
 import { Product } from './entities/product.entity';
@@ -54,27 +59,12 @@ describe('ProductsService', () => {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       setParameter: jest.fn().mockReturnThis(),
-      getRawMany: jest.fn().mockResolvedValue([
-        {
-          product_id: '61c674384-f944-401b-949b-b76e8793bdc9',
-          product_name: 'Test Product',
-          product_slug: 'test-product',
-          product_price: 100,
-          product_description: 'A test product',
-          product_categories: Category.CLOTHING,
-          product_style: Styles.CASUAL,
-          product_type: ProductTypes.DRESS,
-          product_size: 'M',
-          user_id: '44c674384-f944-401b-949b-b76e8793bdc9',
-          user_name: 'Test Vendor',
-          user_photoUrl: '',
-          product_createdAt: new Date('2024-07-05T18:15:14.950Z'),
-          product_lastUpdatedAt: new Date('2024-07-05T18:15:14.950Z'),
-          images_id: null,
-          images_url: null,
-          colors_color: null,
-        },
-      ]),
+      getManyAndCount: jest.fn().mockResolvedValue([[mockProduct], 1]),
+      select: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
     })),
   };
 
@@ -118,10 +108,27 @@ describe('ProductsService', () => {
 
   describe('findAll', () => {
     it('should return an array of products', async () => {
-      const expectedProducts = mockProducts;
-      const products = await service.findAll(1, PRODUCTS_ON_PAGE, '');
+      const expectedProducts = service.mapProducts([mockProduct]);
+      const expectedResult = {
+        products: expectedProducts,
+        count: 1,
+      };
 
-      expect(products).toEqual(expectedProducts);
+      const response = await service.findAll(
+        undefined,
+        1,
+        PRODUCTS_ON_PAGE,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+
+      expect(response).toEqual(expectedResult);
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledTimes(1);
     });
   });
@@ -129,7 +136,7 @@ describe('ProductsService', () => {
   describe('findBySlug', () => {
     it('should return a product by slug', async () => {
       const slug = 'test-product';
-      const expectedProduct = mockProducts[0];
+      const expectedProduct = service.mapProducts([mockProduct])[0];
 
       const product = await service.findBySlug(slug);
 
@@ -183,7 +190,8 @@ describe('ProductsService', () => {
         1,
         PRODUCTS_ON_PAGE,
         '',
-        Order.DESC,
+        DEFAULT_ORDER,
+        DEFAULT_SORT,
         vendorId,
       );
 
@@ -196,7 +204,7 @@ describe('ProductsService', () => {
   describe('findById', () => {
     it('should return a product by id', async () => {
       const id = '61c674384-f944-401b-949b-b76e8793bdc9';
-      const expectedProduct = mockProducts[0];
+      const expectedProduct = service.mapProducts([mockProduct])[0];
 
       const product = await service.findById(id);
 
@@ -270,10 +278,14 @@ describe('ProductsService', () => {
 
       someDaysAgo.setDate(today.getDate() - DAYS_JUST_IN);
 
-      const expectedProducts = mockProducts;
+      const expectedProducts = service.mapProducts([mockProduct]);
+      const expectedResult = {
+        products: expectedProducts,
+        count: 1,
+      };
       const products = await service.findLatest();
 
-      expect(products).toEqual(expectedProducts);
+      expect(products).toEqual(expectedResult);
     });
   });
 
@@ -283,7 +295,15 @@ describe('ProductsService', () => {
       const jeansSize = '32';
       const shoesSize = '10';
 
-      const expectedProducts = mockProducts;
+      const expectedProducts = service.mapProducts([
+        mockProduct,
+        mockProduct,
+        mockProduct,
+      ]);
+      const expectedResult = {
+        products: expectedProducts,
+        count: 3,
+      };
 
       const products = await service.findBySize(
         clothesSize,
@@ -291,7 +311,7 @@ describe('ProductsService', () => {
         shoesSize,
       );
 
-      expect(products).toEqual(expectedProducts);
+      expect(products).toEqual(expectedResult);
     });
   });
 });

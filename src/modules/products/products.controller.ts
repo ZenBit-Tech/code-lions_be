@@ -26,17 +26,20 @@ import {
   FIRST_PAGE,
   PRODUCTS_ON_PAGE,
   PRODUCTS_PER_VENDOR_PAGE,
+  DEFAULT_ORDER,
+  DEFAULT_SORT,
 } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
-import { ProductsService } from 'src/modules/products/products.service';
+import {
+  ProductsResponse,
+  ProductsService,
+} from 'src/modules/products/products.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
-
-import { Order } from './entities/order.enum';
 
 @ApiTags('products')
 @Controller('products')
@@ -57,6 +60,12 @@ export class ProductsController {
     type: [ProductResponseDTO],
   })
   @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Product category',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     description: 'Page number for pagination',
@@ -74,12 +83,74 @@ export class ProductsController {
     description: 'Search query',
     schema: { type: 'string' },
   })
+  @ApiQuery({
+    name: 'minPrice',
+    required: false,
+    description: 'Minimum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'maxPrice',
+    required: false,
+    description: 'Maximum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'color',
+    required: false,
+    description: 'Product color',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'style',
+    required: false,
+    description: 'Product style',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'size',
+    required: false,
+    description: 'Product size',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
+  })
   async findAll(
+    @Query('category') category?: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = PRODUCTS_ON_PAGE,
     @Query('search') search?: string,
-  ): Promise<ProductsAndCountResponseDTO> {
-    return this.productsService.findAll(page, limit, search);
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('color') color?: string,
+    @Query('style') style?: string,
+    @Query('size') size?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ): Promise<ProductsResponse> {
+    return this.productsService.findAll(
+      category,
+      page,
+      limit,
+      search,
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+      sortBy,
+      sortOrder,
+    );
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
@@ -152,10 +223,16 @@ export class ProductsController {
     schema: { type: 'string' },
   })
   @ApiQuery({
-    name: 'order',
+    name: 'sortBy',
     required: false,
-    description: 'Order by date',
-    schema: { type: 'string' },
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
   })
   @ApiParam({
     name: 'id',
@@ -164,15 +241,17 @@ export class ProductsController {
   async findByVendorId(
     @Query('page') page: number = FIRST_PAGE,
     @Query('limit') limit: number = PRODUCTS_PER_VENDOR_PAGE,
+    @Query('sortBy') sortBy: string = DEFAULT_SORT,
+    @Query('sortOrder') sortOrder: string = DEFAULT_ORDER,
     @Param('id') vendorId: string,
     @Query('search') search?: string,
-    @Query('order') order: Order = Order.DESC,
   ): Promise<ProductsAndCountResponseDTO> {
     return this.productsService.findByVendorId(
       page,
       limit,
       search,
-      order,
+      sortOrder,
+      sortBy,
       vendorId,
     );
   }

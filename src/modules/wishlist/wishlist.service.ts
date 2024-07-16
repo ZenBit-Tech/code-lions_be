@@ -143,7 +143,7 @@ export class WishlistService {
       status: inputProduct.status as Status,
       size: inputProduct.size,
       images: inputProduct.images.map((image) => image.url),
-      colors: inputProduct.color,
+      colors: inputProduct.color.map((color) => color.color),
       vendor: inputProduct.user
         ? {
             id: inputProduct.user.id,

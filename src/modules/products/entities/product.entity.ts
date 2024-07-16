@@ -148,7 +148,6 @@ export class Product {
     type: 'enum',
     enum: Status,
     nullable: false,
-    default: Status.INACTIVE,
   })
   status: Status;
 

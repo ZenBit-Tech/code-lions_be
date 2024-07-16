@@ -15,7 +15,6 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
-import { Order } from './entities/order.enum';
 import { Status } from './entities/product-status.enum';
 
 type DateRange = { lower: Date; upper: Date };
@@ -25,10 +24,22 @@ interface GetProductsOptions {
     key: keyof Product;
     value: string | DateRange;
   };
+  category?: string;
   search?: string;
   page?: number;
   limit?: number;
-  order?: Order;
+  minPrice?: number;
+  maxPrice?: number;
+  color?: string;
+  style?: string;
+  size?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export interface ProductsResponse {
+  products: ProductResponseDTO[];
+  count: number;
 }
 
 @Injectable()
@@ -46,14 +57,30 @@ export class ProductsService {
   ) {}
 
   async findAll(
+    category: string,
     page: number,
     limit: number,
     search: string,
-  ): Promise<ProductsAndCountResponseDTO> {
+    minPrice: number,
+    maxPrice: number,
+    color: string,
+    style: string,
+    size: string,
+    sortBy: string,
+    sortOrder: string,
+  ): Promise<ProductsResponse> {
     return this.getProducts({
+      category,
       page,
       limit,
       search,
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+      sortBy,
+      sortOrder,
       where: { key: 'status', value: Status.PUBLISHED },
     });
   }
@@ -62,7 +89,8 @@ export class ProductsService {
     page: number,
     limit: number,
     search: string,
-    order: Order,
+    sortOrder: string,
+    sortBy: string,
     vendorId: string,
   ): Promise<ProductsAndCountResponseDTO> {
     try {
@@ -78,7 +106,8 @@ export class ProductsService {
         page,
         limit,
         search,
-        order,
+        sortBy,
+        sortOrder,
         where: { key: 'vendorId', value: vendorId },
       });
 
@@ -234,17 +263,50 @@ export class ProductsService {
         }
       }
 
+      if (options?.category) {
+        queryBuilder.andWhere('FIND_IN_SET(:category, product.categories)', {
+          category: options.category,
+        });
+      }
       if (options?.search) {
         queryBuilder.andWhere(
-          'product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search',
+          '(product.name LIKE :search OR product.description LIKE :search OR product.type LIKE :search)',
           { search: `%${options.search}%` },
         );
       }
 
-      if (options?.order) {
+      if (options?.minPrice) {
+        queryBuilder.andWhere('product.price >= :minPrice', {
+          minPrice: options.minPrice,
+        });
+      }
+
+      if (options?.maxPrice) {
+        queryBuilder.andWhere('product.price <= :maxPrice', {
+          maxPrice: options.maxPrice,
+        });
+      }
+
+      if (options?.style) {
+        queryBuilder.andWhere('product.style = :style', {
+          style: options.style,
+        });
+      }
+
+      if (options?.size) {
+        queryBuilder.andWhere('product.size = :size', { size: options.size });
+      }
+
+      if (options?.color) {
+        queryBuilder.andWhere('colors.color = :color', {
+          color: options.color,
+        });
+      }
+
+      if (options?.sortBy && options?.sortOrder) {
         queryBuilder.orderBy(
-          'product.createdAt',
-          options.order === Order.ASC ? 'ASC' : 'DESC',
+          `product.${options.sortBy}`,
+          options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
         );
       }
 
@@ -267,7 +329,7 @@ export class ProductsService {
     }
   }
 
-  private mapProducts(products: Product[]): ProductResponseDTO[] {
+  mapProducts(products: Product[]): ProductResponseDTO[] {
     const mappedProducts: ProductResponseDTO[] = products.map((product) => {
       const imageUrls = product.images.map((image) => image.url).sort();
 
@@ -276,7 +338,8 @@ export class ProductsService {
         name: product.user?.name || '',
         photoUrl: product.user?.photoUrl || '',
       };
-      const colors = product.color;
+      const colors = product.color || [];
+      const mappedColors = colors.map((color) => color.color);
 
       delete product.user;
       delete product.vendorId;
@@ -285,7 +348,7 @@ export class ProductsService {
       return {
         ...product,
         images: imageUrls,
-        colors: colors,
+        colors: mappedColors,
         vendor: vendor,
       };
     });
