@@ -428,13 +428,13 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @Delete('admin/reject/:productId')
+  @Patch('admin/reject/:productId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Reject the product request by admin',
     tags: ['Products Endpoints'],
     description:
-      'This endpoint deletes the product request if admin rejects it.',
+      'This endpoint changes the status of the product request to rejected if admin rejects it.',
   })
   @ApiNoContentResponse({
     status: HttpStatus.NO_CONTENT,

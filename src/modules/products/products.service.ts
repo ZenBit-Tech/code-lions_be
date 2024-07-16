@@ -211,23 +211,15 @@ export class ProductsService {
             throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
           }
 
-          const productName: string = product.name;
-
-          const result = await transactionalEntityManager.delete(
-            Product,
-            productId,
-          );
-
-          if (result.affected === 0) {
-            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
-          }
+          product.status = Status.REJECTED;
+          await transactionalEntityManager.save(Product, product);
 
           const isMailSent = await this.mailerService.sendMail({
             receiverEmail: vendor.email,
             subject: 'Product rejected on CodeLions!',
             templateName: 'reject-product.hbs',
             context: {
-              productName,
+              productName: product.name,
             },
           });
 
