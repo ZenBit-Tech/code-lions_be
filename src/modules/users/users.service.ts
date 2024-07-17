@@ -14,6 +14,7 @@ import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
 import {
   LIMIT_OF_BEST_VENDORS_PER_PAGE,
+  LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
   LIMIT_USERS_PER_PAGE,
   MAX_RATING,
   VERIFICATION_CODE_EXPIRATION,
@@ -821,10 +822,12 @@ export class UsersService {
         vendorId: vendor.id,
         vendorName: vendor.name,
         photoUrl: vendor.photoUrl,
-        products: vendor.products.map((product) => ({
-          ...product,
-          vendor: product.user,
-        })),
+        products: vendor.products
+          .slice(0, LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE)
+          .map((product) => ({
+            ...product,
+            vendor: product.user,
+          })),
       }));
     } catch (error) {
       throw new InternalServerErrorException(

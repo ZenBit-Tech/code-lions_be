@@ -13,4 +13,5 @@ export const MIN_RATING = 1;
 export const MAX_RATING = 5;
 export const PRODUCTS_ON_PAGE = 12;
 export const LIMIT_OF_BEST_VENDORS_PER_PAGE = 4;
+export const LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE = 4;
 export const DAYS_JUST_IN = 7;
