@@ -53,7 +53,8 @@ export class CartService {
         throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
       }
 
-      const productUrl: string = images[0].url;
+      const sortedImages: string[] = images.map((image) => image.url).sort();
+      const productUrl: string = sortedImages[0];
       const productColor: string = color[0].color;
 
       const cartEntry = this.cartRepository.create({
