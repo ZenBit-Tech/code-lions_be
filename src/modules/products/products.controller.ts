@@ -1,3 +1,5 @@
+import { extname } from 'path';
+
 import {
   Controller,
   Delete,
@@ -10,9 +12,18 @@ import {
   Request,
   Query,
   UseGuards,
+  UseInterceptors,
+  BadRequestException,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -26,6 +37,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { diskStorage } from 'multer';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import {
@@ -34,6 +46,9 @@ import {
   PRODUCTS_PER_VENDOR_PAGE,
   DEFAULT_ORDER,
   DEFAULT_SORT,
+  PRODUCT_IMAGES_PATH,
+  RANDOM_NUMBER_MAX,
+  MAX_FILE_SIZE,
 } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
@@ -752,14 +767,124 @@ export class ProductsController {
   @ApiOperation({
     summary: 'Upload product photo',
     tags: ['Product Endpoints'],
-    description: 'This endpoint uploads product photo',
+    description: 'This endpoint is used by the vendor to upload product photo',
   })
+  @ApiCreatedResponse({
+    description: 'The photo has been successfully uploaded.',
+    type: ProductResponseDTO,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid file or request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_PHOTO_URL,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'Forbidden - No rights for uploading photos',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 403 },
+        message: {
+          type: 'string',
+          example: Errors.UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to upload photo',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPLOAD_PRODUCT_PHOTO,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: PRODUCT_IMAGES_PATH,
+        filename: (req, file, callback) => {
+          if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
+            return callback(
+              new BadRequestException(Errors.ONLY_JPG_JPEG_PNG_HEIC),
+              null,
+            );
+          }
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * RANDOM_NUMBER_MAX);
+          const ext = extname(file.originalname);
+
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: { fileSize: MAX_FILE_SIZE },
+    }),
+  )
   @Roles(Role.VENDOR)
   async uploadPhoto(
     @Request() request: Request & { user: UserResponseDto },
-    //@UploadedFile() file: Express.Multer.File,
-  ): Promise<string> {
-    return this.productsService.updateProductPhoto(request.user.id, 'aaa');
-    //return request.user.id;
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ProductResponseDTO> {
+    if (!file) {
+      throw new BadRequestException(Errors.NO_PHOTO_UPLOADED);
+    }
+    const photoUrl = `${PRODUCT_IMAGES_PATH}/${file.filename}`;
+    const updatedProduct = await this.productsService.updateProductPhoto(
+      request.user.id,
+      photoUrl,
+    );
+
+    return updatedProduct;
   }
 }

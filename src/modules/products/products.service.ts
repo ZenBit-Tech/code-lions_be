@@ -1,10 +1,11 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   ServiceUnavailableException,
-  UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 
@@ -63,6 +64,7 @@ export class ProductsService {
     private readonly wishlistRepository: Repository<Wishlist>,
     private dataSource: DataSource,
     private mailerService: MailerService,
+    private configService: ConfigService,
   ) {}
 
   async findAll(
@@ -586,43 +588,57 @@ export class ProductsService {
   async updateProductPhoto(
     vendorId: string,
     photoUrl: string,
-  ): Promise<string> {
-    const vendor = await this.userRepository.findOne({
-      where: { id: vendorId },
-    });
+  ): Promise<ProductResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
 
-    if (!vendor) {
-      throw new NotFoundException(Errors.USER_NOT_FOUND);
-    }
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-    if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
-      throw new UnauthorizedException(
-        Errors.UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS,
+      if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+        throw new ForbiddenException(
+          Errors.UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS,
+        );
+      }
+
+      const unfinishedProduct = await this.productRepository.findOne({
+        where: { vendorId, isProductCreationFinished: false },
+      });
+
+      let product = unfinishedProduct;
+      let isPrimary = false;
+
+      if (!unfinishedProduct) {
+        product = await this.createEmptyProduct(vendorId);
+        isPrimary = true;
+      }
+
+      const siteHost = this.configService.get<string>('SITE_HOST');
+
+      const image = new Image();
+
+      image.url = photoUrl.replace('./', siteHost);
+      image.isPrimary = isPrimary;
+      image.product = product;
+      await this.imageRepository.save(image);
+
+      const updatedProduct = await this.findById(product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPLOAD_PRODUCT_PHOTO,
       );
     }
-
-    const unfinishedProduct = await this.productRepository.findOne({
-      where: { vendorId, isProductCreationFinished: false },
-    });
-
-    let product = unfinishedProduct;
-    let isPrimary = false;
-
-    if (!unfinishedProduct) {
-      product = await this.createEmptyProduct(vendorId);
-      isPrimary = true;
-    }
-
-    const image = new Image();
-
-    image.url = photoUrl;
-    image.isPrimary = isPrimary;
-    image.product = product;
-    await this.imageRepository.save(image);
-
-    console.log(product);
-
-    return vendorId;
   }
 
   async createEmptyProduct(vendorId: string): Promise<Product> {

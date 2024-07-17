@@ -151,4 +151,6 @@ export const Errors = {
   FAILED_TO_REJECT_PRODUCT: 'Failed to reject product',
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS:
     'Only active vendors can upload product photos',
+  FAILED_TO_UPLOAD_PRODUCT_PHOTO: 'Failed to upload product photo',
+  NO_PHOTO_UPLOADED: 'No photo uploaded',
 };

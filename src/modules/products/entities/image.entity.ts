@@ -35,6 +35,14 @@ export class Image {
   @Column({ type: 'boolean', default: false, nullable: false })
   isPrimary: boolean;
 
+  @ApiProperty({
+    example: '2024-06-28 21:04:24',
+    description: 'The date the product was created',
+    type: Date,
+  })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
   @ManyToOne(() => Product, (product: Product) => product.images, {
     onDelete: 'CASCADE',
   })
