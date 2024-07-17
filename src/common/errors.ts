@@ -160,4 +160,8 @@ export const Errors = {
   FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS_FROM_OTHER_VENDORS:
     'Forbidden to delete product photos from other vendors',
   NO_PHOTO_URL: 'The file to delete is not chosen',
+  FORBIDDEN_TO_SET_PRIMARY_PHOTO_FROM_OTHER_VENDORS:
+    'Forbidden to set primary photo from other vendors',
+  FAILED_TO_SET_PRIMARY_PHOTO: 'Failed to set primary photo',
+  FORBIDDEN_TO_SET_PRIMARY_PHOTO: 'Forbidden to set primary photo',
 };

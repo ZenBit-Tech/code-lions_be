@@ -728,6 +728,62 @@ export class ProductsService {
     }
   }
 
+  async setPrimaryPhoto(
+    vendorId: string,
+    photoUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+        throw new ForbiddenException(Errors.FORBIDDEN_TO_SET_PRIMARY_PHOTO);
+      }
+
+      const photo = await this.imageRepository.findOne({
+        where: { url: photoUrl },
+        relations: { product: true },
+      });
+
+      if (!photo) {
+        throw new NotFoundException(Errors.IMAGE_NOT_FOUND);
+      }
+
+      if (photo.product.vendorId !== vendorId) {
+        throw new ForbiddenException(
+          Errors.FORBIDDEN_TO_SET_PRIMARY_PHOTO_FROM_OTHER_VENDORS,
+        );
+      }
+
+      await this.imageRepository.update(
+        { product: photo.product, isPrimary: true },
+        { isPrimary: false },
+      );
+
+      photo.isPrimary = true;
+      await this.imageRepository.save(photo);
+
+      const updatedProduct = await this.findById(photo.product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_SET_PRIMARY_PHOTO,
+      );
+    }
+  }
+
   private generateSlug(name: string): string {
     return name
       .toLowerCase()
