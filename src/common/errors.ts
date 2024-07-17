@@ -152,5 +152,12 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS:
     'Only active vendors can upload product photos',
   FAILED_TO_UPLOAD_PRODUCT_PHOTO: 'Failed to upload product photo',
+  UNAUTHORIZED_TO_DELETE_PRODUCT_PHOTOS: 'Vendor allowed ',
   NO_PHOTO_UPLOADED: 'No photo uploaded',
+  FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS: 'Forbidden to delete product photos',
+  IMAGE_NOT_FOUND: 'Image not found',
+  FAILED_TO_DELETE_PRODUCT_PHOTO: 'Failed to delete product photo',
+  FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS_FROM_OTHER_VENDORS:
+    'Forbidden to delete product photos from other vendors',
+  NO_PHOTO_URL: 'The file to delete is not chosen',
 };

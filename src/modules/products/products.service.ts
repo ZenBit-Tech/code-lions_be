@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 import {
   ForbiddenException,
   Injectable,
@@ -606,10 +608,11 @@ export class ProductsService {
 
       const unfinishedProduct = await this.productRepository.findOne({
         where: { vendorId, isProductCreationFinished: false },
+        relations: ['images'],
       });
 
       let product = unfinishedProduct;
-      let isPrimary = false;
+      let isPrimary = product.images.length === 0;
 
       if (!unfinishedProduct) {
         product = await this.createEmptyProduct(vendorId);
@@ -656,6 +659,74 @@ export class ProductsService {
     const savedProduct = await this.productRepository.save(product);
 
     return savedProduct;
+  }
+
+  async deleteProductPhoto(
+    vendorId: string,
+    photoUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+        throw new ForbiddenException(Errors.FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS);
+      }
+
+      const photo = await this.imageRepository.findOne({
+        where: { url: photoUrl },
+        relations: { product: true },
+      });
+
+      if (!photo) {
+        throw new NotFoundException(Errors.IMAGE_NOT_FOUND);
+      }
+
+      if (photo.product.vendorId !== vendorId) {
+        throw new ForbiddenException(
+          Errors.FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS_FROM_OTHER_VENDORS,
+        );
+      }
+
+      await this.imageRepository.remove(photo);
+
+      const siteHost = this.configService.get<string>('SITE_HOST');
+      const filePath = photoUrl.replace(siteHost, './');
+
+      fs.unlinkSync(filePath);
+
+      if (photo.isPrimary) {
+        const anotherPhoto = await this.imageRepository.findOne({
+          where: { product: photo.product, isPrimary: false },
+          order: { createdAt: 'ASC' },
+        });
+
+        if (anotherPhoto) {
+          anotherPhoto.isPrimary = true;
+          await this.imageRepository.save(anotherPhoto);
+        }
+      }
+
+      const updatedProduct = await this.findById(photo.product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      console.log(error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_DELETE_PRODUCT_PHOTO,
+      );
+    }
   }
 
   private generateSlug(name: string): string {

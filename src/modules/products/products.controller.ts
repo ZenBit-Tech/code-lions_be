@@ -887,4 +887,87 @@ export class ProductsController {
 
     return updatedProduct;
   }
+
+  @Delete('photo')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Delete product photo',
+    tags: ['Product Endpoints'],
+    description: 'This endpoint is used by the vendor to delete product photo',
+  })
+  @ApiQuery({
+    name: 'file',
+    type: String,
+    required: true,
+    description: 'Photo url',
+  })
+  @ApiOkResponse({
+    description: 'The photo has been successfully deleted.',
+    type: ProductResponseDTO,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string',
+          example: Errors.NO_PHOTO_URL,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'Forbidden - No rights for deleting photos',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 403 },
+        message: {
+          type: 'string',
+          example: Errors.FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS_FROM_OTHER_VENDORS,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to delete photo',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_DELETE_PRODUCT_PHOTO,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @Roles(Role.VENDOR)
+  async deletePhoto(
+    @Request() request: Request & { user: UserResponseDto },
+    @Query('file') photoUrl: string,
+  ): Promise<ProductResponseDTO> {
+    const updatedProduct = this.productsService.deleteProductPhoto(
+      request.user.id,
+      photoUrl,
+    );
+
+    return updatedProduct;
+  }
 }
