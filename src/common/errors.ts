@@ -149,4 +149,6 @@ export const Errors = {
   FAILED_TO_APPROVE_PRODUCT: 'Failed to approve product',
   FAILED_TO_SEND_EMAIL: 'Failed to send email',
   FAILED_TO_REJECT_PRODUCT: 'Failed to reject product',
+  UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS:
+    'Only active vendors can upload product photos',
 };

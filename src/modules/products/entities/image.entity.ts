@@ -27,6 +27,14 @@ export class Image {
   @Column({ type: 'varchar', length: 255, nullable: false })
   url: string;
 
+  @ApiProperty({
+    example: 'false',
+    description: 'Indicates if the photo is primary',
+    type: Boolean,
+  })
+  @Column({ type: 'boolean', default: false, nullable: false })
+  isPrimary: boolean;
+
   @ManyToOne(() => Product, (product: Product) => product.images, {
     onDelete: 'CASCADE',
   })

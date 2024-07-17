@@ -50,6 +50,7 @@ const mockUser: User = {
 export const mockProduct: Product = {
   id: '9224f77b-026b-48f5-93d0-b406288737e4',
   name: 'Diesel Black Dress 00SYWZ0KASX',
+  isProductCreationFinished: true,
   slug: 'diesel-black-dress-00sywz0kasx',
   price: 216,
   description:

@@ -6,10 +6,13 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Post,
+  Request,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiInternalServerErrorResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -33,6 +36,7 @@ import {
   DEFAULT_SORT,
 } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
 import {
@@ -740,5 +744,22 @@ export class ProductsController {
     @Param('productId') productId: string,
   ): Promise<void> {
     return this.productsService.deleteProduct(vendorId, productId);
+  }
+
+  @Post('photo')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Upload product photo',
+    tags: ['Product Endpoints'],
+    description: 'This endpoint uploads product photo',
+  })
+  @Roles(Role.VENDOR)
+  async uploadPhoto(
+    @Request() request: Request & { user: UserResponseDto },
+    //@UploadedFile() file: Express.Multer.File,
+  ): Promise<string> {
+    return this.productsService.updateProductPhoto(request.user.id, 'aaa');
+    //return request.user.id;
   }
 }

@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
@@ -13,9 +14,12 @@ import { Cart } from 'src/modules/cart/cart.entity';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
+import { Image } from 'src/modules/products/entities/image.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 import { Status } from './entities/product-status.enum';
 
@@ -51,6 +55,8 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Image)
+    private readonly imageRepository: Repository<Image>,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     @InjectRepository(Wishlist)
@@ -575,5 +581,71 @@ export class ProductsService {
         }
       },
     );
+  }
+
+  async updateProductPhoto(
+    vendorId: string,
+    photoUrl: string,
+  ): Promise<string> {
+    const vendor = await this.userRepository.findOne({
+      where: { id: vendorId },
+    });
+
+    if (!vendor) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
+    if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+      throw new UnauthorizedException(
+        Errors.UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS,
+      );
+    }
+
+    const unfinishedProduct = await this.productRepository.findOne({
+      where: { vendorId, isProductCreationFinished: false },
+    });
+
+    let product = unfinishedProduct;
+    let isPrimary = false;
+
+    if (!unfinishedProduct) {
+      product = await this.createEmptyProduct(vendorId);
+      isPrimary = true;
+    }
+
+    const image = new Image();
+
+    image.url = photoUrl;
+    image.isPrimary = isPrimary;
+    image.product = product;
+    await this.imageRepository.save(image);
+
+    console.log(product);
+
+    return vendorId;
+  }
+
+  async createEmptyProduct(vendorId: string): Promise<Product> {
+    const temporaryName = `Product-${uuidv4()}`;
+    const slug = this.generateSlug(temporaryName);
+
+    const product = new Product();
+
+    product.vendorId = vendorId;
+    product.name = temporaryName;
+    product.slug = slug;
+    product.isProductCreationFinished = false;
+    product.status = Status.INACTIVE;
+
+    const savedProduct = await this.productRepository.save(product);
+
+    return savedProduct;
+  }
+
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/ /g, '-')
+      .replace(/[^\w-]+/g, '');
   }
 }

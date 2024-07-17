@@ -40,6 +40,13 @@ export class Product {
   name: string;
 
   @ApiProperty({
+    example: false,
+    description: '',
+  })
+  @Column({ default: false })
+  isProductCreationFinished: boolean;
+
+  @ApiProperty({
     example: 'cool-product',
     description: 'The slug of the product',
     type: String,
