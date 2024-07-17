@@ -147,7 +147,8 @@ export class Product {
   @Column({
     type: 'enum',
     enum: Status,
-    nullable: true,
+    nullable: false,
+    default: Status.INACTIVE,
   })
   status: Status;
 
