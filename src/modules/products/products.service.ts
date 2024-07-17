@@ -612,7 +612,7 @@ export class ProductsService {
       });
 
       let product = unfinishedProduct;
-      let isPrimary = product.images.length === 0;
+      let isPrimary = !product?.images || product.images.length === 0;
 
       if (!unfinishedProduct) {
         product = await this.createEmptyProduct(vendorId);
@@ -716,7 +716,6 @@ export class ProductsService {
 
       return updatedProduct;
     } catch (error) {
-      console.log(error);
       if (
         error instanceof NotFoundException ||
         error instanceof ForbiddenException
