@@ -2,14 +2,22 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
+import { Cart } from 'src/modules/cart/cart.entity';
+import { MailerService } from 'src/modules/mailer/mailer.service';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { User } from 'src/modules/users/user.entity';
+import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
+
+import { Status } from './entities/product-status.enum';
 
 type DateRange = { lower: Date; upper: Date };
 
@@ -41,6 +49,14 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Cart)
+    private readonly cartRepository: Repository<Cart>,
+    @InjectRepository(Wishlist)
+    private readonly wishlistRepository: Repository<Wishlist>,
+    private dataSource: DataSource,
+    private mailerService: MailerService,
   ) {}
 
   async findAll(
@@ -68,7 +84,216 @@ export class ProductsService {
       size,
       sortBy,
       sortOrder,
+      where: { key: 'status', value: Status.PUBLISHED },
     });
+  }
+
+  async findByVendorId(
+    page: number,
+    limit: number,
+    search: string,
+    sortOrder: string,
+    sortBy: string,
+    vendorId: string,
+  ): Promise<ProductsAndCountResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const productsByVendorId = await this.getProducts({
+        page,
+        limit,
+        search,
+        sortBy,
+        sortOrder,
+        where: { key: 'vendorId', value: vendorId },
+      });
+
+      return productsByVendorId;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_PRODUCTS_BY_VENDOR,
+      );
+    }
+  }
+
+  async findAdminList(
+    page: number,
+    limit: number,
+    search: string,
+    sortBy: string,
+    sortOrder: string,
+    list?: Status,
+  ): Promise<ProductsAndCountResponseDTO> {
+    try {
+      const productsAdminList = await this.getProducts({
+        page,
+        limit,
+        search,
+        sortBy,
+        sortOrder,
+        where: { key: 'status', value: list },
+      });
+
+      return productsAdminList;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
+    }
+  }
+
+  async approveRequest(productId: string): Promise<void> {
+    await this.dataSource.transaction(
+      async (transactionalEntityManager: EntityManager) => {
+        try {
+          const product = await transactionalEntityManager.findOne(Product, {
+            where: { id: productId, status: Status.INACTIVE },
+          });
+
+          const vendor = await transactionalEntityManager.findOne(User, {
+            where: { id: product.vendorId },
+          });
+
+          if (!product || !vendor) {
+            throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
+          }
+
+          product.status = Status.PUBLISHED;
+          await transactionalEntityManager.save(Product, product);
+
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: vendor.email,
+            subject: 'Product published on CodeLions!',
+            templateName: 'approve-product.hbs',
+            context: {
+              productName: product.name,
+            },
+          });
+
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+        } catch (error) {
+          if (
+            error instanceof NotFoundException ||
+            error instanceof ServiceUnavailableException
+          ) {
+            throw error;
+          }
+          throw new InternalServerErrorException(
+            Errors.FAILED_TO_APPROVE_PRODUCT,
+          );
+        }
+      },
+    );
+  }
+
+  async rejectRequest(productId: string): Promise<void> {
+    await this.dataSource.transaction(
+      async (transactionalEntityManager: EntityManager) => {
+        try {
+          const product = await transactionalEntityManager.findOne(Product, {
+            where: { id: productId, status: Status.INACTIVE },
+          });
+
+          const vendor = await transactionalEntityManager.findOne(User, {
+            where: { id: product.vendorId },
+          });
+
+          if (!product || !vendor) {
+            throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
+          }
+
+          product.status = Status.REJECTED;
+          await transactionalEntityManager.save(Product, product);
+
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: vendor.email,
+            subject: 'Product rejected on CodeLions!',
+            templateName: 'reject-product.hbs',
+            context: {
+              productName: product.name,
+            },
+          });
+
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+        } catch (error) {
+          if (
+            error instanceof NotFoundException ||
+            error instanceof ServiceUnavailableException
+          ) {
+            throw error;
+          }
+          throw new InternalServerErrorException(
+            Errors.FAILED_TO_REJECT_PRODUCT,
+          );
+        }
+      },
+    );
+  }
+
+  async deleteProductByAdmin(productId: string): Promise<void> {
+    await this.dataSource.transaction(
+      async (transactionalEntityManager: EntityManager) => {
+        try {
+          const product = await transactionalEntityManager.findOne(Product, {
+            where: { id: productId, status: Status.PUBLISHED },
+          });
+
+          const vendor = await transactionalEntityManager.findOne(User, {
+            where: { id: product.vendorId },
+          });
+
+          if (!product || !vendor) {
+            throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
+          }
+
+          const deleteResponse = await transactionalEntityManager.softDelete(
+            Product,
+            productId,
+          );
+
+          await transactionalEntityManager.delete(Cart, { productId });
+          await transactionalEntityManager.delete(Wishlist, { productId });
+
+          if (!deleteResponse || !deleteResponse.affected) {
+            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+          }
+
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: vendor.email,
+            subject: 'Product deleted on CodeLions!',
+            templateName: 'delete-product-admin.hbs',
+            context: {
+              productName: product.name,
+            },
+          });
+
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+        } catch (error) {
+          if (
+            error instanceof NotFoundException ||
+            error instanceof ServiceUnavailableException
+          ) {
+            throw error;
+          }
+          throw new InternalServerErrorException(
+            Errors.FAILED_TO_DELETE_PRODUCT,
+          );
+        }
+      },
+    );
   }
 
   async findBySlug(slug: string): Promise<ProductResponseDTO> {
@@ -87,21 +312,21 @@ export class ProductsService {
   }
 
   async findById(id: string): Promise<ProductResponseDTO> {
-    const products = await this.getProducts({
+    const product = await this.getProducts({
       where: {
         key: 'id',
         value: id,
       },
     });
 
-    if (products.count === 0) {
+    if (product.count === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return products.products[0];
+    return product.products[0];
   }
 
-  async findLatest(): Promise<ProductsResponse> {
+  async findLatest(): Promise<ProductsAndCountResponseDTO> {
     const today = new Date();
     const someDaysAgo = new Date();
 
@@ -117,18 +342,22 @@ export class ProductsService {
       },
     });
 
-    if (products.count === 0) {
+    const publishedProducts = products.products.filter(
+      (item) => item.status === Status.PUBLISHED,
+    );
+
+    if (publishedProducts.length === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return products;
+    return { products: publishedProducts, count: publishedProducts.length };
   }
 
   async findBySize(
     clothesSize: string,
     jeansSize: string,
     shoesSize: string,
-  ): Promise<ProductsResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     const productsClothes = await this.getProducts({
       where: {
         key: 'size',
@@ -150,22 +379,22 @@ export class ProductsService {
       },
     });
 
-    const products = [
+    const publishedProducts = [
       ...productsClothes.products,
       ...productsJeans.products,
       ...productsShoes.products,
-    ];
+    ].filter((item) => item.status === Status.PUBLISHED);
 
-    if (products.length === 0) {
+    if (publishedProducts.length === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return { products, count: products.length };
+    return { products: publishedProducts, count: publishedProducts.length };
   }
 
   private async getProducts(
     options?: GetProductsOptions,
-  ): Promise<ProductsResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     try {
       const queryBuilder = this.productRepository
         .createQueryBuilder('product')
@@ -182,9 +411,11 @@ export class ProductsService {
           'product.categories',
           'product.style',
           'product.type',
+          'product.status',
           'product.size',
           'product.createdAt',
           'product.lastUpdatedAt',
+          'product.deletedAt',
           'images',
           'user.id',
           'user.name',
@@ -265,8 +496,10 @@ export class ProductsService {
 
       const [products, count] = await queryBuilder.getManyAndCount();
 
+      const mappedProducts = this.mapProducts(products);
+
       return {
-        products: this.mapProducts(products),
+        products: mappedProducts,
         count: count,
       };
     } catch (error) {
@@ -299,5 +532,48 @@ export class ProductsService {
     });
 
     return mappedProducts;
+  }
+
+  async deleteProduct(vendorId: string, productId: string): Promise<void> {
+    await this.dataSource.transaction(
+      async (transactionalEntityManager: EntityManager) => {
+        try {
+          const product = await transactionalEntityManager.findOne(Product, {
+            where: { id: productId, vendorId },
+          });
+
+          if (!product) {
+            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+          }
+
+          let deleteResponse;
+
+          if (product.status === Status.INACTIVE) {
+            deleteResponse = await transactionalEntityManager.delete(
+              Product,
+              productId,
+            );
+          } else if (product.status === Status.PUBLISHED) {
+            deleteResponse = await transactionalEntityManager.softDelete(
+              Product,
+              productId,
+            );
+            await transactionalEntityManager.delete(Cart, { productId });
+            await transactionalEntityManager.delete(Wishlist, { productId });
+          }
+
+          if (!deleteResponse || !deleteResponse.affected) {
+            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+          }
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            throw error;
+          }
+          throw new InternalServerErrorException(
+            Errors.FAILED_TO_DELETE_PRODUCT,
+          );
+        }
+      },
+    );
   }
 }

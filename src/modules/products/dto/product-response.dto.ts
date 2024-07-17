@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 
@@ -69,6 +70,13 @@ export class ProductResponseDTO {
   style: Styles;
 
   @ApiProperty({
+    example: 'published',
+    description: 'The status of the product',
+    enum: Status,
+  })
+  status: Status;
+
+  @ApiProperty({
     example: 'dress',
     description: 'The type of the product',
     enum: ProductTypes,
@@ -113,4 +121,10 @@ export class ProductResponseDTO {
     description: 'The last update date of the product',
   })
   lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the product',
+  })
+  deletedAt: Date;
 }

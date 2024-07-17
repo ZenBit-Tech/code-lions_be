@@ -1,20 +1,50 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiInternalServerErrorResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
+  ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { PRODUCTS_ON_PAGE } from 'src/config';
-import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { Errors } from 'src/common/errors';
+import { responseDescrptions } from 'src/common/response-descriptions';
 import {
-  ProductsService,
+  FIRST_PAGE,
+  PRODUCTS_ON_PAGE,
+  PRODUCTS_PER_VENDOR_PAGE,
+  DEFAULT_ORDER,
+  DEFAULT_SORT,
+} from 'src/config';
+import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
+import {
   ProductsResponse,
+  ProductsService,
 } from 'src/modules/products/products.service';
+import { Role } from 'src/modules/roles/role.enum';
+import { Roles } from 'src/modules/roles/roles.decorator';
+import { RolesGuard } from 'src/modules/roles/roles.guard';
+import { UserIdGuard } from 'src/modules/users/user-id.guard';
+
+import { Status } from './entities/product-status.enum';
 
 @ApiTags('products')
 @Controller('products')
@@ -128,6 +158,423 @@ export class ProductsController {
     );
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @Roles(Role.VENDOR)
+  @Get('vendor/:id')
+  @ApiOperation({
+    summary: 'Get products by vendor ID',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint returns a list of products by vendor ID.',
+  })
+  @ApiOkResponse({
+    description: 'The list of products by vendor ID',
+    type: ProductsAndCountResponseDTO,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch products by vendor',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_PRODUCTS_BY_VENDOR,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { type: 'number', default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Products per page limit',
+    schema: { type: 'number', default: PRODUCTS_PER_VENDOR_PAGE },
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search query',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the vendor',
+  })
+  async findByVendorId(
+    @Query('page') page: number = FIRST_PAGE,
+    @Query('limit') limit: number = PRODUCTS_PER_VENDOR_PAGE,
+    @Query('sortBy') sortBy: string = DEFAULT_SORT,
+    @Query('sortOrder') sortOrder: string = DEFAULT_ORDER,
+    @Param('id') vendorId: string,
+    @Query('search') search?: string,
+  ): Promise<ProductsAndCountResponseDTO> {
+    return this.productsService.findByVendorId(
+      page,
+      limit,
+      search,
+      sortOrder,
+      sortBy,
+      vendorId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/:list')
+  @ApiOperation({
+    summary: 'Get product requests and published products list by admin',
+    tags: ['Products Endpoints'],
+    description:
+      'This endpoint returns a list of product requests or published products list for admin.',
+  })
+  @ApiOkResponse({
+    description: 'The list of product requests or products for admin',
+    type: ProductsAndCountResponseDTO,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch product requests or products for admin',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_PRODUCTS,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { type: 'number', default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Products per page limit',
+    schema: { type: 'number', default: PRODUCTS_PER_VENDOR_PAGE },
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search query',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['name', 'price', 'date'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['asc', 'desc'] },
+  })
+  @ApiParam({
+    name: 'list',
+    description:
+      'The list of product fetched for admin(requests or published products)',
+  })
+  async findAdmin(
+    @Query('page') page: number = FIRST_PAGE,
+    @Query('limit') limit: number = PRODUCTS_PER_VENDOR_PAGE,
+    @Query('sortBy') sortBy: string = DEFAULT_SORT,
+    @Query('sortOrder') sortOrder: string = DEFAULT_ORDER,
+    @Param('list') list: Status,
+    @Query('search') search?: string,
+  ): Promise<ProductsAndCountResponseDTO> {
+    return this.productsService.findAdminList(
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+      list,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch('admin/approve/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Update status of the product to published',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint updates the status of product to published.',
+  })
+  @ApiNoContentResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The product request is approved successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor or product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_OR_PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to approve the product request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_APPROVE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of product to approve',
+  })
+  async approveRequest(@Param('productId') productId: string): Promise<void> {
+    return this.productsService.approveRequest(productId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch('admin/reject/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Reject the product request by admin',
+    tags: ['Products Endpoints'],
+    description:
+      'This endpoint changes the status of the product request to rejected if admin rejects it.',
+  })
+  @ApiNoContentResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The product request is rejected successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor or product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_OR_PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to reject the product request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_REJECT_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of product to reject',
+  })
+  async rejectRequest(@Param('productId') productId: string): Promise<void> {
+    return this.productsService.rejectRequest(productId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete('admin/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete the product by admin',
+    tags: ['Products Endpoints'],
+    description: 'This endpoint soft deletes the product by admin.',
+  })
+  @ApiNoContentResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'The product is soft deleted successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found vendor or product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_OR_PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to delete the product',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_DELETE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of product to soft delete',
+  })
+  async deleteProductByAdmin(
+    @Param('productId') productId: string,
+  ): Promise<void> {
+    return this.productsService.deleteProductByAdmin(productId);
+  }
+
   @Get('latest')
   @ApiOperation({
     summary: 'Get latest products',
@@ -142,7 +589,7 @@ export class ProductsController {
   @ApiNotFoundResponse({
     description: 'Latest products not found',
   })
-  async findLatest(): Promise<ProductsResponse> {
+  async findLatest(): Promise<ProductsAndCountResponseDTO> {
     return this.productsService.findLatest();
   }
 
@@ -181,7 +628,7 @@ export class ProductsController {
     @Query('clothesSize') clothesSize: string,
     @Query('jeansSize') jeansSize: string,
     @Query('shoesSize') shoesSize: string,
-  ): Promise<ProductsResponse> {
+  ): Promise<ProductsAndCountResponseDTO> {
     return this.productsService.findBySize(clothesSize, jeansSize, shoesSize);
   }
 
@@ -225,5 +672,73 @@ export class ProductsController {
   })
   async findById(@Param('id') id: string): Promise<ProductResponseDTO> {
     return this.productsService.findById(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
+  @Roles(Role.VENDOR)
+  @Delete(':id/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a product',
+    tags: ['Product Endpoints'],
+    description:
+      'This endpoint softly deletes published products and deletes inactive products.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to delete the product',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_DELETE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the vendor',
+  })
+  @ApiParam({
+    name: 'productId',
+    description: 'The ID of the product',
+  })
+  async deleteProduct(
+    @Param('id') vendorId: string,
+    @Param('productId') productId: string,
+  ): Promise<void> {
+    return this.productsService.deleteProduct(vendorId, productId);
   }
 }

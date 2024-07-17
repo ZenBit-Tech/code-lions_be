@@ -1,4 +1,5 @@
 import { Category } from 'src/modules/products/entities/category.enum';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
@@ -58,8 +59,10 @@ export const mockProduct: Product = {
   style: Styles.CASUAL,
   type: ProductTypes.DRESS,
   size: 'S',
+  status: Status.PUBLISHED,
   createdAt: new Date(),
   lastUpdatedAt: new Date(),
+  deletedAt: new Date(),
   images: [],
   user: mockUser,
   color: [],

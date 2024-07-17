@@ -8,12 +8,14 @@ import {
   ManyToMany,
   JoinTable,
   OneToMany,
+  DeleteDateColumn,
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 import { User } from 'src/modules/users/user.entity';
@@ -138,6 +140,18 @@ export class Product {
   color: Color[];
 
   @ApiProperty({
+    example: 'published',
+    description: 'The status of the product',
+    enum: Status,
+  })
+  @Column({
+    type: 'enum',
+    enum: Status,
+    nullable: false,
+  })
+  status: Status;
+
+  @ApiProperty({
     example: '2024-06-28 21:04:24',
     description: 'The date the product was created',
     type: Date,
@@ -152,6 +166,13 @@ export class Product {
   })
   @Column({ type: 'timestamp', default: null, nullable: true })
   lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The deletion date of the product',
+  })
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  deletedAt: Date;
 
   @OneToMany(() => Cart, (cart) => cart.product)
   cart: Cart[];
