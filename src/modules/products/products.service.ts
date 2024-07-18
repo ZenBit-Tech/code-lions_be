@@ -519,7 +519,10 @@ export class ProductsService {
 
   mapProducts(products: Product[]): ProductResponseDTO[] {
     const mappedProducts: ProductResponseDTO[] = products.map((product) => {
-      const imageUrls = product.images.map((image) => image.url).sort();
+      const sortedImages = !product?.images
+        ? []
+        : this.sortImages(product.images);
+      const imageUrls = sortedImages.map((image) => image.url);
 
       const vendor = {
         id: product.user?.id || '',
@@ -789,5 +792,22 @@ export class ProductsService {
       .toLowerCase()
       .replace(/ /g, '-')
       .replace(/[^\w-]+/g, '');
+  }
+
+  private sortImages(images: Image[]): Image[] {
+    const reverseOrder = -1;
+    const normalOrder = 1;
+
+    return images.sort((a, b) => {
+      if (a.isPrimary && !b.isPrimary) {
+        return reverseOrder;
+      } else if (!a.isPrimary && b.isPrimary) {
+        return normalOrder;
+      } else {
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      }
+    });
   }
 }
