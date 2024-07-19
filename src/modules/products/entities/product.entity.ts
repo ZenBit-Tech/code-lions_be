@@ -16,6 +16,7 @@ import { Brand } from 'src/modules/products/entities/brands.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
+import { Materials } from 'src/modules/products/entities/materials.enum';
 import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
@@ -106,6 +107,14 @@ export class Product {
   })
   @Column({ type: 'enum', enum: Styles, nullable: true })
   style: Styles;
+
+  @ApiProperty({
+    example: 'cotton',
+    description: 'The material of the product',
+    enum: Materials,
+  })
+  @Column({ type: 'enum', enum: Materials, nullable: true })
+  material: Materials;
 
   @ApiProperty({
     example: 'dress',

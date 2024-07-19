@@ -431,6 +431,7 @@ export class ProductsService {
           'product.status',
           'product.size',
           'product.brand',
+          'product.material',
           'product.createdAt',
           'product.lastUpdatedAt',
           'product.deletedAt',

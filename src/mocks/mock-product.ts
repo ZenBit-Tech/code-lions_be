@@ -1,4 +1,5 @@
 import { Category } from 'src/modules/products/entities/category.enum';
+import { Materials } from 'src/modules/products/entities/materials.enum';
 import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
@@ -65,6 +66,7 @@ export const mockProduct: Product = {
     brand: 'Diesel',
     products: [],
   },
+  material: Materials.COTTON,
   status: Status.PUBLISHED,
   createdAt: new Date(),
   lastUpdatedAt: new Date(),
