@@ -1,6 +1,7 @@
 import { extname } from 'path';
 
 import {
+  Body,
   Controller,
   Delete,
   Get,
@@ -54,6 +55,8 @@ import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
+import { UpdateProductDto } from 'src/modules/products/dto/update-product.dto';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import {
   ProductsResponse,
   ProductsService,
@@ -62,8 +65,6 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { UserIdGuard } from 'src/modules/users/user-id.guard';
-
-import { Status } from './entities/product-status.enum';
 
 @ApiTags('products')
 @Controller('products')
@@ -1053,5 +1054,25 @@ export class ProductsController {
     );
 
     return updatedProduct;
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Update product' })
+  @ApiResponse({ status: 200, description: 'Product updated successfully' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  @Roles(Role.VENDOR)
+  async updateProduct(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+  ): Promise<void /*ProductResponseDTO */> {
+    await this.productsService.updateProduct(
+      id,
+      request.user.id,
+      updateProductDto,
+    );
+    //return ;
   }
 }

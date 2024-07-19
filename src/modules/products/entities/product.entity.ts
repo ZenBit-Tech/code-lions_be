@@ -53,7 +53,7 @@ export class Product {
     description: 'The slug of the product',
     type: String,
   })
-  @Column({ type: 'varchar', length: 100, unique: true })
+  @Column({ type: 'varchar', length: 100 })
   slug: string;
 
   @ApiProperty({

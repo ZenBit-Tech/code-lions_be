@@ -11,9 +11,19 @@ import { ProductsService } from 'src/modules/products/products.service';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 
+import { Brand } from './entities/brands.entity';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, User, Color, Cart, Wishlist, Image]),
+    TypeOrmModule.forFeature([
+      Product,
+      User,
+      Color,
+      Cart,
+      Wishlist,
+      Image,
+      Brand,
+    ]),
     MailerModule,
   ],
   controllers: [ProductsController],

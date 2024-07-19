@@ -4,6 +4,8 @@ import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
 
+import { Materials } from '../entities/materials.enum';
+
 export class VendorDTO {
   @ApiProperty({
     example: '2rm07r7r-t98p-5q9q-8p59-33sq0p8s3219',
@@ -82,6 +84,19 @@ export class ProductResponseDTO {
     enum: ProductTypes,
   })
   type: ProductTypes;
+
+  @ApiProperty({
+    example: 'cotton',
+    description: 'The material of the product',
+    enum: Materials,
+  })
+  material: Materials;
+
+  @ApiProperty({
+    example: 'Diesel',
+    description: 'The brand of the product',
+  })
+  brand: string;
 
   @ApiProperty({
     example: 'M',

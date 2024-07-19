@@ -17,14 +17,16 @@ import { Cart } from 'src/modules/cart/cart.entity';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
+import { UpdateProductDto } from 'src/modules/products/dto/update-product.dto';
+import { Brand } from 'src/modules/products/entities/brands.entity';
+import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 import { v4 as uuidv4 } from 'uuid';
-
-import { Status } from './entities/product-status.enum';
 
 type DateRange = { lower: Date; upper: Date };
 
@@ -44,6 +46,7 @@ interface GetProductsOptions {
   size?: string;
   sortBy?: string;
   sortOrder?: string;
+  showNotFinished?: boolean;
 }
 
 export interface ProductsResponse {
@@ -60,6 +63,10 @@ export class ProductsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
+    @InjectRepository(Color)
+    private colorRepository: Repository<Color>,
+    @InjectRepository(Brand)
+    private brandRepository: Repository<Brand>,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     @InjectRepository(Wishlist)
@@ -327,6 +334,7 @@ export class ProductsService {
         key: 'id',
         value: id,
       },
+      showNotFinished: true,
     });
 
     if (product.count === 0) {
@@ -412,12 +420,6 @@ export class ProductsService {
         .leftJoinAndSelect('product.user', 'user')
         .leftJoinAndSelect('product.color', 'colors')
         .leftJoinAndSelect('product.brand', 'brand')
-        .andWhere(
-          'product.isProductCreationFinished = :isProductCreationFinished',
-          {
-            isProductCreationFinished: true,
-          },
-        )
         .select([
           'product.id',
           'product.name',
@@ -443,6 +445,14 @@ export class ProductsService {
           'brand.brand',
         ]);
 
+      if (!options?.showNotFinished) {
+        queryBuilder.andWhere(
+          'product.isProductCreationFinished = :isProductCreationFinished',
+          {
+            isProductCreationFinished: true,
+          },
+        );
+      }
       if (options?.where) {
         if (options.where.key === 'createdAt') {
           const dateRange = options.where.value as DateRange;
@@ -671,6 +681,7 @@ export class ProductsService {
     product.slug = slug;
     product.isProductCreationFinished = false;
     product.status = Status.INACTIVE;
+    product.lastUpdatedAt = new Date();
 
     const savedProduct = await this.productRepository.save(product);
 
@@ -800,11 +811,82 @@ export class ProductsService {
     }
   }
 
+  async updateProduct(
+    id: string,
+    vendorId: string,
+    updateProductDto: UpdateProductDto,
+  ): Promise<void> {
+    const {
+      name,
+      description,
+      price,
+      size,
+      brand,
+      colors,
+      /*
+      material,
+      categories,
+      style,
+      type,*/
+    } = updateProductDto;
+
+    const product = await this.productRepository.findOne({
+      where: { id, vendorId },
+      relations: ['color', 'brand'],
+    });
+    // console.log(product);
+
+    if (!product) {
+      throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+    }
+
+    if (name) {
+      product.name = name;
+      product.slug = this.generateSlug(name);
+    }
+
+    if (description) {
+      product.description = description;
+    }
+
+    if (price) {
+      product.price = price;
+    }
+
+    if (size) {
+      product.size = size;
+    }
+
+    if (colors) {
+      const colorsFromDb = await this.colorRepository.find({
+        where: colors.map((colorName) => ({ color: colorName })),
+      });
+
+      product.color = colorsFromDb;
+    }
+
+    if (brand) {
+      const brandFromDb = await this.brandRepository.findOne({
+        where: { brand: updateProductDto.brand },
+      });
+
+      if (brandFromDb) {
+        product.brand = brandFromDb;
+      }
+      console.log(brand, brandFromDb);
+    }
+
+    product.lastUpdatedAt = new Date();
+    this.productRepository.save(product);
+  }
+
   private generateSlug(name: string): string {
-    return name
+    const slug = name
       .toLowerCase()
       .replace(/ /g, '-')
       .replace(/[^\w-]+/g, '');
+
+    return slug;
   }
 
   private sortImages(images: Image[]): Image[] {
