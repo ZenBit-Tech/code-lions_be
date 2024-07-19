@@ -411,6 +411,13 @@ export class ProductsService {
         .leftJoinAndSelect('product.images', 'images')
         .leftJoinAndSelect('product.user', 'user')
         .leftJoinAndSelect('product.color', 'colors')
+        .leftJoinAndSelect('product.brand', 'brand')
+        .andWhere(
+          'product.isProductCreationFinished = :isProductCreationFinished',
+          {
+            isProductCreationFinished: true,
+          },
+        )
         .select([
           'product.id',
           'product.name',
@@ -423,6 +430,7 @@ export class ProductsService {
           'product.type',
           'product.status',
           'product.size',
+          'product.brand',
           'product.createdAt',
           'product.lastUpdatedAt',
           'product.deletedAt',
@@ -431,6 +439,7 @@ export class ProductsService {
           'user.name',
           'user.photoUrl',
           'colors',
+          'brand.brand',
         ]);
 
       if (options?.where) {
@@ -531,6 +540,7 @@ export class ProductsService {
       };
       const colors = product.color || [];
       const mappedColors = colors.map((color) => color.color);
+      const brand = product?.brand?.brand || '';
 
       delete product.user;
       delete product.vendorId;
@@ -541,6 +551,7 @@ export class ProductsService {
         images: imageUrls,
         colors: mappedColors,
         vendor: vendor,
+        brand: brand,
       };
     });
 

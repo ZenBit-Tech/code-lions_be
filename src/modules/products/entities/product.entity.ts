@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
+import { Brand } from 'src/modules/products/entities/brands.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
@@ -118,6 +119,10 @@ export class Product {
     default: ProductTypes.OTHER,
   })
   type: ProductTypes;
+
+  @ManyToOne(() => Brand, (brand) => brand.products)
+  @JoinColumn({ name: 'brandId' })
+  brand: Brand;
 
   @ApiProperty({
     example: 'M',

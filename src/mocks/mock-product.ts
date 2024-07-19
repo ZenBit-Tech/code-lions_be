@@ -60,6 +60,11 @@ export const mockProduct: Product = {
   style: Styles.CASUAL,
   type: ProductTypes.DRESS,
   size: 'S',
+  brand: {
+    id: 1,
+    brand: 'Diesel',
+    products: [],
+  },
   status: Status.PUBLISHED,
   createdAt: new Date(),
   lastUpdatedAt: new Date(),
