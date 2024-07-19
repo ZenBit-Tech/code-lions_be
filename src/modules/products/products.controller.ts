@@ -1059,20 +1059,81 @@ export class ProductsController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'Update product' })
-  @ApiResponse({ status: 200, description: 'Product updated successfully' })
-  @ApiResponse({ status: 404, description: 'Product not found' })
+  @ApiOperation({
+    summary: 'Update product',
+    tags: ['Product Endpoints'],
+    description: 'This endpoint is used by the vendor to update a product',
+  })
+  @ApiOkResponse({
+    description: 'Product updated successfully',
+    type: ProductResponseDTO,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string',
+          example:
+            'material must be one of the following values: chiffon, cotton, crepe, denim, lace, leather, linen, satin, silk, nylon, polyester, spandex, velvet, wool, viscose, textile, synthetic, rubber, foam, plastic',
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description:
+      'Product not found or vendor not found or this product is not owned by this vendor',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update product',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPDATE_PRODUCT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
   @Roles(Role.VENDOR)
   async updateProduct(
     @Request() request: Request & { user: UserResponseDto },
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
-  ): Promise<void /*ProductResponseDTO */> {
-    await this.productsService.updateProduct(
+  ): Promise<ProductResponseDTO> {
+    const updatedProduct = await this.productsService.updateProduct(
       id,
       request.user.id,
       updateProductDto,
     );
-    //return ;
+
+    return updatedProduct;
   }
 }

@@ -164,4 +164,5 @@ export const Errors = {
     'Forbidden to set primary photo from other vendors',
   FAILED_TO_SET_PRIMARY_PHOTO: 'Failed to set primary photo',
   FORBIDDEN_TO_SET_PRIMARY_PHOTO: 'Forbidden to set primary photo',
+  FAILED_TO_UPDATE_PRODUCT: 'Failed to update product',
 };

@@ -533,7 +533,7 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
-      console.log(error);
+      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
@@ -815,7 +815,7 @@ export class ProductsService {
     id: string,
     vendorId: string,
     updateProductDto: UpdateProductDto,
-  ): Promise<void> {
+  ): Promise<ProductResponseDTO> {
     const {
       name,
       description,
@@ -823,61 +823,87 @@ export class ProductsService {
       size,
       brand,
       colors,
-      /*
       material,
       categories,
       style,
-      type,*/
+      type,
     } = updateProductDto;
 
-    const product = await this.productRepository.findOne({
-      where: { id, vendorId },
-      relations: ['color', 'brand'],
-    });
-    // console.log(product);
-
-    if (!product) {
-      throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
-    }
-
-    if (name) {
-      product.name = name;
-      product.slug = this.generateSlug(name);
-    }
-
-    if (description) {
-      product.description = description;
-    }
-
-    if (price) {
-      product.price = price;
-    }
-
-    if (size) {
-      product.size = size;
-    }
-
-    if (colors) {
-      const colorsFromDb = await this.colorRepository.find({
-        where: colors.map((colorName) => ({ color: colorName })),
+    try {
+      const product = await this.productRepository.findOne({
+        where: { id, vendorId },
+        relations: ['color', 'brand'],
       });
 
-      product.color = colorsFromDb;
-    }
-
-    if (brand) {
-      const brandFromDb = await this.brandRepository.findOne({
-        where: { brand: updateProductDto.brand },
-      });
-
-      if (brandFromDb) {
-        product.brand = brandFromDb;
+      if (!product) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
       }
-      console.log(brand, brandFromDb);
-    }
 
-    product.lastUpdatedAt = new Date();
-    this.productRepository.save(product);
+      if (name) {
+        product.name = name;
+        product.slug = this.generateSlug(name);
+      }
+
+      if (description) {
+        product.description = description;
+      }
+
+      if (price) {
+        product.price = price;
+      }
+
+      if (size) {
+        product.size = size;
+      }
+
+      if (material) {
+        product.material = material;
+      }
+
+      if (type) {
+        product.type = type;
+      }
+
+      if (style) {
+        product.style = style;
+      }
+
+      if (categories) {
+        product.categories = categories;
+      }
+
+      if (colors) {
+        const colorsFromDb = await this.colorRepository.find({
+          where: colors.map((colorName) => ({ color: colorName })),
+        });
+
+        product.color = colorsFromDb;
+      }
+
+      if (brand) {
+        const brandFromDb = await this.brandRepository.findOne({
+          where: { brand: updateProductDto.brand },
+        });
+
+        if (brandFromDb) {
+          product.brand = brandFromDb;
+        }
+      }
+
+      product.isProductCreationFinished = true;
+      product.lastUpdatedAt = new Date();
+      this.productRepository.save(product);
+
+      const updatedProduct = await this.findById(product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PRODUCT);
+    }
   }
 
   private generateSlug(name: string): string {

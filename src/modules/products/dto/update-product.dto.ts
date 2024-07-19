@@ -64,12 +64,13 @@ export class UpdateProductDto {
   type?: ProductTypes;
 
   @ApiPropertyOptional({
-    example: ['casual', 'formal'],
+    example: ['clothing', 'designers'],
     description: 'The categories of the product',
     enum: Category,
   })
   @IsOptional()
   @IsArray()
+  @IsEnum(Category, { each: true })
   categories?: Category[];
 
   @ApiPropertyOptional({ example: 'M', description: 'The size of the product' })
