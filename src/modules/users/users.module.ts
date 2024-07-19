@@ -5,6 +5,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { MailerModule } from 'src/modules/mailer/mailer.module';
 
+import { Product } from '../products/entities/product.entity';
+
 import { BestVendorsController } from './best-vendors.controller';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
@@ -12,7 +14,7 @@ import { UsersService } from './users.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Product]),
     MailerModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

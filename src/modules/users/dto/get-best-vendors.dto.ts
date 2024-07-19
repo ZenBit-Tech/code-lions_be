@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 
 export class BestVendorsResponseDto {
@@ -25,5 +26,5 @@ export class BestVendorsResponseDto {
     type: [Product],
     description: 'The products of the vendor',
   })
-  products: Product[];
+  products: ProductResponseDTO[];
 }
