@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
@@ -31,7 +32,7 @@ export class WishlistService {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       const product = await this.productRepository.findOne({
-        where: { id: productId },
+        where: { id: productId, status: Status.PUBLISHED },
       });
 
       if (!user || !product) {
@@ -106,7 +107,7 @@ export class WishlistService {
             relations: ['user', 'images', 'color'],
           });
 
-          if (!product) {
+          if (!product || product.status === Status.INACTIVE) {
             await this.removeFromWishlist(userId, entry.product.id);
 
             return null;
@@ -139,9 +140,10 @@ export class WishlistService {
       categories: inputProduct.categories,
       style: inputProduct.style as Styles,
       type: inputProduct.type as ProductTypes,
+      status: inputProduct.status as Status,
       size: inputProduct.size,
       images: inputProduct.images.map((image) => image.url),
-      colors: inputProduct.color,
+      colors: inputProduct.color.map((color) => color.color),
       vendor: inputProduct.user
         ? {
             id: inputProduct.user.id,
@@ -151,6 +153,7 @@ export class WishlistService {
         : null,
       createdAt: inputProduct.createdAt,
       lastUpdatedAt: inputProduct.lastUpdatedAt,
+      deletedAt: inputProduct.deletedAt,
     };
   }
 }

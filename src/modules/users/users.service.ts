@@ -866,7 +866,8 @@ export class UsersService {
         name: product.user?.name || '',
         photoUrl: product.user?.photoUrl || '',
       };
-      const colors = product.color;
+      const colors = product.color || [];
+      const mappedColors = colors.map((color) => color.color);
 
       delete product.user;
       delete product.vendorId;
@@ -875,7 +876,7 @@ export class UsersService {
       return {
         ...product,
         images: imageUrls,
-        colors: colors,
+        colors: mappedColors,
         vendor: vendor,
       };
     });

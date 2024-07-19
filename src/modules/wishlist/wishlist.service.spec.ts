@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
@@ -45,6 +46,7 @@ describe('WishlistService', () => {
   mockProduct.categories = [];
   mockProduct.style = Styles.CASUAL;
   mockProduct.type = ProductTypes.DRESS;
+  mockProduct.status = Status.PUBLISHED;
   mockProduct.size = 'M';
   mockProduct.images = [];
   mockProduct.color = [];
@@ -151,6 +153,7 @@ describe('WishlistService', () => {
           type: mockProduct.type,
           size: mockProduct.size,
           images: mockProduct.images,
+          status: mockProduct.status,
           colors: mockProduct.color,
           vendor: {
             id: mockProduct.user.id,
