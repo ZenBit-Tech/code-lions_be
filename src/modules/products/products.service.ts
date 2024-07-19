@@ -522,6 +522,7 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
