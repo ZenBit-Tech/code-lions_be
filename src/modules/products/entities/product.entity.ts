@@ -161,6 +161,17 @@ export class Product {
   color: Color[];
 
   @ApiProperty({
+    example: 'file-1718301871158-882823500.pdf',
+    description: 'The URL of the PDF file which is attached to the product',
+  })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    default: null,
+  })
+  pdfUrl: string;
+
+  @ApiProperty({
     example: 'published',
     description: 'The status of the product',
     enum: Status,
