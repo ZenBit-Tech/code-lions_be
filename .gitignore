@@ -3,7 +3,7 @@
 /node_modules
 /build
 
-/uploads/avatars/*
+/uploads/*
 # Logs
 logs
 *.log

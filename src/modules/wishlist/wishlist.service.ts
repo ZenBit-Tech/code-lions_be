@@ -142,8 +142,14 @@ export class WishlistService {
       type: inputProduct.type as ProductTypes,
       status: inputProduct.status as Status,
       size: inputProduct.size,
-      images: inputProduct.images.map((image) => image.url),
-      colors: inputProduct.color.map((color) => color.color),
+      brand: !inputProduct?.brand?.brand ? null : inputProduct.brand.brand,
+      material: inputProduct.material,
+      images: !inputProduct?.images
+        ? []
+        : inputProduct.images.map((image) => image.url),
+      colors: !inputProduct?.color
+        ? []
+        : inputProduct.color.map((color) => color.color),
       vendor: inputProduct.user
         ? {
             id: inputProduct.user.id,

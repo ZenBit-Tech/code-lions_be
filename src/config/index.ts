@@ -8,6 +8,7 @@ export const LIMIT_USERS_PER_PAGE = 7;
 export const MAX_NAME_LENGTH = 100;
 export const MAX_EMAIL_LENGTH = 100;
 export const IMAGES_PATH = './uploads/avatars';
+export const PRODUCT_IMAGES_PATH = './uploads/products';
 export const MAX_FILE_SIZE = 52428800;
 export const MIN_RATING = 1;
 export const MAX_RATING = 5;

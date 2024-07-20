@@ -3,5 +3,6 @@ export enum ProductTypes {
   DRESS = 'dress',
   BAG = 'bag',
   ACCESSORY = 'accessory',
+  JEANS = 'jeans',
   OTHER = 'other',
 }

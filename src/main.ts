@@ -32,8 +32,8 @@ async function bootstrap(): Promise<void> {
     },
   });
   app.useGlobalPipes(new ValidationPipe());
-  app.useStaticAssets(join(__dirname, '..', 'uploads', 'avatars'), {
-    prefix: '/uploads/avatars/',
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
   });
   await app.listen(configService.get('PORT'));
 }

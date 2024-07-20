@@ -12,9 +12,11 @@ import {
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
+import { Brand } from 'src/modules/products/entities/brands.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
+import { Materials } from 'src/modules/products/entities/materials.enum';
 import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Styles } from 'src/modules/products/entities/styles.enum';
@@ -40,11 +42,18 @@ export class Product {
   name: string;
 
   @ApiProperty({
+    example: false,
+    description: '',
+  })
+  @Column({ default: false })
+  isProductCreationFinished: boolean;
+
+  @ApiProperty({
     example: 'cool-product',
     description: 'The slug of the product',
     type: String,
   })
-  @Column({ type: 'varchar', length: 100, unique: true })
+  @Column({ type: 'varchar', length: 100 })
   slug: string;
 
   @ApiProperty({
@@ -100,6 +109,14 @@ export class Product {
   style: Styles;
 
   @ApiProperty({
+    example: 'cotton',
+    description: 'The material of the product',
+    enum: Materials,
+  })
+  @Column({ type: 'enum', enum: Materials, nullable: true })
+  material: Materials;
+
+  @ApiProperty({
     example: 'dress',
     description: 'The type of the product',
     enum: ProductTypes,
@@ -111,6 +128,10 @@ export class Product {
     default: ProductTypes.OTHER,
   })
   type: ProductTypes;
+
+  @ManyToOne(() => Brand, (brand) => brand.products)
+  @JoinColumn({ name: 'brandId' })
+  brand: Brand;
 
   @ApiProperty({
     example: 'M',
@@ -138,6 +159,17 @@ export class Product {
     },
   })
   color: Color[];
+
+  @ApiProperty({
+    example: 'file-1718301871158-882823500.pdf',
+    description: 'The URL of the PDF file which is attached to the product',
+  })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    default: null,
+  })
+  pdfUrl: string;
 
   @ApiProperty({
     example: 'published',

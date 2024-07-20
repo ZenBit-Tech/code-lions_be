@@ -1,9 +1,13 @@
+import * as fs from 'fs';
+
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 
@@ -13,11 +17,16 @@ import { Cart } from 'src/modules/cart/cart.entity';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { ProductsAndCountResponseDTO } from 'src/modules/products/dto/products-count-response.dto';
+import { UpdateProductDto } from 'src/modules/products/dto/update-product.dto';
+import { Brand } from 'src/modules/products/entities/brands.entity';
+import { Color } from 'src/modules/products/entities/color.entity';
+import { Image } from 'src/modules/products/entities/image.entity';
+import { Status } from 'src/modules/products/entities/product-status.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
-
-import { Status } from './entities/product-status.enum';
+import { v4 as uuidv4 } from 'uuid';
 
 type DateRange = { lower: Date; upper: Date };
 
@@ -37,6 +46,7 @@ interface GetProductsOptions {
   size?: string;
   sortBy?: string;
   sortOrder?: string;
+  showNotFinished?: boolean;
 }
 
 export interface ProductsResponse {
@@ -51,12 +61,19 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Image)
+    private readonly imageRepository: Repository<Image>,
+    @InjectRepository(Color)
+    private colorRepository: Repository<Color>,
+    @InjectRepository(Brand)
+    private brandRepository: Repository<Brand>,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     @InjectRepository(Wishlist)
     private readonly wishlistRepository: Repository<Wishlist>,
     private dataSource: DataSource,
     private mailerService: MailerService,
+    private configService: ConfigService,
   ) {}
 
   async findAll(
@@ -317,6 +334,7 @@ export class ProductsService {
         key: 'id',
         value: id,
       },
+      showNotFinished: true,
     });
 
     if (product.count === 0) {
@@ -401,6 +419,7 @@ export class ProductsService {
         .leftJoinAndSelect('product.images', 'images')
         .leftJoinAndSelect('product.user', 'user')
         .leftJoinAndSelect('product.color', 'colors')
+        .leftJoinAndSelect('product.brand', 'brand')
         .select([
           'product.id',
           'product.name',
@@ -413,6 +432,8 @@ export class ProductsService {
           'product.type',
           'product.status',
           'product.size',
+          'product.brand',
+          'product.material',
           'product.createdAt',
           'product.lastUpdatedAt',
           'product.deletedAt',
@@ -421,8 +442,17 @@ export class ProductsService {
           'user.name',
           'user.photoUrl',
           'colors',
+          'brand.brand',
         ]);
 
+      if (!options?.showNotFinished) {
+        queryBuilder.andWhere(
+          'product.isProductCreationFinished = :isProductCreationFinished',
+          {
+            isProductCreationFinished: true,
+          },
+        );
+      }
       if (options?.where) {
         if (options.where.key === 'createdAt') {
           const dateRange = options.where.value as DateRange;
@@ -503,13 +533,17 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
+      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
 
   mapProducts(products: Product[]): ProductResponseDTO[] {
     const mappedProducts: ProductResponseDTO[] = products.map((product) => {
-      const imageUrls = product.images.map((image) => image.url).sort();
+      const sortedImages = !product?.images
+        ? []
+        : this.sortImages(product.images);
+      const imageUrls = sortedImages.map((image) => image.url);
 
       const vendor = {
         id: product.user?.id || '',
@@ -518,6 +552,7 @@ export class ProductsService {
       };
       const colors = product.color || [];
       const mappedColors = colors.map((color) => color.color);
+      const brand = product?.brand?.brand || '';
 
       delete product.user;
       delete product.vendorId;
@@ -528,6 +563,7 @@ export class ProductsService {
         images: imageUrls,
         colors: mappedColors,
         vendor: vendor,
+        brand: brand,
       };
     });
 
@@ -575,5 +611,324 @@ export class ProductsService {
         }
       },
     );
+  }
+
+  async updateProductPhoto(
+    vendorId: string,
+    photoUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+        throw new ForbiddenException(
+          Errors.UNAUTHORIZED_TO_UPLOAD_PRODUCT_PHOTOS,
+        );
+      }
+
+      const unfinishedProduct = await this.productRepository.findOne({
+        where: { vendorId, isProductCreationFinished: false },
+        relations: ['images'],
+      });
+
+      let product = unfinishedProduct;
+      let isPrimary = !product?.images || product.images.length === 0;
+
+      if (!unfinishedProduct) {
+        product = await this.createEmptyProduct(vendorId);
+        isPrimary = true;
+      }
+
+      const siteHost = this.configService.get<string>('SITE_HOST');
+
+      const image = new Image();
+
+      image.url = photoUrl.replace('./', siteHost);
+      image.isPrimary = isPrimary;
+      image.product = product;
+      await this.imageRepository.save(image);
+
+      const updatedProduct = await this.findById(product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPLOAD_PRODUCT_PHOTO,
+      );
+    }
+  }
+
+  async createEmptyProduct(vendorId: string): Promise<Product> {
+    const temporaryName = `Product-${uuidv4()}`;
+    const slug = this.generateSlug(temporaryName);
+
+    const product = new Product();
+
+    product.vendorId = vendorId;
+    product.name = temporaryName;
+    product.slug = slug;
+    product.isProductCreationFinished = false;
+    product.status = Status.INACTIVE;
+    product.lastUpdatedAt = new Date();
+
+    const savedProduct = await this.productRepository.save(product);
+
+    return savedProduct;
+  }
+
+  async deleteProductPhoto(
+    vendorId: string,
+    photoUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+        throw new ForbiddenException(Errors.FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS);
+      }
+
+      const photo = await this.imageRepository.findOne({
+        where: { url: photoUrl },
+        relations: { product: true },
+      });
+
+      if (!photo) {
+        throw new NotFoundException(Errors.IMAGE_NOT_FOUND);
+      }
+
+      if (photo.product.vendorId !== vendorId) {
+        throw new ForbiddenException(
+          Errors.FORBIDDEN_TO_DELETE_PRODUCT_PHOTOS_FROM_OTHER_VENDORS,
+        );
+      }
+
+      await this.imageRepository.remove(photo);
+
+      const siteHost = this.configService.get<string>('SITE_HOST');
+      const filePath = photoUrl.replace(siteHost, './');
+
+      fs.unlinkSync(filePath);
+
+      if (photo.isPrimary) {
+        const anotherPhoto = await this.imageRepository.findOne({
+          where: { product: photo.product, isPrimary: false },
+          order: { createdAt: 'ASC' },
+        });
+
+        if (anotherPhoto) {
+          anotherPhoto.isPrimary = true;
+          await this.imageRepository.save(anotherPhoto);
+        }
+      }
+
+      const updatedProduct = await this.findById(photo.product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_DELETE_PRODUCT_PHOTO,
+      );
+    }
+  }
+
+  async setPrimaryPhoto(
+    vendorId: string,
+    photoUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const vendor = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (vendor.role !== Role.VENDOR || vendor.isAccountActive === false) {
+        throw new ForbiddenException(Errors.FORBIDDEN_TO_SET_PRIMARY_PHOTO);
+      }
+
+      const photo = await this.imageRepository.findOne({
+        where: { url: photoUrl },
+        relations: { product: true },
+      });
+
+      if (!photo) {
+        throw new NotFoundException(Errors.IMAGE_NOT_FOUND);
+      }
+
+      if (photo.product.vendorId !== vendorId) {
+        throw new ForbiddenException(
+          Errors.FORBIDDEN_TO_SET_PRIMARY_PHOTO_FROM_OTHER_VENDORS,
+        );
+      }
+
+      await this.imageRepository.update(
+        { product: photo.product, isPrimary: true },
+        { isPrimary: false },
+      );
+
+      photo.isPrimary = true;
+      await this.imageRepository.save(photo);
+
+      const updatedProduct = await this.findById(photo.product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_SET_PRIMARY_PHOTO,
+      );
+    }
+  }
+
+  async updateProduct(
+    id: string,
+    vendorId: string,
+    updateProductDto: UpdateProductDto,
+  ): Promise<ProductResponseDTO> {
+    const {
+      name,
+      description,
+      price,
+      size,
+      brand,
+      colors,
+      material,
+      categories,
+      style,
+      type,
+    } = updateProductDto;
+
+    try {
+      const product = await this.productRepository.findOne({
+        where: { id, vendorId },
+        relations: ['color', 'brand'],
+      });
+
+      if (!product) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
+
+      if (name) {
+        product.name = name;
+        product.slug = this.generateSlug(name);
+      }
+
+      if (description) {
+        product.description = description;
+      }
+
+      if (price) {
+        product.price = price;
+      }
+
+      if (size) {
+        product.size = size;
+      }
+
+      if (material) {
+        product.material = material;
+      }
+
+      if (type) {
+        product.type = type;
+      }
+
+      if (style) {
+        product.style = style;
+      }
+
+      if (categories) {
+        product.categories = categories;
+      }
+
+      if (colors) {
+        const colorsFromDb = await this.colorRepository.find({
+          where: colors.map((colorName) => ({ color: colorName })),
+        });
+
+        product.color = colorsFromDb;
+      }
+
+      if (brand) {
+        const brandFromDb = await this.brandRepository.findOne({
+          where: { brand: updateProductDto.brand },
+        });
+
+        if (brandFromDb) {
+          product.brand = brandFromDb;
+        }
+      }
+
+      product.isProductCreationFinished = true;
+      product.lastUpdatedAt = new Date();
+      this.productRepository.save(product);
+
+      const updatedProduct = await this.findById(product.id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PRODUCT);
+    }
+  }
+
+  private generateSlug(name: string): string {
+    const slug = name
+      .toLowerCase()
+      .replace(/ /g, '-')
+      .replace(/[^\w-]+/g, '');
+
+    return slug;
+  }
+
+  private sortImages(images: Image[]): Image[] {
+    const reverseOrder = -1;
+    const normalOrder = 1;
+
+    return images.sort((a, b) => {
+      if (a.isPrimary && !b.isPrimary) {
+        return reverseOrder;
+      } else if (!a.isPrimary && b.isPrimary) {
+        return normalOrder;
+      } else {
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      }
+    });
   }
 }
