@@ -8,20 +8,29 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, FindOptionsWhere } from 'typeorm';
+import { Repository, Like, FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
-import { LIMIT_USERS_PER_PAGE, VERIFICATION_CODE_EXPIRATION } from 'src/config';
+import {
+  LIMIT_OF_BEST_VENDORS_PER_PAGE,
+  LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
+  LIMIT_USERS_PER_PAGE,
+  MAX_RATING,
+  VERIFICATION_CODE_EXPIRATION,
+} from 'src/config';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
 
 import { UserResponseDto } from '../auth/dto/user-response.dto';
 import { UserWithTokensResponseDto } from '../auth/dto/user-with-tokens-response.dto';
 import { MailerService } from '../mailer/mailer.service';
+import { ProductResponseDTO } from '../products/dto/product-response.dto';
+import { Product } from '../products/entities/product.entity';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { BestVendorsResponseDto } from './dto/get-best-vendors.dto';
 import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
@@ -38,7 +47,12 @@ export class UsersService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailerService: MailerService,
-  ) {}
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+  ) {
+    this.transformVendor = this.transformVendor.bind(this);
+    this.mapProducts = this.mapProducts.bind(this);
+  }
 
   private async hashPassword(password: string): Promise<string> {
     try {
@@ -796,5 +810,77 @@ export class UsersService {
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_ADD_ORDER);
     }
+  }
+
+  async getBestVendors(): Promise<BestVendorsResponseDto[]> {
+    try {
+      const bestVendors = await this.userRepository.find({
+        where: { role: Role.VENDOR, rating: MoreThanOrEqual(MAX_RATING) },
+        relations: [
+          'products',
+          'products.images',
+          'products.color',
+          'products.user',
+        ],
+        take: LIMIT_OF_BEST_VENDORS_PER_PAGE,
+      });
+
+      const bestVendorsWithLimitedProducts = await Promise.all(
+        bestVendors.map(async (vendor) => {
+          const limitedProducts = await this.productRepository.find({
+            where: { vendorId: vendor.id },
+            relations: ['images', 'color', 'user'],
+            take: LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
+          });
+
+          return {
+            ...vendor,
+            products: limitedProducts,
+          };
+        }),
+      );
+
+      return bestVendorsWithLimitedProducts.map(this.transformVendor);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_BEST_VENDORS,
+      );
+    }
+  }
+
+  private transformVendor(vendor: User): BestVendorsResponseDto {
+    return {
+      vendorId: vendor.id,
+      vendorName: vendor.name,
+      photoUrl: vendor.photoUrl,
+      products: this.mapProducts(vendor.products),
+    };
+  }
+
+  private mapProducts(products: Product[]): ProductResponseDTO[] {
+    const mappedProducts: ProductResponseDTO[] = products.map((product) => {
+      const imageUrls = product.images.map((image) => image.url).sort();
+
+      const vendor = {
+        id: product.user?.id || '',
+        name: product.user?.name || '',
+        photoUrl: product.user?.photoUrl || '',
+      };
+      const colors = product.color || [];
+      const mappedColors = colors.map((color) => color.color);
+
+      delete product.user;
+      delete product.vendorId;
+      delete product.color;
+
+      return {
+        ...product,
+        images: imageUrls,
+        colors: mappedColors,
+        vendor: vendor,
+      };
+    });
+
+    return mappedProducts;
   }
 }
