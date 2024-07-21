@@ -28,6 +28,8 @@ import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 import { v4 as uuidv4 } from 'uuid';
 
+import { mapProducts } from './utils/mapProducts';
+
 type DateRange = { lower: Date; upper: Date };
 
 interface GetProductsOptions {
@@ -526,7 +528,7 @@ export class ProductsService {
 
       const [products, count] = await queryBuilder.getManyAndCount();
 
-      const mappedProducts = this.mapProducts(products);
+      const mappedProducts = mapProducts(products);
 
       return {
         products: mappedProducts,
@@ -536,38 +538,6 @@ export class ProductsService {
       console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
-  }
-
-  mapProducts(products: Product[]): ProductResponseDTO[] {
-    const mappedProducts: ProductResponseDTO[] = products.map((product) => {
-      const sortedImages = !product?.images
-        ? []
-        : this.sortImages(product.images);
-      const imageUrls = sortedImages.map((image) => image.url);
-
-      const vendor = {
-        id: product.user?.id || '',
-        name: product.user?.name || '',
-        photoUrl: product.user?.photoUrl || '',
-      };
-      const colors = product.color || [];
-      const mappedColors = colors.map((color) => color.color);
-      const brand = product?.brand?.brand || '';
-
-      delete product.user;
-      delete product.vendorId;
-      delete product.color;
-
-      return {
-        ...product,
-        images: imageUrls,
-        colors: mappedColors,
-        vendor: vendor,
-        brand: brand,
-      };
-    });
-
-    return mappedProducts;
   }
 
   async deleteProduct(vendorId: string, productId: string): Promise<void> {
@@ -913,22 +883,5 @@ export class ProductsService {
       .replace(/[^\w-]+/g, '');
 
     return slug;
-  }
-
-  private sortImages(images: Image[]): Image[] {
-    const reverseOrder = -1;
-    const normalOrder = 1;
-
-    return images.sort((a, b) => {
-      if (a.isPrimary && !b.isPrimary) {
-        return reverseOrder;
-      } else if (!a.isPrimary && b.isPrimary) {
-        return normalOrder;
-      } else {
-        return (
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-      }
-    });
   }
 }

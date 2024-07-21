@@ -67,6 +67,7 @@ export const mockProduct: Product = {
     products: [],
   },
   material: Materials.COTTON,
+  pdfUrl: 'http:/example.com/diesel.pdf',
   status: Status.PUBLISHED,
   createdAt: new Date(),
   lastUpdatedAt: new Date(),

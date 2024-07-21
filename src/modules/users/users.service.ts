@@ -19,13 +19,13 @@ import {
   MAX_RATING,
   VERIFICATION_CODE_EXPIRATION,
 } from 'src/config';
+import { mapProducts } from 'src/modules/products/utils/mapProducts';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
 
 import { UserResponseDto } from '../auth/dto/user-response.dto';
 import { UserWithTokensResponseDto } from '../auth/dto/user-with-tokens-response.dto';
 import { MailerService } from '../mailer/mailer.service';
-import { ProductResponseDTO } from '../products/dto/product-response.dto';
 import { Product } from '../products/entities/product.entity';
 
 import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
@@ -51,7 +51,6 @@ export class UsersService {
     private readonly productRepository: Repository<Product>,
   ) {
     this.transformVendor = this.transformVendor.bind(this);
-    this.mapProducts = this.mapProducts.bind(this);
   }
 
   private async hashPassword(password: string): Promise<string> {
@@ -853,34 +852,7 @@ export class UsersService {
       vendorId: vendor.id,
       vendorName: vendor.name,
       photoUrl: vendor.photoUrl,
-      products: this.mapProducts(vendor.products),
+      products: mapProducts(vendor.products),
     };
-  }
-
-  private mapProducts(products: Product[]): ProductResponseDTO[] {
-    const mappedProducts: ProductResponseDTO[] = products.map((product) => {
-      const imageUrls = product.images.map((image) => image.url).sort();
-
-      const vendor = {
-        id: product.user?.id || '',
-        name: product.user?.name || '',
-        photoUrl: product.user?.photoUrl || '',
-      };
-      const colors = product.color || [];
-      const mappedColors = colors.map((color) => color.color);
-
-      delete product.user;
-      delete product.vendorId;
-      delete product.color;
-
-      return {
-        ...product,
-        images: imageUrls,
-        colors: mappedColors,
-        vendor: vendor,
-      };
-    });
-
-    return mappedProducts;
   }
 }
