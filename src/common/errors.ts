@@ -169,4 +169,5 @@ export const Errors = {
   ONLY_THIS_FILES_ARE_ALLOWED: 'Only this files are allowed: ',
   BIG_FILE: 'Maximum size of this file (in bytes) should be: ',
   FILE_UPLOAD_URL_NOT_CONFIGURED: 'File upload URL is not configured',
+  FAILED_TO_FETCH_BRANDS: 'Failed to fetch brands',
 };

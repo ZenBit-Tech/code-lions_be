@@ -876,6 +876,18 @@ export class ProductsService {
     }
   }
 
+  async getBrands(): Promise<string[]> {
+    try {
+      const brands = await this.brandRepository.find({
+        select: ['brand'],
+      });
+
+      return brands.map((brand) => brand.brand);
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_BRANDS);
+    }
+  }
+
   private generateSlug(name: string): string {
     const slug = name
       .toLowerCase()
