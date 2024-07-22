@@ -435,6 +435,7 @@ export class ProductsService {
           'product.size',
           'product.brand',
           'product.material',
+          'product.pdfUrl',
           'product.createdAt',
           'product.lastUpdatedAt',
           'product.deletedAt',
@@ -871,6 +872,35 @@ export class ProductsService {
       }
       console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PRODUCT);
+    }
+  }
+
+  async uploadPdfFile(
+    id: string,
+    vendorId: string,
+    pdfUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const product = await this.productRepository.findOne({
+        where: { id, vendorId },
+      });
+
+      if (!product) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
+
+      product.pdfUrl = pdfUrl;
+      await this.productRepository.save(product);
+      const updatedProduct = await this.findById(id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPLOAD_PRODUCT_DOCUMENT,
+      );
     }
   }
 
