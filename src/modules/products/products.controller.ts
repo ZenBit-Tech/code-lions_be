@@ -760,7 +760,7 @@ export class ProductsController {
     return this.productsService.deleteProduct(vendorId, productId);
   }
 
-  @Post('photo')
+  @Post(':id/photo')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({
@@ -852,6 +852,7 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('file'), ProductPhotoUploadInterceptor)
   @Roles(Role.VENDOR)
   async uploadPhoto(
+    @Param('id') id: string,
     @Request() request: FileUploadRequest & { user: UserResponseDto },
   ): Promise<ProductResponseDTO> {
     if (request.uploadError) {
@@ -859,6 +860,7 @@ export class ProductsController {
     }
     const photoUrl = request.uploadedFileUrl;
     const updatedProduct = await this.productsService.updateProductPhoto(
+      id,
       request.user.id,
       photoUrl,
     );

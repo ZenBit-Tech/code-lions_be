@@ -55,6 +55,8 @@ export interface ProductsResponse {
   count: number;
 }
 
+const newProduct = 'new';
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -535,7 +537,6 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
-      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
@@ -584,6 +585,7 @@ export class ProductsService {
   }
 
   async updateProductPhoto(
+    productId: string,
     vendorId: string,
     photoUrl: string,
   ): Promise<ProductResponseDTO> {
@@ -603,14 +605,18 @@ export class ProductsService {
       }
 
       const unfinishedProduct = await this.productRepository.findOne({
-        where: { vendorId, isProductCreationFinished: false },
+        where: { id: productId, vendorId },
         relations: ['images'],
       });
+
+      if (!unfinishedProduct && productId !== newProduct) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
 
       let product = unfinishedProduct;
       let isPrimary = !product?.images || product.images.length === 0;
 
-      if (!unfinishedProduct) {
+      if (productId === newProduct) {
         product = await this.createEmptyProduct(vendorId);
         isPrimary = true;
       }
@@ -870,7 +876,6 @@ export class ProductsService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PRODUCT);
     }
   }
