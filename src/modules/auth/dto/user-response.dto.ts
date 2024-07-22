@@ -111,6 +111,13 @@ export class UserResponseDto {
   orders: number;
 
   @ApiProperty({
+    example: false,
+    description:
+      'Indicates if needed to show rental rules to the user before add the product to cart',
+  })
+  willHideRentalRules: boolean;
+
+  @ApiProperty({
     example: new Date(),
     description: 'The creation date of the user',
   })

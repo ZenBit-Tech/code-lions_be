@@ -31,6 +31,7 @@ const mockUser: User = {
   cardNumber: '',
   expireDate: '',
   cvvCode: '',
+  willHideRentalRules: false,
   createdAt: undefined,
   lastUpdatedAt: undefined,
   deletedAt: undefined,

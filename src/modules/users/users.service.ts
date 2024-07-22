@@ -85,6 +85,7 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
+      willHideRentalRules,
       onboardingStep,
       createdAt,
       lastUpdatedAt,
@@ -110,6 +111,7 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
+      willHideRentalRules,
       onboardingStep,
       createdAt,
       lastUpdatedAt,
@@ -140,6 +142,7 @@ export class UsersService {
       rating,
       orders,
       onboardingStep,
+      willHideRentalRules,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -168,6 +171,7 @@ export class UsersService {
       orders,
       isAccountActive,
       onboardingStep,
+      willHideRentalRules,
       createdAt,
       lastUpdatedAt,
       deletedAt,
@@ -854,5 +858,23 @@ export class UsersService {
       photoUrl: vendor.photoUrl,
       products: mapProducts(vendor.products),
     };
+  }
+
+  async hideRentalRules(userId: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.willHideRentalRules = true;
+      await this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
   }
 }
