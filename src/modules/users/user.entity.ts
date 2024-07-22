@@ -7,9 +7,12 @@ import {
   BeforeUpdate,
   DeleteDateColumn,
   OneToMany,
+  ManyToMany,
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
+import { ChatRoom } from 'src/modules/chat/entities/chat-room.entity';
+import { Message } from 'src/modules/chat/entities/message.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
@@ -255,4 +258,10 @@ export class User {
 
   @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
   wishlist: Wishlist[];
+
+  @ManyToMany(() => ChatRoom, (chatRoom) => chatRoom.participants)
+  chatRooms: ChatRoom[];
+
+  @OneToMany(() => Message, (message) => message.sender)
+  messages: Message[];
 }
