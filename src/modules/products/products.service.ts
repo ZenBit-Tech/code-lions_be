@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-
 import {
   ForbiddenException,
   Injectable,
@@ -11,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 
+import axios from 'axios';
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -615,11 +614,9 @@ export class ProductsService {
         isPrimary = true;
       }
 
-      const siteHost = this.configService.get<string>('SITE_HOST');
-
       const image = new Image();
 
-      image.url = photoUrl.replace('./', siteHost);
+      image.url = photoUrl;
       image.isPrimary = isPrimary;
       image.product = product;
       await this.imageRepository.save(image);
@@ -692,10 +689,11 @@ export class ProductsService {
 
       await this.imageRepository.remove(photo);
 
-      const siteHost = this.configService.get<string>('SITE_HOST');
-      const filePath = photoUrl.replace(siteHost, './');
+      const fileDeleteUrl = this.configService.get<string>('FILE_DELETE_URL');
 
-      fs.unlinkSync(filePath);
+      if (fileDeleteUrl) {
+        await axios.get(`${fileDeleteUrl}&url=${photoUrl}`);
+      }
 
       if (photo.isPrimary) {
         const anotherPhoto = await this.imageRepository.findOne({
