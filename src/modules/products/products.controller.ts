@@ -1,5 +1,3 @@
-import { extname } from 'path';
-
 import {
   Body,
   Controller,
@@ -15,7 +13,6 @@ import {
   UseGuards,
   UseInterceptors,
   BadRequestException,
-  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -38,7 +35,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { diskStorage } from 'multer';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import {
@@ -47,10 +43,11 @@ import {
   PRODUCTS_PER_VENDOR_PAGE,
   DEFAULT_ORDER,
   DEFAULT_SORT,
-  PRODUCT_IMAGES_PATH,
-  RANDOM_NUMBER_MAX,
-  MAX_FILE_SIZE,
 } from 'src/config';
+import {
+  ProductPhotoUploadInterceptor,
+  FileUploadRequest,
+} from 'src/interceptors/file-upload/file-upload.interceptor';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
@@ -851,36 +848,15 @@ export class ProductsController {
       },
     },
   })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: PRODUCT_IMAGES_PATH,
-        filename: (req, file, callback) => {
-          if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
-            return callback(
-              new BadRequestException(Errors.ONLY_JPG_JPEG_PNG_HEIC),
-              null,
-            );
-          }
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * RANDOM_NUMBER_MAX);
-          const ext = extname(file.originalname);
-
-          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-        },
-      }),
-      limits: { fileSize: MAX_FILE_SIZE },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file'), ProductPhotoUploadInterceptor)
   @Roles(Role.VENDOR)
   async uploadPhoto(
-    @Request() request: Request & { user: UserResponseDto },
-    @UploadedFile() file: Express.Multer.File,
+    @Request() request: FileUploadRequest & { user: UserResponseDto },
   ): Promise<ProductResponseDTO> {
-    if (!file) {
-      throw new BadRequestException(Errors.NO_PHOTO_UPLOADED);
+    if (request.uploadError) {
+      throw new BadRequestException(request.uploadError.message);
     }
-    const photoUrl = `${PRODUCT_IMAGES_PATH}/${file.filename}`;
+    const photoUrl = request.uploadedFileUrl;
     const updatedProduct = await this.productsService.updateProductPhoto(
       request.user.id,
       photoUrl,
