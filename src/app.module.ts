@@ -12,6 +12,9 @@ import { ReviewsModule } from 'src/modules/reviews/reviews.module';
 import { UsersModule } from 'src/modules/users/users.module';
 import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
 
+import { ChatModule } from './modules/chat/chat.module';
+import { EventsModule } from './modules/events/events.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -25,6 +28,8 @@ import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
     ProductsModule,
     WishlistModule,
     CartModule,
+    EventsModule,
+    ChatModule,
     StripeModule.forRoot(StripeModule, {
       apiKey: process.env.STRIPE_SECRET_KEY,
     }),
