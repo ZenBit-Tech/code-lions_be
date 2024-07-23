@@ -39,10 +39,8 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
-import {
-  AvatarUploadInterceptor,
-  FileUploadRequest,
-} from 'src/interceptors/file-upload/file-upload.interceptor';
+import { AvatarUploadInterceptor } from 'src/interceptors/file-upload/avatar-upload.interceptor';
+import { FileUploadRequest } from 'src/interceptors/file-upload/file-upload.interceptor';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { UserWithTokensResponseDto } from 'src/modules/auth/dto/user-with-tokens-response.dto';

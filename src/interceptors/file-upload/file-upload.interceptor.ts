@@ -14,11 +14,6 @@ import { Request } from 'express';
 import { Observable, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { Errors } from 'src/common/errors';
-import {
-  MAX_PRODUCT_PHOTO_SIZE,
-  MAX_AVATAR_SIZE,
-  MAX_PRODUCT_PDF_SIZE,
-} from 'src/config';
 
 export interface FileUploadRequest extends Request {
   uploadedFileUrl?: string;
@@ -103,32 +98,5 @@ export abstract class FileUploadInterceptor implements NestInterceptor {
 
       return next.handle();
     }
-  }
-}
-
-export class AvatarUploadInterceptor extends FileUploadInterceptor {
-  protected allowedFileTypes = ['jpg', 'jpeg', 'png', 'heic'];
-  protected maxFilesize = MAX_AVATAR_SIZE;
-
-  constructor() {
-    super();
-  }
-}
-
-export class ProductPhotoUploadInterceptor extends FileUploadInterceptor {
-  protected allowedFileTypes = ['jpg', 'jpeg', 'png', 'heic'];
-  protected maxFilesize = MAX_PRODUCT_PHOTO_SIZE;
-
-  constructor() {
-    super();
-  }
-}
-
-export class ProductPdfUploadInterceptor extends FileUploadInterceptor {
-  protected allowedFileTypes = ['pdf'];
-  protected maxFilesize = MAX_PRODUCT_PDF_SIZE;
-
-  constructor() {
-    super();
   }
 }

@@ -44,11 +44,9 @@ import {
   DEFAULT_ORDER,
   DEFAULT_SORT,
 } from 'src/config';
-import {
-  ProductPhotoUploadInterceptor,
-  FileUploadRequest,
-  ProductPdfUploadInterceptor,
-} from 'src/interceptors/file-upload/file-upload.interceptor';
+import { FileUploadRequest } from 'src/interceptors/file-upload/file-upload.interceptor';
+import { ProductPdfUploadInterceptor } from 'src/interceptors/file-upload/product-pdf-upload.interceptor';
+import { ProductPhotoUploadInterceptor } from 'src/interceptors/file-upload/product-photo-upload.interceptor';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
