@@ -14,7 +14,7 @@ export function mapProducts(products: Product[]): ProductResponseDTO[] {
     };
     const colors = product.color || [];
     const mappedColors = colors.map((color) => color.color);
-    const brand = product?.brand?.brand || '';
+    const brand = product?.brand?.brand || null;
 
     delete product.user;
     delete product.vendorId;

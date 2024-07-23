@@ -19,11 +19,13 @@ import { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
 
 import { ProductResponseDTO } from './dto/product-response.dto';
 import { Category } from './entities/category.enum';
+import { Materials } from './entities/materials.enum';
 import { Status } from './entities/product-status.enum';
 import { ProductTypes } from './entities/product-types.enum';
 import { Product } from './entities/product.entity';
 import { Styles } from './entities/styles.enum';
 import { ProductsService } from './products.service';
+import { mapProducts } from './utils/mapProducts';
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -46,6 +48,7 @@ describe('ProductsService', () => {
       size: 'M',
       images: [],
       colors: [],
+      brand: 'Test Brand',
       status: Status.PUBLISHED,
       vendor: {
         id: '44c674384-f944-401b-949b-b76e8793bdc9',
@@ -55,6 +58,7 @@ describe('ProductsService', () => {
       createdAt: new Date('2024-07-05T18:15:14.950Z'),
       lastUpdatedAt: new Date('2024-07-05T18:15:14.950Z'),
       deletedAt: null,
+      material: Materials.CHIFFON,
     },
   ];
 
@@ -120,7 +124,7 @@ describe('ProductsService', () => {
 
   describe('findAll', () => {
     it('should return an array of products', async () => {
-      const expectedProducts = service.mapProducts([mockProduct]);
+      const expectedProducts = mapProducts([mockProduct]);
       const expectedResult = {
         products: expectedProducts,
         count: 1,
@@ -148,7 +152,7 @@ describe('ProductsService', () => {
   describe('findBySlug', () => {
     it('should return a product by slug', async () => {
       const slug = 'test-product';
-      const expectedProduct = service.mapProducts([mockProduct])[0];
+      const expectedProduct = mapProducts([mockProduct])[0];
 
       const product = await service.findBySlug(slug);
 
@@ -196,6 +200,8 @@ describe('ProductsService', () => {
         products: [],
         cart: [],
         wishlist: [],
+        chatRooms: [],
+        messages: [],
       } as User);
 
       const products = await service.findByVendorId(
@@ -216,7 +222,7 @@ describe('ProductsService', () => {
   describe('findById', () => {
     it('should return a product by id', async () => {
       const id = '61c674384-f944-401b-949b-b76e8793bdc9';
-      const expectedProduct = service.mapProducts([mockProduct])[0];
+      const expectedProduct = mapProducts([mockProduct])[0];
 
       const product = await service.findById(id);
 
@@ -491,7 +497,7 @@ describe('ProductsService', () => {
 
       someDaysAgo.setDate(today.getDate() - DAYS_JUST_IN);
 
-      const expectedProducts = service.mapProducts([mockProduct]);
+      const expectedProducts = mapProducts([mockProduct]);
       const expectedResult = {
         products: expectedProducts,
         count: 1,
@@ -508,7 +514,7 @@ describe('ProductsService', () => {
       const jeansSize = '32';
       const shoesSize = '10';
 
-      const expectedProducts = service.mapProducts([
+      const expectedProducts = mapProducts([
         mockProduct,
         mockProduct,
         mockProduct,

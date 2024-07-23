@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import dataSource from 'src/db/data-source';
 import { Seeder, runSeeder } from 'typeorm-extension';
 
+import BrandSeeder from './brand.seeder';
 import ColorSeeder from './color.seeder';
 
 class SeedRunner implements Seeder {
@@ -13,6 +14,7 @@ class SeedRunner implements Seeder {
     await dataSource.query('TRUNCATE TABLE products;');
 
     await runSeeder(dataSource, ColorSeeder);
+    await runSeeder(dataSource, BrandSeeder);
 
     await dataSource.query('SET FOREIGN_KEY_CHECKS = 1;');
     await dataSource.destroy();

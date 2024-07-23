@@ -166,4 +166,12 @@ export const Errors = {
   FAILED_TO_SET_PRIMARY_PHOTO: 'Failed to set primary photo',
   FORBIDDEN_TO_SET_PRIMARY_PHOTO: 'Forbidden to set primary photo',
   FAILED_TO_UPDATE_PRODUCT: 'Failed to update product',
+  ONLY_THIS_FILES_ARE_ALLOWED: 'Only this files are allowed: ',
+  BIG_FILE: 'Maximum size of this file (in bytes) should be: ',
+  FILE_UPLOAD_URL_NOT_CONFIGURED: 'File upload URL is not configured',
+  FAILED_TO_FETCH_BRANDS: 'Failed to fetch brands',
+  INVALID_FILE_OR_REQUEST: 'Invalid file or request',
+  UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
+    'Only active vendors can upload product documents',
+  FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
 };

@@ -502,9 +502,7 @@ export class UsersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      const siteHost = this.configService.get<string>('SITE_HOST');
-
-      user.photoUrl = photoUrl.replace('./', siteHost);
+      user.photoUrl = photoUrl;
       if (user.onboardingStep !== OnboardingSteps.FINISH) {
         user.onboardingStep = OnboardingSteps.INFO;
       }
