@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { StripeModule } from '@golevelup/nestjs-stripe';
 import { TypeOrmConfigService } from 'src/config/typeorm';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { CartModule } from 'src/modules/cart/cart.module';
@@ -24,6 +25,9 @@ import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
     ProductsModule,
     WishlistModule,
     CartModule,
+    StripeModule.forRoot(StripeModule, {
+      apiKey: process.env.STRIPE_SECRET_KEY,
+    }),
   ],
 })
 export class AppModule {}
