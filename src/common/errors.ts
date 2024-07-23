@@ -145,6 +145,12 @@ export const Errors = {
   FAILED_TO_REMOVE_PRODUCT_FROM_CART: 'Failed to remove product from cart',
   CART_NOT_FOUND: 'Cart not found',
   FAILED_TO_RETRIEVE_CART: 'Failed to retrieve cart',
+  INVALID_DURATION:
+    'To rent longer than 7 days, please, upgrade your rating to 4.9 stars',
+  PRICE_LIMIT_EXCEEDED:
+    'To rent more than $1000, please, upgrade your rating to 4.9 stars',
+  EXTENDED_PRIVILEGES_REQUIRED:
+    'To rent more than $2500 and longer than 7 days, please, upgrade your average rating to 4.9 stars and receive three 5-star ratings',
   FAILED_TO_FETCH_PRODUCTS_BY_VENDOR: 'Failed to fetch products by vendor',
   FAILED_TO_DELETE_PRODUCT: 'Failed to delete product',
   FAILED_TO_APPROVE_PRODUCT: 'Failed to approve product',
