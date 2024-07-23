@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-
 import {
   ForbiddenException,
   Injectable,
@@ -11,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 
+import axios from 'axios';
 import { Errors } from 'src/common/errors';
 import { PRODUCTS_ON_PAGE, DAYS_JUST_IN } from 'src/config';
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -55,6 +54,8 @@ export interface ProductsResponse {
   products: ProductResponseDTO[];
   count: number;
 }
+
+const newProduct = 'new';
 
 @Injectable()
 export class ProductsService {
@@ -436,6 +437,7 @@ export class ProductsService {
           'product.size',
           'product.brand',
           'product.material',
+          'product.pdfUrl',
           'product.createdAt',
           'product.lastUpdatedAt',
           'product.deletedAt',
@@ -535,7 +537,6 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
-      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }
@@ -584,6 +585,7 @@ export class ProductsService {
   }
 
   async updateProductPhoto(
+    productId: string,
     vendorId: string,
     photoUrl: string,
   ): Promise<ProductResponseDTO> {
@@ -603,23 +605,25 @@ export class ProductsService {
       }
 
       const unfinishedProduct = await this.productRepository.findOne({
-        where: { vendorId, isProductCreationFinished: false },
+        where: { id: productId, vendorId },
         relations: ['images'],
       });
+
+      if (!unfinishedProduct && productId !== newProduct) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
 
       let product = unfinishedProduct;
       let isPrimary = !product?.images || product.images.length === 0;
 
-      if (!unfinishedProduct) {
+      if (productId === newProduct) {
         product = await this.createEmptyProduct(vendorId);
         isPrimary = true;
       }
 
-      const siteHost = this.configService.get<string>('SITE_HOST');
-
       const image = new Image();
 
-      image.url = photoUrl.replace('./', siteHost);
+      image.url = photoUrl;
       image.isPrimary = isPrimary;
       image.product = product;
       await this.imageRepository.save(image);
@@ -692,10 +696,11 @@ export class ProductsService {
 
       await this.imageRepository.remove(photo);
 
-      const siteHost = this.configService.get<string>('SITE_HOST');
-      const filePath = photoUrl.replace(siteHost, './');
+      const fileDeleteUrl = this.configService.get<string>('FILE_DELETE_URL');
 
-      fs.unlinkSync(filePath);
+      if (fileDeleteUrl) {
+        await axios.get(`${fileDeleteUrl}&url=${photoUrl}`);
+      }
 
       if (photo.isPrimary) {
         const anotherPhoto = await this.imageRepository.findOne({
@@ -871,8 +876,48 @@ export class ProductsService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      console.log(error); // it is just for logging bugs on the server, I will remove it when implement server error logger
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PRODUCT);
+    }
+  }
+
+  async uploadPdfFile(
+    id: string,
+    vendorId: string,
+    pdfUrl: string,
+  ): Promise<ProductResponseDTO> {
+    try {
+      const product = await this.productRepository.findOne({
+        where: { id, vendorId },
+      });
+
+      if (!product) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
+
+      product.pdfUrl = pdfUrl;
+      await this.productRepository.save(product);
+      const updatedProduct = await this.findById(id);
+
+      return updatedProduct;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPLOAD_PRODUCT_DOCUMENT,
+      );
+    }
+  }
+
+  async getBrands(): Promise<string[]> {
+    try {
+      const brands = await this.brandRepository.find({
+        select: ['brand'],
+      });
+
+      return brands.map((brand) => brand.brand);
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_BRANDS);
     }
   }
 

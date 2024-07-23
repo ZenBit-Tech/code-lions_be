@@ -1,5 +1,3 @@
-import { extname } from 'path';
-
 import {
   Body,
   Controller,
@@ -15,7 +13,6 @@ import {
   UseGuards,
   UseInterceptors,
   BadRequestException,
-  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -38,7 +35,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { diskStorage } from 'multer';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import {
@@ -47,10 +43,10 @@ import {
   PRODUCTS_PER_VENDOR_PAGE,
   DEFAULT_ORDER,
   DEFAULT_SORT,
-  PRODUCT_IMAGES_PATH,
-  RANDOM_NUMBER_MAX,
-  MAX_FILE_SIZE,
 } from 'src/config';
+import { FileUploadRequest } from 'src/interceptors/file-upload/file-upload.interceptor';
+import { ProductPdfUploadInterceptor } from 'src/interceptors/file-upload/product-pdf-upload.interceptor';
+import { ProductPhotoUploadInterceptor } from 'src/interceptors/file-upload/product-photo-upload.interceptor';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
@@ -762,7 +758,7 @@ export class ProductsController {
     return this.productsService.deleteProduct(vendorId, productId);
   }
 
-  @Post('photo')
+  @Post(':id/photo')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({
@@ -851,37 +847,18 @@ export class ProductsController {
       },
     },
   })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: PRODUCT_IMAGES_PATH,
-        filename: (req, file, callback) => {
-          if (!file.originalname.match(/\.(jpg|jpeg|png|heic)$/)) {
-            return callback(
-              new BadRequestException(Errors.ONLY_JPG_JPEG_PNG_HEIC),
-              null,
-            );
-          }
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * RANDOM_NUMBER_MAX);
-          const ext = extname(file.originalname);
-
-          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-        },
-      }),
-      limits: { fileSize: MAX_FILE_SIZE },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file'), ProductPhotoUploadInterceptor)
   @Roles(Role.VENDOR)
   async uploadPhoto(
-    @Request() request: Request & { user: UserResponseDto },
-    @UploadedFile() file: Express.Multer.File,
+    @Param('id') id: string,
+    @Request() request: FileUploadRequest & { user: UserResponseDto },
   ): Promise<ProductResponseDTO> {
-    if (!file) {
-      throw new BadRequestException(Errors.NO_PHOTO_UPLOADED);
+    if (request.uploadError) {
+      throw new BadRequestException(request.uploadError.message);
     }
-    const photoUrl = `${PRODUCT_IMAGES_PATH}/${file.filename}`;
+    const photoUrl = request.uploadedFileUrl;
     const updatedProduct = await this.productsService.updateProductPhoto(
+      id,
       request.user.id,
       photoUrl,
     );
@@ -1132,6 +1109,103 @@ export class ProductsController {
       id,
       request.user.id,
       updateProductDto,
+    );
+
+    return updatedProduct;
+  }
+
+  @Post(':id/pdf-file')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Upload product document',
+    tags: ['Product Endpoints'],
+    description:
+      'This endpoint is used by the vendor to upload product document',
+  })
+  @ApiCreatedResponse({
+    description: 'The document has been successfully uploaded.',
+    type: ProductResponseDTO,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid file or request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string',
+          example: Errors.INVALID_FILE_OR_REQUEST,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: '',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.PRODUCT_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to upload product document',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_UPLOAD_PRODUCT_DOCUMENT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'), ProductPdfUploadInterceptor)
+  @Roles(Role.VENDOR)
+  async uploadPdfFile(
+    @Request() request: FileUploadRequest & { user: UserResponseDto },
+    @Param('id') id: string,
+  ): Promise<ProductResponseDTO> {
+    if (request.uploadError) {
+      throw new BadRequestException(request.uploadError.message);
+    }
+    const pdfUrl = request.uploadedFileUrl;
+
+    const updatedProduct = await this.productsService.uploadPdfFile(
+      id,
+      request.user.id,
+      pdfUrl,
     );
 
     return updatedProduct;
