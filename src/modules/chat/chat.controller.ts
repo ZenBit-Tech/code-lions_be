@@ -19,11 +19,11 @@ type AuthenticatedUser = {
   };
 } & Request;
 
+UseGuards(JwtAuthGuard);
 @Controller('chats')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({
     summary: 'Get all chat rooms for the authenticated user',
@@ -79,7 +79,6 @@ export class ChatController {
     return this.chatService.getUserChats(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({
     summary: 'Get a specific chat room by ID',
