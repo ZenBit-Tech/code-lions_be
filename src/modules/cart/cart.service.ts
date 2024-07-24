@@ -8,6 +8,7 @@ import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import getDateWithoutTime from 'src/common/utils/getDateWithoutTime';
 import {
   AVERAGE_RATING_FOUR_POINT_NINE,
   DURATION_FOURTEEN_DAYS,
@@ -46,6 +47,23 @@ export class CartService {
     duration: number,
     price: number,
   ): Promise<void> {
+    if (
+      !user.isAccountActive &&
+      user.deactivationTimestamp &&
+      user.reactivationTimestamp
+    ) {
+      const deactivationDate = getDateWithoutTime(
+        new Date(user.deactivationTimestamp),
+      );
+      const reactivationDate = getDateWithoutTime(
+        new Date(user.reactivationTimestamp),
+      );
+
+      throw new ConflictException(
+        Errors.CONFLICT_ACCOUNT_DEACTIVATED(deactivationDate, reactivationDate),
+      );
+    }
+
     const userReviews = await this.reviewRepository.find({
       where: { userId: user.id },
     });

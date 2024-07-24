@@ -36,3 +36,6 @@ export const BAD_RATINGS_COUNT_ONE = 1;
 export const BAD_RATINGS_COUNT_TWO = 2;
 export const DECIMAL_PRECISION = 2;
 export const RENTAL_RULES_LINK = 'https://code-lions.netlify.app/how-it-works';
+
+/* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+export const TWO_MINUTES = 2 * 60 * 1000;

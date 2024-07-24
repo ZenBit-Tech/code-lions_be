@@ -221,6 +221,13 @@ export class User {
 
   @ApiProperty({
     example: new Date(),
+    description: 'The date of reactivation of the account of the user',
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  reactivationTimestamp: Date;
+
+  @ApiProperty({
+    example: new Date(),
     description: 'The deletion date of the user',
   })
   @DeleteDateColumn({ type: 'timestamp', nullable: true })

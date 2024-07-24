@@ -142,6 +142,12 @@ export class UserResponseDto {
   deactivationTimestamp: Date;
 
   @ApiProperty({
+    example: new Date(),
+    description: 'The date of reactivation of the account of the user',
+  })
+  reactivationTimestamp: Date;
+
+  @ApiProperty({
     example: '1',
     description:
       'Indicates how many steps user completed filling shipping profile',

@@ -151,6 +151,11 @@ export const Errors = {
     'To rent more than $1000, please, upgrade your rating to 4.9 stars',
   EXTENDED_PRIVILEGES_REQUIRED:
     'To rent more than $2500 and longer than 7 days, please, upgrade your average rating to 4.9 stars and receive three 5-star ratings',
+  CONFLICT_ACCOUNT_DEACTIVATED: (
+    deactivationDate: string,
+    reactivationDate: string,
+  ): string =>
+    `The ability to rent products is limited from ${deactivationDate} to ${reactivationDate}, to appeal this - contact support@blackcircle.com`,
   FAILED_TO_FETCH_PRODUCTS_BY_VENDOR: 'Failed to fetch products by vendor',
   FAILED_TO_DELETE_PRODUCT: 'Failed to delete product',
   FAILED_TO_APPROVE_PRODUCT: 'Failed to approve product',

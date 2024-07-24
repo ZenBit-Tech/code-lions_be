@@ -15,6 +15,7 @@ import {
   DECIMAL_PRECISION,
   RATING_THREE,
   RENTAL_RULES_LINK,
+  TWO_MINUTES,
 } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { User } from 'src/modules/users/user.entity';
@@ -108,6 +109,7 @@ export class ReviewsService {
     } else if (lowRatingReviews >= BAD_RATINGS_COUNT_TWO) {
       user.isAccountActive = false;
       user.deactivationTimestamp = new Date();
+      user.reactivationTimestamp = new Date(Date.now() + TWO_MINUTES);
       await transactionalEntityManager.save(user);
 
       const isMailSent = await this.mailerService.sendMail({

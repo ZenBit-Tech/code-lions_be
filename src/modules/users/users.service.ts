@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
@@ -91,6 +92,7 @@ export class UsersService {
       lastUpdatedAt,
       deletedAt,
       deactivationTimestamp,
+      reactivationTimestamp,
     } = user;
 
     const publicUser: UserResponseDto = {
@@ -118,6 +120,7 @@ export class UsersService {
       lastUpdatedAt,
       deletedAt,
       deactivationTimestamp,
+      reactivationTimestamp,
     };
 
     return publicUser;
@@ -149,6 +152,7 @@ export class UsersService {
       lastUpdatedAt,
       deletedAt,
       deactivationTimestamp,
+      reactivationTimestamp,
       cardNumber,
       expireDate,
       cvvCode,
@@ -179,6 +183,7 @@ export class UsersService {
       lastUpdatedAt,
       deletedAt,
       deactivationTimestamp,
+      reactivationTimestamp,
       cardNumber,
       expireDate,
       cvvCode,
@@ -877,6 +882,36 @@ export class UsersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_30_SECONDS, { name: 'reactivateUsers' })
+  async reactivateUsers(): Promise<void> {
+    const usersToReactivate = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.isAccountActive = :isActive', { isActive: false })
+      .andWhere('user.reactivationTimestamp IS NOT NULL')
+      .andWhere('user.reactivationTimestamp <= :now', { now: new Date() })
+      .getMany();
+
+    for (const user of usersToReactivate) {
+      user.isAccountActive = true;
+      user.deactivationTimestamp = null;
+      user.reactivationTimestamp = null;
+      await this.userRepository.save(user);
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'Account Reactivated on CodeLions',
+        templateName: 'account-reactivated.hbs',
+        context: {
+          name: user.name,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
     }
   }
 }
