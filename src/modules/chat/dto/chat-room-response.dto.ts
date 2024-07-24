@@ -4,21 +4,16 @@ import { ChatUserDto } from './chat-user.dto';
 import { MessageResponseDto } from './message-response.dto';
 
 export class ChatRoomResponseDto {
-  @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
-    description: 'The ID of the chat room',
-  })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({
-    type: () => ChatUserDto,
-    description: 'The chat partner in the chat room',
-  })
+  @ApiProperty()
   chatPartner: ChatUserDto;
 
-  @ApiProperty({
-    type: () => [MessageResponseDto],
-    description: 'The last message in the chat room',
-  })
+  @ApiProperty()
   messages: MessageResponseDto[];
+
+  constructor(partial: Partial<ChatRoomResponseDto>) {
+    Object.assign(this, partial);
+  }
 }

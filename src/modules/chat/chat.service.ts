@@ -2,11 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { User } from 'src/modules/users/user.entity';
 
 import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
+import { ChatUserDto } from './dto/chat-user.dto';
+import { CreateChatDto } from './dto/create-chat.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
+import { SendMessageDto } from './dto/send-message.dto';
 import { ChatRoom } from './entities/chat-room.entity';
 import { Message } from './entities/message.entity';
 
@@ -22,13 +24,21 @@ export class ChatService {
   ) {}
 
   async getUserChats(userId: string): Promise<ChatRoomResponseDto[]> {
-    const chatRooms = await this.chatRoomRepository.find({
-      relations: ['participants', 'messages'],
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: [
+        'chatRooms',
+        'chatRooms.participants',
+        'chatRooms.messages',
+        'chatRooms.messages.sender',
+      ],
     });
 
-    const userChats = chatRooms.filter((chatRoom) =>
-      chatRoom.participants.some((participant) => participant.id === userId),
-    );
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const userChats = user.chatRooms;
 
     return userChats.map((chatRoom) =>
       this.toChatRoomResponseDto(chatRoom, userId),
@@ -59,6 +69,74 @@ export class ChatService {
     return this.toChatRoomResponseDto(chatRoom, userId);
   }
 
+  async createChat(createChatDto: CreateChatDto): Promise<ChatRoom> {
+    const { userId1, userId2 } = createChatDto;
+
+    const firstUser = await this.userRepository.findOne({
+      where: { id: userId1 },
+    });
+
+    if (!firstUser) {
+      throw new NotFoundException('First user not found');
+    }
+
+    const secondUser = await this.userRepository.findOne({
+      where: { id: userId2 },
+    });
+
+    if (!secondUser) {
+      throw new NotFoundException('Second user not found');
+    }
+
+    const existingChatRoomId = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .select('chatRoom.id')
+      .leftJoin('chatRoom.participants', 'participant')
+      .where('participant.id IN (:...userIds)', { userIds: [userId1, userId2] })
+      .groupBy('chatRoom.id')
+      .having('COUNT(participant.id) = 2')
+      .getRawOne();
+
+    if (existingChatRoomId) {
+      return this.chatRoomRepository.findOne({
+        where: { id: existingChatRoomId.chatRoom_id },
+        relations: ['participants'],
+      });
+    }
+
+    const chatRoom = this.chatRoomRepository.create({
+      participants: [firstUser, secondUser],
+    });
+
+    return this.chatRoomRepository.save(chatRoom);
+  }
+
+  async sendMessage(sendMessageDto: SendMessageDto): Promise<Message> {
+    const { chatId, content, senderId } = sendMessageDto;
+
+    const chatRoom = await this.chatRoomRepository.findOne({
+      where: { id: chatId },
+    });
+
+    if (!chatRoom) {
+      throw new NotFoundException('Chat room not found');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: senderId } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const message = this.messageRepository.create({
+      content,
+      chatRoom,
+      sender: user,
+    });
+
+    return this.messageRepository.save(message);
+  }
+
   private toChatRoomResponseDto(
     chatRoom: ChatRoom,
     userId: string,
@@ -67,33 +145,31 @@ export class ChatService {
       (participant) => participant.id !== userId,
     );
 
-    const chatPartnerDto = new UserResponseDto();
-
-    chatPartnerDto.id = chatPartner.id;
-    chatPartnerDto.name = chatPartner.name;
-    chatPartnerDto.photoUrl = chatPartner.photoUrl;
+    const chatPartnerDto = chatPartner
+      ? new ChatUserDto({
+          id: chatPartner.id,
+          name: chatPartner.name,
+          photoUrl: chatPartner.photoUrl,
+        })
+      : null;
 
     const messages = chatRoom.messages.map((message) => {
-      const messageDto = new MessageResponseDto();
-
-      messageDto.id = message.id;
-      messageDto.content = message.content;
-      messageDto.createdAt = message.createdAt;
-      messageDto.sender = {
-        id: message.sender.id,
-        name: message.sender.name,
-        photoUrl: message.sender.photoUrl,
-      };
-
-      return messageDto;
+      return new MessageResponseDto({
+        id: message.id,
+        content: message.content,
+        createdAt: message.createdAt,
+        sender: {
+          id: message.sender.id,
+          name: message.sender.name,
+          photoUrl: message.sender.photoUrl,
+        },
+      });
     });
 
-    const chatRoomResponseDto = new ChatRoomResponseDto();
-
-    chatRoomResponseDto.id = chatRoom.id;
-    chatRoomResponseDto.chatPartner = chatPartnerDto;
-    chatRoomResponseDto.messages = messages;
-
-    return chatRoomResponseDto;
+    return new ChatRoomResponseDto({
+      id: chatRoom.id,
+      chatPartner: chatPartnerDto,
+      messages: messages,
+    });
   }
 }
