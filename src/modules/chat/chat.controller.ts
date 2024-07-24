@@ -14,6 +14,7 @@ import {
   ApiUnauthorizedResponse,
   ApiInternalServerErrorResponse,
   ApiParam,
+  ApiTags,
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -23,6 +24,7 @@ import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { ChatRoom } from './entities/chat-room.entity';
 
+@ApiTags('chats')
 @UseGuards(JwtAuthGuard)
 @Controller('chats')
 export class ChatController {
