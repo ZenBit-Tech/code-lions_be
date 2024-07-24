@@ -35,6 +35,7 @@ const mockUser: User = {
   createdAt: undefined,
   lastUpdatedAt: undefined,
   deletedAt: undefined,
+  deactivationTimestamp: null,
   onboardingStep: 0,
   rating: 0,
   orders: 0,

@@ -4,8 +4,8 @@ import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import {
@@ -29,6 +29,7 @@ import { ResponseCartItemDto } from './response-cart.dto';
 @Injectable()
 export class CartService {
   constructor(
+    @InjectEntityManager() private readonly entityManager: EntityManager,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     @InjectRepository(User)
@@ -52,15 +53,16 @@ export class CartService {
     const hasThreeFiveStarReviews =
       userReviews.filter((review) => review.rating === RATING_FIVE).length >=
       NUMBER_OF_FIVE_RATINGS;
-    const isHighRated = user.rating > AVERAGE_RATING_FOUR_POINT_NINE;
+    const isHighRated = user.rating >= AVERAGE_RATING_FOUR_POINT_NINE;
+
     const isEligibleForExtendedPrivileges =
       hasThreeFiveStarReviews && isHighRated;
 
     if (
-      user.orders === ORDERS_SUM_ZERO &&
+      user.orders === ORDERS_SUM_ZERO ||
       user.rating < AVERAGE_RATING_FOUR_POINT_NINE
     ) {
-      if (duration !== DURATION_SEVEN_DAYS) {
+      if (duration > DURATION_SEVEN_DAYS) {
         throw new ConflictException(Errors.INVALID_DURATION);
       }
       if (price > PRICE_ONE_THOUSAND) {
@@ -81,56 +83,50 @@ export class CartService {
     duration: number,
     price: number,
   ): Promise<void> {
-    try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      const product = await this.productRepository.findOne({
-        where: { id: productId, status: Status.PUBLISHED },
-        relations: ['images', 'color'],
-      });
+    return await this.entityManager.transaction(
+      async (transactionalEntityManager) => {
+        const user = await transactionalEntityManager.findOne(User, {
+          where: { id: userId },
+        });
+        const product = await transactionalEntityManager.findOne(Product, {
+          where: { id: productId, status: Status.PUBLISHED },
+          relations: ['images', 'color'],
+        });
 
-      if (!user || !product) {
-        throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
-      }
+        if (!user || !product) {
+          throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
+        }
 
-      await this.checkUserEligibility(user, product, duration, price);
+        await this.checkUserEligibility(user, product, duration, price);
 
-      const { images, size, color } = product;
+        const existingEntry = await transactionalEntityManager.findOne(Cart, {
+          where: { userId, productId },
+        });
 
-      const existingEntry = await this.cartRepository.findOne({
-        where: { userId, productId },
-      });
+        if (existingEntry) {
+          throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
+        }
 
-      if (existingEntry) {
-        throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
-      }
+        const sortedImages: string[] = product.images
+          .map((image) => image.url)
+          .sort();
+        const productUrl: string = sortedImages[0];
+        const productColor: string = product.color[0].color;
 
-      const sortedImages: string[] = images.map((image) => image.url).sort();
-      const productUrl: string = sortedImages[0];
-      const productColor: string = color[0].color;
+        const cartEntry = this.cartRepository.create({
+          userId,
+          productId,
+          vendorId: product.vendorId,
+          productUrl,
+          size: product.size,
+          color: productColor,
+          duration,
+          price,
+        });
 
-      const cartEntry = this.cartRepository.create({
-        userId,
-        productId,
-        vendorId: product.vendorId,
-        productUrl,
-        size,
-        color: productColor,
-        duration,
-        price,
-      });
-
-      await this.cartRepository.save(cartEntry);
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_ADD_PRODUCT_TO_CART,
-      );
-    }
+        await transactionalEntityManager.save(cartEntry);
+      },
+    );
   }
 
   async removeFromCart(userId: string, productId: string): Promise<void> {

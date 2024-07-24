@@ -3,13 +3,20 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, EntityManager, LessThan } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
-
-import { User } from '../users/user.entity';
+import {
+  BAD_RATINGS_COUNT_ONE,
+  BAD_RATINGS_COUNT_TWO,
+  DECIMAL_PRECISION,
+  RATING_THREE,
+} from 'src/config';
+import { MailerService } from 'src/modules/mailer/mailer.service';
+import { User } from 'src/modules/users/user.entity';
 
 import { CreateReviewDto } from './dto/create-review.dto';
 import { Review } from './review.entity';
@@ -17,53 +24,101 @@ import { Review } from './review.entity';
 @Injectable()
 export class ReviewsService {
   constructor(
+    @InjectEntityManager() private readonly entityManager: EntityManager,
     @InjectRepository(Review)
     private readonly reviewRepository: Repository<Review>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly mailerService: MailerService,
   ) {}
 
   async createReview(createReviewDto: CreateReviewDto): Promise<Review> {
-    try {
-      const { userId, reviewerId, text, rating } = createReviewDto;
+    const { userId, reviewerId, text, rating } = createReviewDto;
 
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      const reviewer = await this.userRepository.findOne({
-        where: { id: reviewerId },
-      });
+    return await this.entityManager.transaction(
+      async (transactionalEntityManager) => {
+        const user = await transactionalEntityManager.findOne(User, {
+          where: { id: userId },
+        });
+        const reviewer = await transactionalEntityManager.findOne(User, {
+          where: { id: reviewerId },
+        });
 
-      if (!user || !reviewer) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
+        if (!user || !reviewer) {
+          throw new NotFoundException(Errors.USER_NOT_FOUND);
+        }
 
-      if (user.role === reviewer.role) {
-        throw new ConflictException(
-          Errors.CONFLICT_REVIEW_SAME_ROLE(user.role),
+        if (user.role === reviewer.role) {
+          throw new ConflictException(
+            Errors.CONFLICT_REVIEW_SAME_ROLE(user.role),
+          );
+        }
+
+        const review = this.reviewRepository.create({
+          userId: user.id,
+          reviewerId: reviewer.id,
+          text,
+          rating,
+          reviewerName: reviewer.name,
+          reviewerAvatar: reviewer.photoUrl,
+        });
+
+        const createdReview = await transactionalEntityManager.save(review);
+
+        await this.updateUserRating(user.id, transactionalEntityManager);
+
+        await this.handleLowRatingReviews(
+          user,
+          rating,
+          transactionalEntityManager,
         );
-      }
 
-      const review = this.reviewRepository.create({
-        userId: user.id,
-        reviewerId: reviewer.id,
-        text,
-        rating,
-        reviewerName: reviewer.name,
-        reviewerAvatar: reviewer.photoUrl,
+        return createdReview;
+      },
+    );
+  }
+
+  private async handleLowRatingReviews(
+    user: User,
+    rating: number,
+    transactionalEntityManager: EntityManager,
+  ): Promise<void> {
+    if (rating >= RATING_THREE) return;
+
+    const lowRatingReviews = await transactionalEntityManager.count(Review, {
+      where: { userId: user.id, rating: LessThan(RATING_THREE) },
+    });
+
+    if (lowRatingReviews === BAD_RATINGS_COUNT_ONE) {
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'You have received a low rating on CodeLions',
+        templateName: 'low-rating-warning.hbs',
+        context: {
+          userName: user.name,
+        },
       });
 
-      const createdReview = await this.reviewRepository.save(review);
-
-      await this.updateUserRating(review.userId);
-
-      return createdReview;
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
       }
-      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_REVIEW);
+    } else if (lowRatingReviews >= BAD_RATINGS_COUNT_TWO) {
+      user.isAccountActive = false;
+      user.deactivationTimestamp = new Date();
+      await transactionalEntityManager.save(user);
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'Account Deactivation Notice',
+        templateName: 'account-deactivation.hbs',
+        context: {
+          userName: user.name,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
     }
   }
 
@@ -87,9 +142,15 @@ export class ReviewsService {
     }
   }
 
-  async updateUserRating(userId: string): Promise<void> {
+  private async updateUserRating(
+    userId: string,
+    transactionalEntityManager: EntityManager,
+  ): Promise<void> {
     try {
-      const reviews = await this.reviewRepository.find({
+      const reviewRepository = transactionalEntityManager.getRepository(Review);
+      const userRepository = transactionalEntityManager.getRepository(User);
+
+      const reviews = await reviewRepository.find({
         where: { userId },
       });
 
@@ -99,8 +160,11 @@ export class ReviewsService {
           0,
         );
         const averageRating = totalRating / reviews.length;
+        const roundedAverageRating = parseFloat(
+          averageRating.toFixed(DECIMAL_PRECISION),
+        );
 
-        await this.userRepository.update(userId, { rating: averageRating });
+        await userRepository.update(userId, { rating: roundedAverageRating });
       }
     } catch (error) {
       throw new InternalServerErrorException(

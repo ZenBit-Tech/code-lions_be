@@ -31,3 +31,7 @@ export const DURATION_SEVEN_DAYS = 7;
 export const ORDERS_SUM_ZERO = 0;
 export const PRICE_ONE_THOUSAND = 1000;
 export const PRICE_TWO_THOUSAND_FIVE_HUNDRED = 2500;
+export const RATING_THREE = 3;
+export const BAD_RATINGS_COUNT_ONE = 1;
+export const BAD_RATINGS_COUNT_TWO = 2;
+export const DECIMAL_PRECISION = 2;

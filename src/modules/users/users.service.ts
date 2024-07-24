@@ -90,6 +90,7 @@ export class UsersService {
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
     } = user;
 
     const publicUser: UserResponseDto = {
@@ -116,6 +117,7 @@ export class UsersService {
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
     };
 
     return publicUser;
@@ -146,6 +148,7 @@ export class UsersService {
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
       cardNumber,
       expireDate,
       cvvCode,
@@ -175,6 +178,7 @@ export class UsersService {
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
       cardNumber,
       expireDate,
       cvvCode,
