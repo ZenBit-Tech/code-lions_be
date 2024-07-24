@@ -124,9 +124,10 @@ export class EventsGateway
 
   @SubscribeMessage('userTyping')
   async handleUserTyping(
-    client: Socket,
+    client: SocketWithAuth,
     userTypingDto: UserTypingDto,
   ): Promise<void> {
+    userTypingDto.userId = client.userId;
     this.server.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
   }
 }
