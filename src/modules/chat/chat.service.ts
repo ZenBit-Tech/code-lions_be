@@ -69,11 +69,14 @@ export class ChatService {
     return this.toChatRoomResponseDto(chatRoom, userId);
   }
 
-  async createChat(createChatDto: CreateChatDto): Promise<ChatRoom> {
-    const { userId1, userId2 } = createChatDto;
+  async createChat(
+    userId: string,
+    createChatDto: CreateChatDto,
+  ): Promise<ChatRoom> {
+    const { chatPartnerId } = createChatDto;
 
     const firstUser = await this.userRepository.findOne({
-      where: { id: userId1 },
+      where: { id: userId },
     });
 
     if (!firstUser) {
@@ -81,7 +84,7 @@ export class ChatService {
     }
 
     const secondUser = await this.userRepository.findOne({
-      where: { id: userId2 },
+      where: { id: chatPartnerId },
     });
 
     if (!secondUser) {
@@ -92,7 +95,9 @@ export class ChatService {
       .createQueryBuilder('chatRoom')
       .select('chatRoom.id')
       .leftJoin('chatRoom.participants', 'participant')
-      .where('participant.id IN (:...userIds)', { userIds: [userId1, userId2] })
+      .where('participant.id IN (:...userIds)', {
+        userIds: [userId, chatPartnerId],
+      })
       .groupBy('chatRoom.id')
       .having('COUNT(participant.id) = 2')
       .getRawOne();
@@ -111,8 +116,11 @@ export class ChatService {
     return this.chatRoomRepository.save(chatRoom);
   }
 
-  async sendMessage(sendMessageDto: SendMessageDto): Promise<Message> {
-    const { chatId, content, senderId } = sendMessageDto;
+  async sendMessage(
+    senderId: string,
+    sendMessageDto: SendMessageDto,
+  ): Promise<Message> {
+    const { chatId, content } = sendMessageDto;
 
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id: chatId },

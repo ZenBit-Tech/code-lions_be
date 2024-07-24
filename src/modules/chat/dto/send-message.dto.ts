@@ -12,10 +12,4 @@ export class SendMessageDto {
     description: 'The content of the message',
   })
   content: string;
-
-  @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
-    description: 'The ID of the sender',
-  })
-  senderId: string;
 }

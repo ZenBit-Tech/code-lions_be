@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Param,
-  Post,
-  Body,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Param } from '@nestjs/common';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -17,12 +9,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { GetUserId } from 'src/common/decorators/get-user-id';
+
 import { JwtAuthGuard } from '../auth/auth.guard';
 
 import { ChatService } from './chat.service';
 import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
-import { CreateChatDto } from './dto/create-chat.dto';
-import { ChatRoom } from './entities/chat-room.entity';
 
 @ApiTags('chats')
 @UseGuards(JwtAuthGuard)
@@ -78,7 +70,7 @@ export class ChatController {
     },
   })
   async getUserChats(
-    @Query('userId') userId: string,
+    @GetUserId() userId: string,
   ): Promise<ChatRoomResponseDto[]> {
     return this.chatService.getUserChats(userId);
   }
@@ -136,52 +128,8 @@ export class ChatController {
   })
   async getChatById(
     @Param('id') chatId: string,
-    @Query('userId') userId: string,
+    @GetUserId() userId: string,
   ): Promise<ChatRoomResponseDto> {
     return this.chatService.getChatById(chatId, userId);
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a new chat room',
-    tags: ['Chat Endpoints'],
-    description: 'This endpoint creates a new chat room between two users.',
-  })
-  @ApiOkResponse({
-    description: 'The newly created chat room',
-    type: ChatRoom,
-  })
-  @ApiNotFoundResponse({
-    description: 'One or both users not found',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 404 },
-        message: { type: 'string', example: 'User not found' },
-        error: { type: 'string', example: 'Not Found' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: { type: 'string', example: 'Unauthorized' },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Failed to create chat room',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 500 },
-        message: { type: 'string', example: 'Failed to create chat room' },
-        error: { type: 'string', example: 'Internal Server Error' },
-      },
-    },
-  })
-  async createChat(@Body() createChatDto: CreateChatDto): Promise<ChatRoom> {
-    return this.chatService.createChat(createChatDto);
   }
 }

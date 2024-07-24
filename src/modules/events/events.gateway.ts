@@ -1,4 +1,10 @@
-import { Logger, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Logger,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -17,6 +23,11 @@ import { SendMessageDto } from '../chat/dto/send-message.dto';
 import { UserTypingDto } from '../chat/dto/user-typing.dto';
 import { ChatRoom } from '../chat/entities/chat-room.entity';
 import { Message } from '../chat/entities/message.entity';
+import { UsersService } from '../users/users.service';
+
+type SocketWithAuth = {
+  userId: string;
+} & Socket;
 
 UseGuards(JwtAuthGuard);
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -28,14 +39,51 @@ export class EventsGateway
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly jwtService: JwtService,
+    private readonly userService: UsersService,
+  ) {}
 
-  afterInit(): void {
+  afterInit(server: Server): void {
     this.Logger.log('WebSocket server initialized');
+
+    server.use(async (socket: SocketWithAuth, next) => {
+      try {
+        const token = socket.handshake.query.token as string;
+
+        if (!token) {
+          next(new UnauthorizedException('No token provided'));
+        }
+
+        const { id: userId } = this.jwtService.decode(token);
+
+        if (!userId) {
+          next(new UnauthorizedException('Invalid token'));
+        }
+
+        const user = await this.userService.getUserById(userId);
+
+        if (!user) {
+          next(new BadRequestException("User doesn't exist!"));
+        }
+
+        socket.userId = userId;
+        next();
+      } catch (error) {
+        next(new UnauthorizedException('Token verification failed'));
+      }
+    });
   }
 
-  handleConnection(client: Socket): void {
-    this.Logger.log(`Client connected: ${client.id}`);
+  async handleConnection(client: SocketWithAuth): Promise<void> {
+    this.Logger.log(`Client connected: ${client.userId}`);
+
+    const userChats = await this.chatService.getUserChats(client.userId);
+
+    if (userChats) {
+      userChats.forEach((chat) => client.join(chat.id));
+    }
   }
 
   handleDisconnect(client: Socket): void {
@@ -44,26 +92,30 @@ export class EventsGateway
 
   @SubscribeMessage('createChat')
   async handleCreateChat(
-    client: Socket,
+    client: SocketWithAuth,
     createChatDto: CreateChatDto,
   ): Promise<ChatRoom> {
-    const chatRoom = await this.chatService.createChat(createChatDto);
+    const chatRoom = await this.chatService.createChat(
+      client.userId,
+      createChatDto,
+    );
 
     chatRoom.participants.forEach((participant) => client.join(participant.id));
 
     this.server.to(chatRoom.id).emit('newChat', chatRoom);
-
-    this.server.emit('Chat created', createChatDto);
 
     return chatRoom;
   }
 
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
-    client: Socket,
+    client: SocketWithAuth,
     sendMessageDto: SendMessageDto,
   ): Promise<Message> {
-    const message = await this.chatService.sendMessage(sendMessageDto);
+    const message = await this.chatService.sendMessage(
+      client.userId,
+      sendMessageDto,
+    );
 
     this.server.to(message.chatRoom.id).emit('newMessage', message);
 
