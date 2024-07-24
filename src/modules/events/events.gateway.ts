@@ -50,7 +50,7 @@ export class EventsGateway
 
     server.use(async (socket: SocketWithAuth, next) => {
       try {
-        const token = socket.handshake.query.token as string;
+        const token = socket.handshake.auth.token as string;
 
         if (!token) {
           next(new UnauthorizedException('No token provided'));
