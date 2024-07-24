@@ -9,13 +9,14 @@ import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
 import { Repository, EntityManager, LessThan } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import getDateWithoutTime from 'src/common/utils/getDateWithoutTime';
 import {
-  BAD_RATINGS_COUNT_ONE,
-  BAD_RATINGS_COUNT_TWO,
+  LOW_RATINGS_COUNT_ONE,
+  LOW_RATINGS_COUNT_TWO,
   DECIMAL_PRECISION,
   RATING_THREE,
   RENTAL_RULES_LINK,
-  TWO_MINUTES,
+  THIRTY_DAYS,
 } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { User } from 'src/modules/users/user.entity';
@@ -37,94 +38,120 @@ export class ReviewsService {
   async createReview(createReviewDto: CreateReviewDto): Promise<Review> {
     const { userId, reviewerId, text, rating } = createReviewDto;
 
-    return await this.entityManager.transaction(
-      async (transactionalEntityManager) => {
-        const user = await transactionalEntityManager.findOne(User, {
-          where: { id: userId },
-        });
-        const reviewer = await transactionalEntityManager.findOne(User, {
-          where: { id: reviewerId },
-        });
+    try {
+      return await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const user = await transactionalEntityManager.findOne(User, {
+            where: { id: userId },
+          });
+          const reviewer = await transactionalEntityManager.findOne(User, {
+            where: { id: reviewerId },
+          });
 
-        if (!user || !reviewer) {
-          throw new NotFoundException(Errors.USER_NOT_FOUND);
-        }
+          if (!user || !reviewer) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
 
-        if (user.role === reviewer.role) {
-          throw new ConflictException(
-            Errors.CONFLICT_REVIEW_SAME_ROLE(user.role),
-          );
-        }
+          if (user.role === reviewer.role) {
+            throw new ConflictException(
+              Errors.CONFLICT_REVIEW_SAME_ROLE(user.role),
+            );
+          }
 
-        const review = this.reviewRepository.create({
-          userId: user.id,
-          reviewerId: reviewer.id,
-          text,
-          rating,
-          reviewerName: reviewer.name,
-          reviewerAvatar: reviewer.photoUrl,
-        });
+          const review = this.reviewRepository.create({
+            userId: user.id,
+            reviewerId: reviewer.id,
+            text,
+            rating,
+            reviewerName: reviewer.name,
+            reviewerAvatar: reviewer.photoUrl,
+          });
 
-        const createdReview = await transactionalEntityManager.save(review);
+          const createdReview = await transactionalEntityManager.save(review);
 
-        await this.updateUserRating(user.id, transactionalEntityManager);
+          await this.updateUserRating(user.id, transactionalEntityManager);
 
-        await this.handleLowRatingReviews(
-          user,
-          rating,
-          transactionalEntityManager,
-        );
+          await this.handleLowRatingReviews(user, rating);
 
-        return createdReview;
-      },
-    );
+          return createdReview;
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof ServiceUnavailableException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_REVIEW);
+    }
   }
 
   private async handleLowRatingReviews(
     user: User,
     rating: number,
-    transactionalEntityManager: EntityManager,
   ): Promise<void> {
     if (rating >= RATING_THREE) return;
 
-    const lowRatingReviews = await transactionalEntityManager.count(Review, {
-      where: { userId: user.id, rating: LessThan(RATING_THREE) },
-    });
-
-    if (lowRatingReviews === BAD_RATINGS_COUNT_ONE) {
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: user.email,
-        subject: 'You have received a low rating on CodeLions',
-        templateName: 'low-rating-warning.hbs',
-        context: {
-          name: user.name,
-          rating,
-          rentalRulesLink: RENTAL_RULES_LINK,
-        },
+    try {
+      const lowRatingReviews = await this.reviewRepository.count({
+        where: { userId: user.id, rating: LessThan(RATING_THREE) },
       });
 
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
-    } else if (lowRatingReviews >= BAD_RATINGS_COUNT_TWO) {
-      user.isAccountActive = false;
-      user.deactivationTimestamp = new Date();
-      user.reactivationTimestamp = new Date(Date.now() + TWO_MINUTES);
-      await transactionalEntityManager.save(user);
+      if (lowRatingReviews === LOW_RATINGS_COUNT_ONE) {
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'You have received a low rating on CodeLions',
+          templateName: 'low-rating-warning.hbs',
+          context: {
+            name: user.name,
+            rating,
+            rentalRulesLink: RENTAL_RULES_LINK,
+          },
+        });
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: user.email,
-        subject: 'Account Deactivated on CodeLions',
-        templateName: 'account-deactivated.hbs',
-        context: {
-          name: user.name,
-          rentalRulesLink: RENTAL_RULES_LINK,
-        },
-      });
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        }
+      } else if (lowRatingReviews >= LOW_RATINGS_COUNT_TWO) {
+        user.isAccountActive = false;
+        user.deactivationTimestamp = new Date();
+        user.reactivationTimestamp = new Date(Date.now() + THIRTY_DAYS);
 
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        await this.userRepository.save(user);
+
+        const deactivationDate = getDateWithoutTime(user.deactivationTimestamp);
+        const reactivationDate = getDateWithoutTime(user.reactivationTimestamp);
+
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'Account Deactivated on CodeLions',
+          templateName: 'account-deactivated.hbs',
+          context: {
+            name: user.name,
+            rentalRulesLink: RENTAL_RULES_LINK,
+            deactivationDate,
+            reactivationDate,
+          },
+        });
+
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        }
       }
+    } catch (error) {
+      if (
+        error instanceof ServiceUnavailableException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_HANDLE_LOW_RATING_REVIEWS,
+      );
     }
   }
 

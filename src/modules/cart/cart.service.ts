@@ -101,50 +101,62 @@ export class CartService {
     duration: number,
     price: number,
   ): Promise<void> {
-    return await this.entityManager.transaction(
-      async (transactionalEntityManager) => {
-        const user = await transactionalEntityManager.findOne(User, {
-          where: { id: userId },
-        });
-        const product = await transactionalEntityManager.findOne(Product, {
-          where: { id: productId, status: Status.PUBLISHED },
-          relations: ['images', 'color'],
-        });
+    try {
+      return await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const user = await transactionalEntityManager.findOne(User, {
+            where: { id: userId },
+          });
+          const product = await transactionalEntityManager.findOne(Product, {
+            where: { id: productId, status: Status.PUBLISHED },
+            relations: ['images', 'color'],
+          });
 
-        if (!user || !product) {
-          throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
-        }
+          if (!user || !product) {
+            throw new NotFoundException(Errors.USER_OR_PRODUCT_NOT_FOUND);
+          }
 
-        await this.checkUserEligibility(user, product, duration, price);
+          await this.checkUserEligibility(user, product, duration, price);
 
-        const existingEntry = await transactionalEntityManager.findOne(Cart, {
-          where: { userId, productId },
-        });
+          const existingEntry = await transactionalEntityManager.findOne(Cart, {
+            where: { userId, productId },
+          });
 
-        if (existingEntry) {
-          throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
-        }
+          if (existingEntry) {
+            throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
+          }
 
-        const sortedImages: string[] = product.images
-          .map((image) => image.url)
-          .sort();
-        const productUrl: string = sortedImages[0];
-        const productColor: string = product.color[0].color;
+          const sortedImages: string[] = product.images
+            .map((image) => image.url)
+            .sort();
+          const productUrl: string = sortedImages[0];
+          const productColor: string = product.color[0].color;
 
-        const cartEntry = this.cartRepository.create({
-          userId,
-          productId,
-          vendorId: product.vendorId,
-          productUrl,
-          size: product.size,
-          color: productColor,
-          duration,
-          price,
-        });
+          const cartEntry = this.cartRepository.create({
+            userId,
+            productId,
+            vendorId: product.vendorId,
+            productUrl,
+            size: product.size,
+            color: productColor,
+            duration,
+            price,
+          });
 
-        await transactionalEntityManager.save(cartEntry);
-      },
-    );
+          await transactionalEntityManager.save(cartEntry);
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_ADD_PRODUCT_TO_CART,
+      );
+    }
   }
 
   async removeFromCart(userId: string, productId: string): Promise<void> {

@@ -885,33 +885,40 @@ export class UsersService {
     }
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS, { name: 'reactivateUsers' })
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: 'reactivateUsers' })
   async reactivateUsers(): Promise<void> {
-    const usersToReactivate = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.isAccountActive = :isActive', { isActive: false })
-      .andWhere('user.reactivationTimestamp IS NOT NULL')
-      .andWhere('user.reactivationTimestamp <= :now', { now: new Date() })
-      .getMany();
+    try {
+      const usersToReactivate = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.isAccountActive = :isActive', { isActive: false })
+        .andWhere('user.reactivationTimestamp IS NOT NULL')
+        .andWhere('user.reactivationTimestamp <= :now', { now: new Date() })
+        .getMany();
 
-    for (const user of usersToReactivate) {
-      user.isAccountActive = true;
-      user.deactivationTimestamp = null;
-      user.reactivationTimestamp = null;
-      await this.userRepository.save(user);
+      for (const user of usersToReactivate) {
+        user.isAccountActive = true;
+        user.deactivationTimestamp = null;
+        user.reactivationTimestamp = null;
+        await this.userRepository.save(user);
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: user.email,
-        subject: 'Account Reactivated on CodeLions',
-        templateName: 'account-reactivated.hbs',
-        context: {
-          name: user.name,
-        },
-      });
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'Account Reactivated on CodeLions',
+          templateName: 'account-reactivated.hbs',
+          context: {
+            name: user.name,
+          },
+        });
 
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        }
       }
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_REACTIVATE_USERS);
     }
   }
 }

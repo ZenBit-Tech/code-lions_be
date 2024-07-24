@@ -125,6 +125,7 @@ export const Errors = {
   FAILED_TO_DELETE_REVIEW: 'Failed to delete review',
   CONFLICT_REVIEW_SAME_ROLE: (role: string): string =>
     `You cannot review the other ${role}s`,
+  FAILED_TO_HANDLE_LOW_RATING_REVIEWS: 'Failed to handle low rating reviews',
   CONFLICT_REVIEW_EXAMPLE: 'You cannot review the other user role',
   FAILED_TO_ADD_ORDER: 'Failed to add an order',
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
@@ -185,4 +186,5 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
+  FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
 };
