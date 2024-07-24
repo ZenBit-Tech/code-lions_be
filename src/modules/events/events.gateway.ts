@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import { CreateChatDto } from '../chat/dto/create-chat.dto';
 import { SendMessageDto } from '../chat/dto/send-message.dto';
+import { UserTypingDto } from '../chat/dto/user-typing.dto';
 import { ChatRoom } from '../chat/entities/chat-room.entity';
 import { Message } from '../chat/entities/message.entity';
 
@@ -67,5 +68,13 @@ export class EventsGateway
     this.server.to(message.chatRoom.id).emit('newMessage', message);
 
     return message;
+  }
+
+  @SubscribeMessage('userTyping')
+  async handleUserTyping(
+    client: Socket,
+    userTypingDto: UserTypingDto,
+  ): Promise<void> {
+    this.server.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
   }
 }
