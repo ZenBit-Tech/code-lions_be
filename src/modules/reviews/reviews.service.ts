@@ -14,6 +14,7 @@ import {
   BAD_RATINGS_COUNT_TWO,
   DECIMAL_PRECISION,
   RATING_THREE,
+  RENTAL_RULES_LINK,
 } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { User } from 'src/modules/users/user.entity';
@@ -95,7 +96,9 @@ export class ReviewsService {
         subject: 'You have received a low rating on CodeLions',
         templateName: 'low-rating-warning.hbs',
         context: {
-          userName: user.name,
+          name: user.name,
+          rating,
+          rentalRulesLink: RENTAL_RULES_LINK,
         },
       });
 
@@ -109,10 +112,11 @@ export class ReviewsService {
 
       const isMailSent = await this.mailerService.sendMail({
         receiverEmail: user.email,
-        subject: 'Account Deactivation Notice',
-        templateName: 'account-deactivation.hbs',
+        subject: 'Account Deactivated on CodeLions',
+        templateName: 'account-deactivated.hbs',
         context: {
-          userName: user.name,
+          name: user.name,
+          rentalRulesLink: RENTAL_RULES_LINK,
         },
       });
 
