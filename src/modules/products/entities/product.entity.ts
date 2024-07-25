@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
+import { Order } from 'src/modules/orders/entities/order.entity';
 import { Brand } from 'src/modules/products/entities/brands.entity';
 import { Category } from 'src/modules/products/entities/category.enum';
 import { Color } from 'src/modules/products/entities/color.entity';
@@ -212,4 +213,7 @@ export class Product {
 
   @OneToMany(() => Wishlist, (wishlist) => wishlist.product)
   wishlistEntries: Wishlist[];
+
+  @ManyToMany(() => Order, (order) => order.products)
+  orders: Order[];
 }

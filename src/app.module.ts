@@ -6,6 +6,7 @@ import { TypeOrmConfigService } from 'src/config/typeorm';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
+import { OrdersModule } from 'src/modules/orders/orders.module';
 import { ProductsModule } from 'src/modules/products/products.module';
 import { ReviewsModule } from 'src/modules/reviews/reviews.module';
 import { UsersModule } from 'src/modules/users/users.module';
@@ -29,6 +30,7 @@ import { EventsModule } from './modules/events/events.module';
     CartModule,
     EventsModule,
     ChatModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}

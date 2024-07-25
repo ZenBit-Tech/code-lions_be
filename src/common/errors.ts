@@ -174,4 +174,8 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
+  FAILED_TO_FETCH_ORDERS_BY_VENDOR: 'Failed to fetch orders bt vendor',
+  FAILED_TO_FETCH_ORDERS: 'Failed to fetch orders',
+  ORDERS_NOT_FOUND: 'Orders not found',
+  FAILED_TO_CREATE_ORDER: 'Failed to create order',
 };
