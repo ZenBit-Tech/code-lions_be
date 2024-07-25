@@ -8,12 +8,14 @@ import { Repository } from 'typeorm';
 
 import { User } from 'src/modules/users/user.entity';
 
-import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
-import { ChatUserDto } from './dto/chat-user.dto';
-import { CreateChatDto } from './dto/create-chat.dto';
-import { GetUserChatsDto } from './dto/get-user-chats.dto';
-import { MessageResponseDto } from './dto/message-response.dto';
-import { SendMessageDto } from './dto/send-message.dto';
+import {
+  ChatRoomResponseDto,
+  ChatUserDto,
+  CreateChatDto,
+  GetUserChatsDto,
+  MessageResponseDto,
+  SendMessageDto,
+} from './dto/index';
 import { ChatRoom } from './entities/chat-room.entity';
 import { MessageRead } from './entities/message-read.entity';
 import { Message } from './entities/message.entity';

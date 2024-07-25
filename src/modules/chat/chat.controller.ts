@@ -14,8 +14,7 @@ import { GetUserId } from 'src/common/decorators/get-user-id';
 import { JwtAuthGuard } from '../auth/auth.guard';
 
 import { ChatService } from './chat.service';
-import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
-import { GetUserChatsDto } from './dto/get-user-chats.dto';
+import { ChatRoomResponseDto, GetUserChatsDto } from './dto/index';
 
 @ApiTags('chats')
 @UseGuards(JwtAuthGuard)

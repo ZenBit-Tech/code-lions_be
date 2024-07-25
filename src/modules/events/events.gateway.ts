@@ -18,10 +18,12 @@ import { Server, Socket } from 'socket.io';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
-import { CreateChatDto } from '../chat/dto/create-chat.dto';
-import { GetUserChatsDto } from '../chat/dto/get-user-chats.dto';
-import { SendMessageDto } from '../chat/dto/send-message.dto';
-import { UserTypingDto } from '../chat/dto/user-typing.dto';
+import {
+  CreateChatDto,
+  GetUserChatsDto,
+  SendMessageDto,
+  UserTypingDto,
+} from '../chat/dto/index';
 import { ChatRoom } from '../chat/entities/chat-room.entity';
 import { Message } from '../chat/entities/message.entity';
 import { UsersService } from '../users/users.service';
@@ -51,7 +53,7 @@ export class EventsGateway
 
     server.use(async (socket: SocketWithAuth, next) => {
       try {
-        const token = socket.handshake.query.token as string;
+        const token = socket.handshake.auth.token as string;
 
         if (!token) {
           next(new UnauthorizedException('No token provided'));
