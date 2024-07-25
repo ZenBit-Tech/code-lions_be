@@ -32,6 +32,13 @@ export class ResponseCartItemDto {
   vendorId: string;
 
   @ApiProperty({
+    example: 'Jane Smith',
+    description: 'The name of the vendor',
+  })
+  @IsString()
+  vendorName: string;
+
+  @ApiProperty({
     example:
       'https://img.kwcdn.com/thumbnail/s/f09fce1e307adcde849148ecad30f7d5_fdd36fbfe57d.jpg?imageView2/2/w/650/q/50/format/webp',
     description: 'The URL of the product image',

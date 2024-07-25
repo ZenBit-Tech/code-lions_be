@@ -191,6 +191,7 @@ export class CartService {
         cart.map(async (item) => {
           const product = await this.productRepository.findOne({
             where: { id: item.productId },
+            relations: ['user'],
           });
 
           if (!product || product.status === Status.INACTIVE) {
@@ -206,6 +207,7 @@ export class CartService {
             vendorId: item.vendorId,
             productUrl: item.productUrl,
             name: product.name,
+            vendorName: product.user.name,
             size: item.size,
             color: item.color,
             duration: item.duration,
