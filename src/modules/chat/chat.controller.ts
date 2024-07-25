@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 
 import { ChatService } from './chat.service';
 import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
+import { GetUserChatsDto } from './dto/get-user-chats.dto';
 
 @ApiTags('chats')
 @UseGuards(JwtAuthGuard)
@@ -69,9 +70,7 @@ export class ChatController {
       },
     },
   })
-  async getUserChats(
-    @GetUserId() userId: string,
-  ): Promise<ChatRoomResponseDto[]> {
+  async getUserChats(@GetUserId() userId: string): Promise<GetUserChatsDto[]> {
     return this.chatService.getUserChats(userId);
   }
 

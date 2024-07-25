@@ -19,6 +19,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import { CreateChatDto } from '../chat/dto/create-chat.dto';
+import { GetUserChatsDto } from '../chat/dto/get-user-chats.dto';
 import { SendMessageDto } from '../chat/dto/send-message.dto';
 import { UserTypingDto } from '../chat/dto/user-typing.dto';
 import { ChatRoom } from '../chat/entities/chat-room.entity';
@@ -50,7 +51,7 @@ export class EventsGateway
 
     server.use(async (socket: SocketWithAuth, next) => {
       try {
-        const token = socket.handshake.auth.token as string;
+        const token = socket.handshake.query.token as string;
 
         if (!token) {
           next(new UnauthorizedException('No token provided'));
@@ -88,6 +89,16 @@ export class EventsGateway
 
   handleDisconnect(client: Socket): void {
     this.Logger.log(`Client disconnected: ${client.id}`);
+  }
+
+  @SubscribeMessage('getUserChats')
+  async handleGetUserChats(client: SocketWithAuth): Promise<GetUserChatsDto[]> {
+    const userId = client.userId;
+    const userChats = await this.chatService.getUserChats(userId);
+
+    client.emit('userChats', userChats);
+
+    return userChats;
   }
 
   @SubscribeMessage('createChat')
@@ -129,5 +140,31 @@ export class EventsGateway
   ): Promise<void> {
     userTypingDto.userId = client.userId;
     this.server.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
+  }
+
+  @SubscribeMessage('markMessageAsRead')
+  async handleMarkMessageAsRead(
+    client: SocketWithAuth,
+    data: { chatId: string },
+  ): Promise<void> {
+    const { chatId } = data;
+
+    await this.chatService.markMessageAsRead(client.userId, chatId);
+  }
+
+  @SubscribeMessage('countUnreadMessages')
+  async handleCountUnreadMessages(
+    client: SocketWithAuth,
+    data: { chatId: string },
+  ): Promise<number> {
+    const { chatId } = data;
+    const count = await this.chatService.countUnreadMessages(
+      client.userId,
+      chatId,
+    );
+
+    client.emit('unreadMessageCount', { chatId, count });
+
+    return count;
   }
 }
