@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { TypeOrmConfigService } from 'src/config/typeorm';
@@ -13,6 +13,7 @@ import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
 
 import { ChatModule } from './modules/chat/chat.module';
 import { EventsModule } from './modules/events/events.module';
+import { StripeModule } from './modules/stripe/stripe.module';
 
 @Module({
   imports: [
@@ -29,6 +30,15 @@ import { EventsModule } from './modules/events/events.module';
     CartModule,
     EventsModule,
     ChatModule,
+    StripeModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        apiKey: configService.get<string>('STRIPE_SECRET_KEY'),
+        options: {
+          apiVersion: '2024-06-20',
+        },
+      }),
+    }),
   ],
 })
 export class AppModule {}
