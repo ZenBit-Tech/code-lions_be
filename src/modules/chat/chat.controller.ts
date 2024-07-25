@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, UseGuards, Param } from '@nestjs/common';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -6,20 +6,18 @@ import {
   ApiUnauthorizedResponse,
   ApiInternalServerErrorResponse,
   ApiParam,
+  ApiTags,
 } from '@nestjs/swagger';
+
+import { GetUserId } from 'src/common/decorators/get-user-id';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 
 import { ChatService } from './chat.service';
 import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
 
-type AuthenticatedUser = {
-  user: {
-    id: string;
-  };
-} & Request;
-
-UseGuards(JwtAuthGuard);
+@ApiTags('chats')
+@UseGuards(JwtAuthGuard)
 @Controller('chats')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
@@ -72,10 +70,8 @@ export class ChatController {
     },
   })
   async getUserChats(
-    @Request() req: AuthenticatedUser,
+    @GetUserId() userId: string,
   ): Promise<ChatRoomResponseDto[]> {
-    const userId = req.user.id;
-
     return this.chatService.getUserChats(userId);
   }
 
@@ -132,10 +128,8 @@ export class ChatController {
   })
   async getChatById(
     @Param('id') chatId: string,
-    @Request() req: AuthenticatedUser,
+    @GetUserId() userId: string,
   ): Promise<ChatRoomResponseDto> {
-    const userId = req.user.id;
-
     return this.chatService.getChatById(chatId, userId);
   }
 }
