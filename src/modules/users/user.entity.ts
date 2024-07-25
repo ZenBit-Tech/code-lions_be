@@ -191,6 +191,14 @@ export class User {
   cvvCode: string;
 
   @ApiProperty({
+    example: false,
+    description:
+      'Indicates if needed to show rental rules to the user before add the product to cart',
+  })
+  @Column({ default: false })
+  willHideRentalRules: boolean;
+
+  @ApiProperty({
     example: new Date(),
     description: 'The creation date of the user',
   })
@@ -203,6 +211,20 @@ export class User {
   })
   @Column({ type: 'timestamp', nullable: true })
   lastUpdatedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The date of deactivation of the account of the user',
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  deactivationTimestamp: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The date of reactivation of the account of the user',
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  reactivationTimestamp: Date;
 
   @ApiProperty({
     example: new Date(),
@@ -220,14 +242,14 @@ export class User {
   onboardingStep: number;
 
   @ApiProperty({
-    example: 4.5,
+    example: 4.98,
     description:
-      'The average rating of the user from reviews. It ranges from 0.0 to 5.0.',
+      'The average rating of the user from reviews. It ranges from 0.00 to 5.00.',
   })
   @Column({
     type: 'decimal',
-    precision: 3,
-    scale: 1,
+    precision: 4,
+    scale: 2,
     nullable: false,
     default: 0.0,
   })

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
@@ -85,10 +86,13 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
+      willHideRentalRules,
       onboardingStep,
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
+      reactivationTimestamp,
     } = user;
 
     const publicUser: UserResponseDto = {
@@ -110,10 +114,13 @@ export class UsersService {
       isAccountActive,
       rating,
       orders,
+      willHideRentalRules,
       onboardingStep,
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
+      reactivationTimestamp,
     };
 
     return publicUser;
@@ -140,9 +147,12 @@ export class UsersService {
       rating,
       orders,
       onboardingStep,
+      willHideRentalRules,
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
+      reactivationTimestamp,
       cardNumber,
       expireDate,
       cvvCode,
@@ -168,9 +178,12 @@ export class UsersService {
       orders,
       isAccountActive,
       onboardingStep,
+      willHideRentalRules,
       createdAt,
       lastUpdatedAt,
       deletedAt,
+      deactivationTimestamp,
+      reactivationTimestamp,
       cardNumber,
       expireDate,
       cvvCode,
@@ -852,5 +865,60 @@ export class UsersService {
       photoUrl: vendor.photoUrl,
       products: mapProducts(vendor.products),
     };
+  }
+
+  async hideRentalRules(userId: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.willHideRentalRules = true;
+      await this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: 'reactivateUsers' })
+  async reactivateUsers(): Promise<void> {
+    try {
+      const usersToReactivate = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.isAccountActive = :isActive', { isActive: false })
+        .andWhere('user.reactivationTimestamp IS NOT NULL')
+        .andWhere('user.reactivationTimestamp <= :now', { now: new Date() })
+        .getMany();
+
+      for (const user of usersToReactivate) {
+        user.isAccountActive = true;
+        user.deactivationTimestamp = null;
+        user.reactivationTimestamp = null;
+        await this.userRepository.save(user);
+
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'Account Reactivated on CodeLions',
+          templateName: 'account-reactivated.hbs',
+          context: {
+            name: user.name,
+          },
+        });
+
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        }
+      }
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_REACTIVATE_USERS);
+    }
   }
 }

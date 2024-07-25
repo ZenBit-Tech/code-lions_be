@@ -111,6 +111,13 @@ export class UserResponseDto {
   orders: number;
 
   @ApiProperty({
+    example: false,
+    description:
+      'Indicates if needed to show rental rules to the user before add the product to cart',
+  })
+  willHideRentalRules: boolean;
+
+  @ApiProperty({
     example: new Date(),
     description: 'The creation date of the user',
   })
@@ -127,6 +134,18 @@ export class UserResponseDto {
     description: 'The deletion date of the user',
   })
   deletedAt: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The date of deactivation of the account of the user',
+  })
+  deactivationTimestamp: Date;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The date of reactivation of the account of the user',
+  })
+  reactivationTimestamp: Date;
 
   @ApiProperty({
     example: '1',

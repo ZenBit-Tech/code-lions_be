@@ -144,6 +144,7 @@ export class WishlistService {
       size: inputProduct.size,
       brand: !inputProduct?.brand?.brand ? null : inputProduct.brand.brand,
       material: inputProduct.material,
+      pdfUrl: inputProduct.pdfUrl,
       images: !inputProduct?.images
         ? []
         : inputProduct.images.map((image) => image.url),

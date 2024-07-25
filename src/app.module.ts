@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { TypeOrmConfigService } from 'src/config/typeorm';
@@ -20,6 +21,7 @@ import { EventsModule } from './modules/events/events.module';
     TypeOrmModule.forRootAsync({
       useClass: TypeOrmConfigService,
     }),
+    ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
     GeoNamesModule,
