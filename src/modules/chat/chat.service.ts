@@ -49,9 +49,31 @@ export class ChatService {
     }
 
     const userChats = user.chatRooms;
+    const EQUAL_SORT_ORDER = 0;
+
+    const sortedUserChats = await Promise.all(
+      userChats.map(async (chatRoom) => {
+        const lastMessage = await this.getLastMessage(chatRoom.id);
+
+        return {
+          ...chatRoom,
+          lastMessage,
+        };
+      }),
+    );
+
+    sortedUserChats.sort((a, b) => {
+      if (!a.lastMessage || !b.lastMessage) return EQUAL_SORT_ORDER;
+
+      return (
+        b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
+      );
+    });
 
     return await Promise.all(
-      userChats.map((chatRoom) => this.toGetUserChatsDto(chatRoom, userId)),
+      sortedUserChats.map((chatRoom) =>
+        this.toGetUserChatsDto(chatRoom, userId),
+      ),
     );
   }
 
@@ -75,6 +97,10 @@ export class ChatService {
         `User with ID ${userId} not part of chat room ${chatId}`,
       );
     }
+
+    chatRoom.messages.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
 
     return this.toChatRoomResponseDto(chatRoom, userId);
   }
