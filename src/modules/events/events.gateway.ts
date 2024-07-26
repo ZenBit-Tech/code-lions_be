@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Logger,
   UnauthorizedException,
   UseGuards,
@@ -19,12 +21,10 @@ import { Server, Socket } from 'socket.io';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import {
-  CreateChatDto,
   GetUserChatsDto,
   SendMessageDto,
   UserTypingDto,
 } from '../chat/dto/index';
-import { ChatRoom } from '../chat/entities/chat-room.entity';
 import { Message } from '../chat/entities/message.entity';
 import { UsersService } from '../users/users.service';
 
@@ -43,7 +43,9 @@ export class EventsGateway
   server: Server;
 
   constructor(
-    private readonly chatService: ChatService,
+    @Inject(forwardRef(() => ChatService))
+    private chatService: ChatService,
+
     private readonly jwtService: JwtService,
     private readonly userService: UsersService,
   ) {}
@@ -53,7 +55,7 @@ export class EventsGateway
 
     server.use(async (socket: SocketWithAuth, next) => {
       try {
-        const token = socket.handshake.auth.token as string;
+        const token = socket.handshake.query.token as string;
 
         if (!token) {
           next(new UnauthorizedException('No token provided'));
@@ -103,25 +105,25 @@ export class EventsGateway
     return userChats;
   }
 
-  @SubscribeMessage('createChat')
-  async handleCreateChat(
-    client: SocketWithAuth,
-    createChatDto: CreateChatDto,
-  ): Promise<ChatRoom> {
-    const chatRoom = await this.chatService.createChat(
-      client.userId,
-      createChatDto,
-    );
+  // @SubscribeMessage('createChat')
+  // async handleCreateChat(
+  //   client: SocketWithAuth,
+  //   createChatDto: CreateChatDto,
+  // ): Promise<ChatRoom> {
+  //   const chatRoom = await this.chatService.createChat(
+  //     client.userId,
+  //     createChatDto,
+  //   );
 
-    chatRoom.participants.forEach((participant) => {
-      client.join(participant.id);
-      this.server.to(participant.id).emit('newChat', chatRoom);
-    });
+  //   chatRoom.participants.forEach((participant) => {
+  //     client.join(participant.id);
+  //     this.server.to(participant.id).emit('newChat', chatRoom);
+  //   });
 
-    this.server.to(chatRoom.id).emit('newChat', chatRoom);
+  //   this.server.to(chatRoom.id).emit('newChat', chatRoom);
 
-    return chatRoom;
-  }
+  //   return chatRoom;
+  // }
 
   @SubscribeMessage('sendMessage')
   async handleSendMessage(

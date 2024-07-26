@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EventsModule } from '../events/events.module';
 import { User } from '../users/user.entity';
 import { UsersModule } from '../users/users.module';
 
@@ -14,6 +15,7 @@ import { Message } from './entities/message.entity';
   imports: [
     TypeOrmModule.forFeature([ChatRoom, Message, User, MessageRead]),
     UsersModule,
+    forwardRef(() => EventsModule),
   ],
   controllers: [ChatController],
   providers: [ChatService],

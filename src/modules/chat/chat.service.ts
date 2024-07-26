@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,6 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { User } from 'src/modules/users/user.entity';
+
+import { EventsGateway } from '../events/events.gateway';
 
 import {
   ChatRoomResponseDto,
@@ -31,6 +35,8 @@ export class ChatService {
     private readonly messageReadRepository: Repository<MessageRead>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => EventsGateway))
+    private eventsGateway: EventsGateway,
   ) {}
 
   async getUserChats(userId: string): Promise<GetUserChatsDto[]> {
@@ -139,10 +145,16 @@ export class ChatService {
       .getRawOne();
 
     if (existingChatRoomId) {
-      return this.chatRoomRepository.findOne({
+      const existingChatRoom = await this.chatRoomRepository.findOne({
         where: { id: existingChatRoomId.chatRoom_id },
         relations: ['participants'],
       });
+
+      this.eventsGateway.server
+        .to(existingChatRoomId.chatRoom_id)
+        .emit('newChat', existingChatRoom);
+
+      return existingChatRoom;
     }
 
     const chatRoom = this.chatRoomRepository.create({
@@ -150,6 +162,15 @@ export class ChatService {
     });
 
     const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
+
+    savedChatRoom.participants.forEach((participant) => {
+      this.eventsGateway.server
+        .to(participant.id)
+        .emit('newChat', savedChatRoom);
+    });
+    this.eventsGateway.server
+      .to(savedChatRoom.id)
+      .emit('newChat', savedChatRoom);
 
     if (content) {
       await this.sendMessage(userId, {
