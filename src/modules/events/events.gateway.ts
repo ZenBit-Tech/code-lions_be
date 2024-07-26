@@ -113,7 +113,10 @@ export class EventsGateway
       createChatDto,
     );
 
-    chatRoom.participants.forEach((participant) => client.join(participant.id));
+    chatRoom.participants.forEach((participant) => {
+      client.join(participant.id);
+      this.server.to(participant.id).emit('newChat', chatRoom);
+    });
 
     this.server.to(chatRoom.id).emit('newChat', chatRoom);
 
