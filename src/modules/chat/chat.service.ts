@@ -66,7 +66,7 @@ export class ChatService {
       if (!a.lastMessage || !b.lastMessage) return EQUAL_SORT_ORDER;
 
       return (
-        b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
+        a.lastMessage.createdAt.getTime() - b.lastMessage.createdAt.getTime()
       );
     });
 
@@ -99,7 +99,7 @@ export class ChatService {
     }
 
     chatRoom.messages.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
 
     return this.toChatRoomResponseDto(chatRoom, userId);
