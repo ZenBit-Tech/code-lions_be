@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsNotEmpty, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsUUID, IsOptional, IsString } from 'class-validator';
 
 export class CreateChatDto {
   @ApiProperty({
@@ -10,4 +10,13 @@ export class CreateChatDto {
   @IsNotEmpty()
   @IsUUID()
   chatPartnerId: string;
+
+  @ApiProperty({
+    example: 'Hello, this is the first message!',
+    description: 'The initial message content',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  content?: string;
 }

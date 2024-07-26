@@ -83,7 +83,7 @@ export class ChatService {
     userId: string,
     createChatDto: CreateChatDto,
   ): Promise<ChatRoom> {
-    const { chatPartnerId } = createChatDto;
+    const { chatPartnerId, content } = createChatDto;
 
     const firstUser = await this.userRepository.findOne({
       where: { id: userId },
@@ -123,7 +123,16 @@ export class ChatService {
       participants: [firstUser, secondUser],
     });
 
-    return this.chatRoomRepository.save(chatRoom);
+    const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
+
+    if (content) {
+      await this.sendMessage(userId, {
+        chatId: savedChatRoom.id,
+        content,
+      });
+    }
+
+    return savedChatRoom;
   }
 
   async sendMessage(
@@ -158,7 +167,12 @@ export class ChatService {
   async markMessageAsRead(userId: string, chatId: string): Promise<void> {
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id: chatId },
-      relations: ['messages', 'messages.reads', 'messages.sender'],
+      relations: [
+        'messages',
+        'messages.reads',
+        'messages.sender',
+        'messages.reads.user',
+      ],
     });
 
     if (!chatRoom) {
