@@ -240,18 +240,14 @@ export class ChatService {
     return count;
   }
 
-  async getLastMessage(chatId: string): Promise<Message> {
+  async getLastMessage(chatId: string): Promise<Message | null> {
     const lastMessage = await this.messageRepository.findOne({
       where: { chatRoom: { id: chatId } },
       order: { createdAt: 'DESC' },
       relations: ['sender'],
     });
 
-    if (!lastMessage) {
-      throw new NotFoundException('No messages found for this chat room');
-    }
-
-    return lastMessage;
+    return lastMessage || null;
   }
 
   private toChatRoomResponseDto(
@@ -312,16 +308,18 @@ export class ChatService {
     );
     const lastMessage = await this.getLastMessage(chatRoom.id);
 
-    const lastMessageDto = new MessageResponseDto({
-      id: lastMessage.id,
-      content: lastMessage.content,
-      createdAt: lastMessage.createdAt,
-      sender: {
-        id: lastMessage.sender.id,
-        name: lastMessage.sender.name,
-        photoUrl: lastMessage.sender.photoUrl,
-      },
-    });
+    const lastMessageDto = lastMessage
+      ? new MessageResponseDto({
+          id: lastMessage.id,
+          content: lastMessage.content,
+          createdAt: lastMessage.createdAt,
+          sender: {
+            id: lastMessage.sender.id,
+            name: lastMessage.sender.name,
+            photoUrl: lastMessage.sender.photoUrl,
+          },
+        })
+      : null;
 
     return new GetUserChatsDto({
       id: chatRoom.id,
