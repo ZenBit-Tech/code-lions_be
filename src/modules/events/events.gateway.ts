@@ -141,7 +141,7 @@ export class EventsGateway
     userTypingDto: UserTypingDto,
   ): Promise<void> {
     userTypingDto.userId = client.userId;
-    this.server.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
+    client.broadcast.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
   }
 
   @SubscribeMessage('markMessageAsRead')
