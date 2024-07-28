@@ -122,10 +122,6 @@ export class AuthService {
       throw new BadRequestException(Errors.ACCOUNT_DELETED_BY_ADMIN);
     }
 
-    if (user && !user.isAccountActive) {
-      throw new BadRequestException(Errors.ACCOUNT_SUSPENDED_BY_ADMIN);
-    }
-
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
@@ -273,6 +269,10 @@ export class AuthService {
     const user = await this.usersService.getUserByEmail(email);
 
     if (user) {
+      if (user.deletedAt !== null) {
+        throw new BadRequestException(Errors.ACCOUNT_DELETED_BY_ADMIN);
+      }
+
       const isGoogleIdValid = user.googleId === payload.sub;
 
       if (!isGoogleIdValid) {

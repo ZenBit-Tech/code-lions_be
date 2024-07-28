@@ -3,13 +3,23 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, EntityManager, LessThan } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
-
-import { User } from '../users/user.entity';
+import getDateWithoutTime from 'src/common/utils/getDateWithoutTime';
+import {
+  LOW_RATINGS_COUNT_ONE,
+  LOW_RATINGS_COUNT_TWO,
+  DECIMAL_PRECISION,
+  RATING_THREE,
+  RENTAL_RULES_LINK,
+  THIRTY_DAYS,
+} from 'src/config';
+import { MailerService } from 'src/modules/mailer/mailer.service';
+import { User } from 'src/modules/users/user.entity';
 
 import { CreateReviewDto } from './dto/create-review.dto';
 import { Review } from './review.entity';
@@ -17,53 +27,131 @@ import { Review } from './review.entity';
 @Injectable()
 export class ReviewsService {
   constructor(
+    @InjectEntityManager() private readonly entityManager: EntityManager,
     @InjectRepository(Review)
     private readonly reviewRepository: Repository<Review>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly mailerService: MailerService,
   ) {}
 
   async createReview(createReviewDto: CreateReviewDto): Promise<Review> {
+    const { userId, reviewerId, text, rating } = createReviewDto;
+
     try {
-      const { userId, reviewerId, text, rating } = createReviewDto;
+      return await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const user = await transactionalEntityManager.findOne(User, {
+            where: { id: userId },
+          });
+          const reviewer = await transactionalEntityManager.findOne(User, {
+            where: { id: reviewerId },
+          });
 
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      const reviewer = await this.userRepository.findOne({
-        where: { id: reviewerId },
-      });
+          if (!user || !reviewer) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
 
-      if (!user || !reviewer) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
+          if (user.role === reviewer.role) {
+            throw new ConflictException(
+              Errors.CONFLICT_REVIEW_SAME_ROLE(user.role),
+            );
+          }
 
-      if (user.role === reviewer.role) {
-        throw new ConflictException(
-          Errors.CONFLICT_REVIEW_SAME_ROLE(user.role),
-        );
-      }
+          const review = this.reviewRepository.create({
+            userId: user.id,
+            reviewerId: reviewer.id,
+            text,
+            rating,
+            reviewerName: reviewer.name,
+            reviewerAvatar: reviewer.photoUrl,
+          });
 
-      const review = this.reviewRepository.create({
-        userId: user.id,
-        reviewerId: reviewer.id,
-        text,
-        rating,
-        reviewerName: reviewer.name,
-        reviewerAvatar: reviewer.photoUrl,
-      });
+          const createdReview = await transactionalEntityManager.save(review);
 
-      const createdReview = await this.reviewRepository.save(review);
+          await this.updateUserRating(user.id, transactionalEntityManager);
 
-      await this.updateUserRating(review.userId);
+          await this.handleLowRatingReviews(user, rating);
 
-      return createdReview;
+          return createdReview;
+        },
+      );
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof ConflictException
+        error instanceof ConflictException ||
+        error instanceof ServiceUnavailableException ||
+        error instanceof InternalServerErrorException
       ) {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_REVIEW);
+    }
+  }
+
+  private async handleLowRatingReviews(
+    user: User,
+    rating: number,
+  ): Promise<void> {
+    if (rating >= RATING_THREE) return;
+
+    try {
+      const lowRatingReviews = await this.reviewRepository.count({
+        where: { userId: user.id, rating: LessThan(RATING_THREE) },
+      });
+
+      if (lowRatingReviews === LOW_RATINGS_COUNT_ONE) {
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'You have received a low rating on CodeLions',
+          templateName: 'low-rating-warning.hbs',
+          context: {
+            name: user.name,
+            rating,
+            rentalRulesLink: RENTAL_RULES_LINK,
+          },
+        });
+
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        }
+      } else if (lowRatingReviews >= LOW_RATINGS_COUNT_TWO) {
+        user.isAccountActive = false;
+        user.deactivationTimestamp = new Date();
+        user.reactivationTimestamp = new Date(Date.now() + THIRTY_DAYS);
+
+        await this.userRepository.save(user);
+
+        const deactivationDate = getDateWithoutTime(user.deactivationTimestamp);
+        const reactivationDate = getDateWithoutTime(user.reactivationTimestamp);
+
+        const isMailSent = await this.mailerService.sendMail({
+          receiverEmail: user.email,
+          subject: 'Account Deactivated on CodeLions',
+          templateName: 'account-deactivated.hbs',
+          context: {
+            name: user.name,
+            rentalRulesLink: RENTAL_RULES_LINK,
+            deactivationDate,
+            reactivationDate,
+          },
+        });
+
+        if (!isMailSent) {
+          throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+        }
+      }
+    } catch (error) {
+      if (
+        error instanceof ServiceUnavailableException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_HANDLE_LOW_RATING_REVIEWS,
+      );
     }
   }
 
@@ -87,9 +175,15 @@ export class ReviewsService {
     }
   }
 
-  async updateUserRating(userId: string): Promise<void> {
+  private async updateUserRating(
+    userId: string,
+    transactionalEntityManager: EntityManager,
+  ): Promise<void> {
     try {
-      const reviews = await this.reviewRepository.find({
+      const reviewRepository = transactionalEntityManager.getRepository(Review);
+      const userRepository = transactionalEntityManager.getRepository(User);
+
+      const reviews = await reviewRepository.find({
         where: { userId },
       });
 
@@ -99,8 +193,11 @@ export class ReviewsService {
           0,
         );
         const averageRating = totalRating / reviews.length;
+        const roundedAverageRating = parseFloat(
+          averageRating.toFixed(DECIMAL_PRECISION),
+        );
 
-        await this.userRepository.update(userId, { rating: averageRating });
+        await userRepository.update(userId, { rating: roundedAverageRating });
       }
     } catch (error) {
       throw new InternalServerErrorException(
