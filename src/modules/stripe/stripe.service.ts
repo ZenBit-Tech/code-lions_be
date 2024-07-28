@@ -1,20 +1,28 @@
 import {
+  BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { Errors } from 'src/common/errors';
+import { CANADA_POST_LOGO } from 'src/config';
+import { mockOrders } from 'src/mocks/mock-orders';
+import { CartService } from 'src/modules/cart/cart.service';
 import { ProductsService } from 'src/modules/products/products.service';
 import Stripe from 'stripe';
 
-import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 
 import { PaymentDto } from './dto/payment.dto';
 import { StripeModuleOptions } from './stripe.interfaces';
 import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
+
+const minDifference = 0.01;
+const centsInDollar = 100;
 
 @Injectable()
 export class StripeService {
@@ -23,51 +31,18 @@ export class StripeService {
     @Inject(MODULE_OPTIONS_TOKEN) private options: StripeModuleOptions,
     private usersServise: UsersService,
     private productsService: ProductsService,
+    private configService: ConfigService,
+    private cartService: CartService,
   ) {
     this.StripeApi = new Stripe(this.options.apiKey, this.options.options);
-  }
-
-  async createCustomer(
-    email: string,
-  ): Promise<Stripe.Response<Stripe.Customer>> {
-    return this.StripeApi.customers.create({
-      email,
-    });
-  }
-
-  async createCustomerSource(
-    customerId: string,
-    source: string,
-  ): Promise<Stripe.Response<Stripe.CustomerSource>> {
-    return this.StripeApi.customers.createSource(customerId, {
-      source,
-    });
-  }
-
-  async createCharge(
-    customerId: string,
-    amount: number,
-    currency: string,
-  ): Promise<Stripe.Response<Stripe.Charge>> {
-    return this.StripeApi.charges.create({
-      amount,
-      currency,
-      customer: customerId,
-    });
-  }
-
-  async getCustomerList(): Promise<
-    Stripe.Response<Stripe.ApiList<Stripe.Customer>>
-  > {
-    return await this.StripeApi.customers.list();
   }
 
   async createCheckoutSession(
     customerId: string,
     payment: PaymentDto,
-  ): Promise<User> {
-    //const { productIds, shippingFee } = payment;
-    console.log(payment);
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
+    const { productIds, total, shippingPrice } = payment;
+
     try {
       const user = await this.usersServise.getUserById(customerId);
 
@@ -75,98 +50,110 @@ export class StripeService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      //const products = await this.productsService.getProductsByIds(productIds);
+      const products = await this.productsService.findByIds(productIds);
 
-      return user;
+      if (products.length < productIds.length) {
+        throw new NotFoundException(Errors.SOME_PRODUCTS_NOT_FOUND);
+      }
+
+      const productsTotalPrice = products.reduce(
+        (sum, product) => sum + Number(product.price),
+        0,
+      );
+
+      if (
+        Math.abs(productsTotalPrice + shippingPrice - total) > minDifference
+      ) {
+        throw new ConflictException(Errors.PRICES_DO_NOT_MATCH);
+      }
+
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+        products.map((product) => {
+          return {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: product.name,
+                images: [product.images[0]],
+              },
+              unit_amount: Number(product.price) * centsInDollar,
+            },
+            quantity: 1,
+          };
+        });
+
+      if (shippingPrice > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Shipping',
+              images: [CANADA_POST_LOGO],
+            },
+            unit_amount: shippingPrice * centsInDollar,
+          },
+          quantity: 1,
+        });
+      }
+
+      const session = await this.StripeApi.checkout.sessions.create({
+        line_items: lineItems,
+
+        payment_intent_data: {
+          transfer_group: mockOrders[0].transferGroup,
+        },
+        mode: 'payment',
+        success_url: this.configService.get<string>('STRIPE_SUCCESS_URL'),
+        cancel_url: this.configService.get<string>('STRIPE_CANCEL_URL'),
+      });
+
+      return session;
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException(Errors.PAYMENT_ERROR);
     }
-
-    // const paymentIntent = await this.createPaymentIntent(amount);
-    /*
-    const session = await this.StripeApi.checkout.sessions.create({
-
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Black Circle service',
-            },
-            unit_amount: amount * 100,
-          },
-          quantity: 1,
-        },
-      ],
-
-      payment_intent_data: {
-        transfer_group: 'ORDER100',
-        //application_fee_amount: amount * 10,
-      },
-          payment_intent_data: {
-            transfer_group: 'ORDER_123',
-            application_fee_amount: amount * 10,
-            on_behalf_of: 'acct_1Ph9kdCmIXb3EALW',
-          },
-          metadata: {
-            payment_intent_id: paymentIntent.id, // Store PaymentIntent ID in metadata
-          },
-      mode: 'payment',
-      success_url: 'http://localhost:4001/success',
-      cancel_url: 'https://code-lions.netlify.app/cart',
-    }, {
-      stripeAccount: 'acct_1Ph9kdCmIXb3EALW'
-    }
-      
-    );
-*/
-    //session;
   }
 
-  async webhookHandler(event: any): Promise<any> {
-    switch (event.type) {
-      case 'checkout.session.completed':
-        const session = event.data.object as Stripe.Checkout.Session;
-        const paymentIntentId = session.payment_intent as string;
+  async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const paymentIntentId = session.payment_intent as string;
 
-        const paymentIntent =
-          await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
+      const paymentIntent =
+        await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
+      const transferGroup = paymentIntent.transfer_group;
 
-        await this.StripeApi.transfers.create({
-          amount: paymentIntent.amount * 0 - 1,
-          currency: 'usd',
-          destination: 'acct_1Ph9kdCmIXb3EALW',
-          transfer_group: paymentIntent.transfer_group,
-        });
+      const userId = mockOrders.find(
+        (order) => order.transferGroup === transferGroup,
+      ).userId;
 
-        await this.StripeApi.transfers.create({
-          amount: paymentIntent.amount * 1,
-          currency: 'usd',
-          destination: 'acct_1Ph9kdCmIXb3EALW2',
-          transfer_group: paymentIntent.transfer_group,
-        });
-
-        break;
-
-      // Handle other event types as needed
-      default:
-        console.log(`Unhandled event type ${event.type}`);
+      await this.cartService.emptyCart(userId);
     }
 
     return { received: true };
   }
 
-  async createPaymentIntent(amount: number): Promise<Stripe.PaymentIntent> {
-    const paymentIntent = await this.StripeApi.paymentIntents.create({
-      amount: amount * 1, // Amount in cents
-      currency: 'usd',
-      payment_method_types: ['card'],
-      transfer_group: 'ORDER_123', // This is used to group the payment and transfers
-    });
+  async checkSignature(
+    event: string,
+    signature: string,
+  ): Promise<Stripe.Event> {
+    try {
+      const consrtuctedEvent = this.StripeApi.webhooks.constructEvent(
+        event,
+        signature,
+        this.configService.get<string>('STRIPE_WEBHOOK_SECRET'),
+      );
 
-    return paymentIntent;
+      console.log(consrtuctedEvent);
+
+      return consrtuctedEvent;
+    } catch (error) {
+      throw new BadRequestException(Errors.INVALID_WEBHOOK_SIGNATURE);
+    }
   }
 }

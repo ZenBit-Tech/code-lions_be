@@ -11,8 +11,14 @@ export class PaymentDto {
   productIds: string[];
 
   @ApiProperty({
+    example: 500.12,
+    description: 'The total price of the order group',
+  })
+  total: number;
+
+  @ApiProperty({
     example: 15,
     description: 'The shipping fee for the order group',
   })
-  shippingFee: number;
+  shippingPrice: number;
 }

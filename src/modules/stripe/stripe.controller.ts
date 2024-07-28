@@ -1,7 +1,7 @@
 import {
   Body,
   Controller,
-  Get,
+  Headers,
   Post,
   Request,
   UseGuards,
@@ -22,26 +22,6 @@ import { User } from '../users/user.entity';
 export class StripeController {
   constructor(private readonly stripeService: StripeService) {}
 
-  @Get()
-  async getCustomerList(): Promise<
-    Stripe.Response<Stripe.ApiList<Stripe.Customer>>
-  > {
-    return this.stripeService.getCustomerList();
-  }
-
-  /*
-    @Post('create-payment-intent')
-    async createPaymentIntent(): Promise<Stripe.Response<Stripe.PaymentIntent>> {
-      return this.stripeService.createPaymentIntent();
-    }
-  */
-  @Post('create-customer')
-  async createCustomer(
-    @Body() { email }: { email: string },
-  ): Promise<Stripe.Response<Stripe.Customer>> {
-    return this.stripeService.createCustomer(email);
-  }
-
   @Post('create-checkout-session')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,19 +29,25 @@ export class StripeController {
   async createCheckoutSession(
     @Body() payment: PaymentDto,
     @Request() request: { user: User },
-  ): Promise<void> {
-    await this.stripeService.createCheckoutSession(request.user.id, payment);
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
+    const session = await this.stripeService.createCheckoutSession(
+      request.user.id,
+      payment,
+    );
+
+    return session;
   }
 
   @Post('webhook')
-  async webhook(@Body() body: any): Promise<any> {
-    /*
-    console.log(body);
-    return {
-      message: 'Success',
-    };*/
-    const event = body;
+  async webhook(
+    @Headers('stripe-signature') signature: string,
+    @Body() event: string,
+  ): Promise<{ received: boolean }> {
+    const checkedEvent = await this.stripeService.checkSignature(
+      event,
+      signature,
+    );
 
-    return this.stripeService.webhookHandler(event);
+    return await this.stripeService.webhookHandler(checkedEvent);
   }
 }

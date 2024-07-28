@@ -188,4 +188,9 @@ export const Errors = {
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
   PAYMENT_ERROR: 'Payment error',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
+  SOME_PRODUCTS_NOT_FOUND: 'Some products not found',
+  PRICES_DO_NOT_MATCH:
+    'Prices of the products in the DB and cart are different',
+  EMPTY_CART_FAILED: 'Failed to empty cart',
+  INVALID_WEBHOOK_SIGNATURE: 'Invalid webhook signature',
 };

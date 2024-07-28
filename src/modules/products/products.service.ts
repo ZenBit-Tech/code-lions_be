@@ -47,6 +47,7 @@ interface GetProductsOptions {
   size?: string;
   sortBy?: string;
   sortOrder?: string;
+  onlyInIdSet?: string[];
   showNotFinished?: boolean;
 }
 
@@ -347,6 +348,14 @@ export class ProductsService {
     return product.products[0];
   }
 
+  async findByIds(ids: string[]): Promise<ProductResponseDTO[]> {
+    const products = await this.getProducts({
+      onlyInIdSet: ids,
+    });
+
+    return products.products;
+  }
+
   async findLatest(): Promise<ProductsAndCountResponseDTO> {
     const today = new Date();
     const someDaysAgo = new Date();
@@ -457,6 +466,13 @@ export class ProductsService {
           },
         );
       }
+
+      if (options?.onlyInIdSet) {
+        queryBuilder.andWhere('product.id IN (:...ids)', {
+          ids: options.onlyInIdSet,
+        });
+      }
+
       if (options?.where) {
         if (options.where.key === 'createdAt') {
           const dateRange = options.where.value as DateRange;

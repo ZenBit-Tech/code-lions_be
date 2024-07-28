@@ -176,6 +176,14 @@ export class CartService {
     }
   }
 
+  async emptyCart(userId: string): Promise<void> {
+    try {
+      await this.cartRepository.delete({ userId });
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.EMPTY_CART_FAILED);
+    }
+  }
+
   async getCart(userId: string): Promise<ResponseCartItemDto[]> {
     try {
       const cart = await this.cartRepository.find({
