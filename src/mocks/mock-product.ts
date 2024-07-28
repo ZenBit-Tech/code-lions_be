@@ -49,6 +49,7 @@ const mockUser: User = {
   chatRooms: [],
   messages: [],
   productsOrder: [],
+  buyerOrders: [],
 };
 
 export const mockProduct: Product = {

@@ -178,4 +178,7 @@ export const Errors = {
   FAILED_TO_FETCH_ORDERS: 'Failed to fetch orders',
   ORDERS_NOT_FOUND: 'Orders not found',
   FAILED_TO_CREATE_ORDER: 'Failed to create order',
+  ORDERS_CANNOT_BE_GENERATED: 'Orders cannot be generated',
+  FAILED_TO_CREATE_BUYER_ORDER: 'Failed to create buyer order',
+  VENDOR_NOT_FOUND: 'Vendor not found',
 };

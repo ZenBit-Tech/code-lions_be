@@ -1,17 +1,19 @@
 import { Controller, Get, Param, Body, Post } from '@nestjs/common';
 import {
+  ApiBody,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import { Errors } from 'src/common/errors';
+import { ResponseCartItemDto } from 'src/modules/cart/response-cart.dto';
 import { OrdersService } from 'src/modules/orders/orders.service';
 
+import { CreateBuyerOrderDTO } from './dto/create-buyer-order.dto';
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
 
@@ -115,13 +117,54 @@ export class OrdersController {
       },
     },
   })
-  @ApiParam({
-    name: 'id',
-    description: 'The ID of the vendor',
-  })
   async findByVendorId(
     @Param('id') vendorId: string,
   ): Promise<OrderResponseDTO[]> {
     return this.ordersService.findByVendor(vendorId);
+  }
+
+  @Post('create-order')
+  @ApiOperation({
+    summary: 'Create a buyer order',
+    tags: ['Order Endpoints'],
+    description: 'This endpoint creates a new buyer order.',
+  })
+  @ApiOkResponse({
+    description: 'The buyer order has been successfully created',
+    type: [CreateBuyerOrderDTO],
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create buyer order',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_CREATE_BUYER_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({
+    type: [ResponseCartItemDto],
+  })
+  async createBuyerOrder(
+    @Body() responseCartItemDto: ResponseCartItemDto[],
+  ): Promise<CreateBuyerOrderDTO> {
+    return this.ordersService.createBuyerOrder(responseCartItemDto);
   }
 }

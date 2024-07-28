@@ -3,17 +3,21 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   JoinColumn,
   ManyToMany,
   JoinTable,
+  BeforeInsert,
 } from 'typeorm';
 
-import { Address } from 'src/modules/orders/entities/address.entity';
+import { MAX_ORDER_NUMBER, MIN_ORDER_NUMBER } from 'src/config';
 import { Status } from 'src/modules/orders/entities/order-status.enum';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
+
+import { AddressDTO } from '../dto/address.dto';
+
+import { BuyerOrder } from './buyer-order.entity';
 
 @Entity('orders')
 export class Order {
@@ -24,6 +28,22 @@ export class Order {
   })
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @ApiProperty({
+    example: 1,
+    description: 'The order number',
+    type: Number,
+  })
+  @Column({ type: 'int', unique: true })
+  orderNumber: number;
+
+  @ApiProperty({
+    example: 15,
+    description: 'The order`s shipping',
+    type: Number,
+  })
+  @Column({ type: 'int' })
+  shipping: number;
 
   @ApiProperty({
     example: 'product1 , product2',
@@ -92,13 +112,26 @@ export class Order {
   @ApiProperty({
     example: `{Canada, Street1, Street2, ...}`,
     description: 'The address of the order',
-    type: Address,
+    type: AddressDTO,
   })
-  @ManyToOne(() => Address, (address) => address.orders, { eager: true })
-  @JoinColumn({ name: 'address_id' })
-  address: Address;
+  address: AddressDTO;
 
   @ManyToMany(() => User, (user) => user.productsOrder)
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @ManyToMany(() => BuyerOrder, (buyerOrder) => buyerOrder.orders)
+  buyerOrders: BuyerOrder[];
+
+  @BeforeInsert()
+  async setOrderNumber(): Promise<void> {
+    this.orderNumber = await Order.createOrderNumber();
+  }
+
+  static async createOrderNumber(): Promise<number> {
+    return (
+      Math.floor(Math.random() * (MAX_ORDER_NUMBER - MIN_ORDER_NUMBER + 1)) +
+      MIN_ORDER_NUMBER
+    );
+  }
 }

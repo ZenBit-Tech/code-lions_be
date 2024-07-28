@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { IsNotEmpty, IsNumber, IsUUID, IsArray } from 'class-validator';
-import { Address } from 'src/modules/orders/entities/address.entity';
 
 export class CreateOrderDTO {
   @ApiProperty({
@@ -30,14 +29,6 @@ export class CreateOrderDTO {
   @IsNumber()
   @IsNotEmpty()
   price: number;
-
-  @ApiProperty({
-    example: `{Canada, Street1, Street2, ...}`,
-    description: 'The address of the order',
-    type: Address,
-  })
-  @IsNotEmpty()
-  addressId: string;
 
   @ApiProperty({
     example: ['product1', 'product2'],
