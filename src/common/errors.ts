@@ -174,4 +174,5 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
+  PAYMENT_ERROR: 'Payment error',
 };
