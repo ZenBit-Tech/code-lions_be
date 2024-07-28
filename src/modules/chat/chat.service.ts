@@ -42,44 +42,24 @@ export class ChatService {
   async getUserChats(userId: string): Promise<GetUserChatsDto[]> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: [
-        'chatRooms',
-        'chatRooms.participants',
-        'chatRooms.messages',
-        'chatRooms.messages.sender',
-      ],
+      relations: ['chatRooms', 'chatRooms.participants'],
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const userChats = user.chatRooms;
-    const EQUAL_SORT_ORDER = 0;
-
-    const sortedUserChats = await Promise.all(
-      userChats.map(async (chatRoom) => {
-        const lastMessage = await this.getLastMessage(chatRoom.id);
-
-        return {
-          ...chatRoom,
-          lastMessage,
-        };
-      }),
-    );
-
-    sortedUserChats.sort((a, b) => {
-      if (!a.lastMessage || !b.lastMessage) return EQUAL_SORT_ORDER;
-
-      return (
-        a.lastMessage.createdAt.getTime() - b.lastMessage.createdAt.getTime()
-      );
-    });
+    const chatRooms = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .leftJoinAndSelect('chatRoom.participants', 'participant')
+      .leftJoinAndSelect('chatRoom.messages', 'message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('participant.id = :userId', { userId })
+      .orderBy('message.createdAt', 'DESC')
+      .getMany();
 
     return await Promise.all(
-      sortedUserChats.map((chatRoom) =>
-        this.toGetUserChatsDto(chatRoom, userId),
-      ),
+      chatRooms.map((chatRoom) => this.toGetUserChatsDto(chatRoom, userId)),
     );
   }
 
@@ -87,10 +67,14 @@ export class ChatService {
     chatId: string,
     userId: string,
   ): Promise<ChatRoomResponseDto> {
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatId },
-      relations: ['participants', 'messages', 'messages.sender'],
-    });
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .leftJoinAndSelect('chatRoom.participants', 'participant')
+      .leftJoinAndSelect('chatRoom.messages', 'message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('chatRoom.id = :chatId', { chatId })
+      .orderBy('message.createdAt', 'DESC')
+      .getOne();
 
     if (!chatRoom) {
       throw new NotFoundException(`Chat room with ID ${chatId} not found`);
@@ -103,10 +87,6 @@ export class ChatService {
         `User with ID ${userId} not part of chat room ${chatId}`,
       );
     }
-
-    chatRoom.messages.sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-    );
 
     return this.toChatRoomResponseDto(chatRoom, userId);
   }

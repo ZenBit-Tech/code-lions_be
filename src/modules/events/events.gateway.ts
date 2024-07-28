@@ -105,26 +105,6 @@ export class EventsGateway
     return userChats;
   }
 
-  // @SubscribeMessage('createChat')
-  // async handleCreateChat(
-  //   client: SocketWithAuth,
-  //   createChatDto: CreateChatDto,
-  // ): Promise<ChatRoom> {
-  //   const chatRoom = await this.chatService.createChat(
-  //     client.userId,
-  //     createChatDto,
-  //   );
-
-  //   chatRoom.participants.forEach((participant) => {
-  //     client.join(participant.id);
-  //     this.server.to(participant.id).emit('newChat', chatRoom);
-  //   });
-
-  //   this.server.to(chatRoom.id).emit('newChat', chatRoom);
-
-  //   return chatRoom;
-  // }
-
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     client: SocketWithAuth,
