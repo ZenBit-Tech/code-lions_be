@@ -63,5 +63,6 @@ export class OrderResponseDTO {
     this.price = order.price;
     this.status = order.status;
     this.createdAt = order.createdAt;
+    this.shipping = order.shipping;
   }
 }

@@ -181,4 +181,6 @@ export const Errors = {
   ORDERS_CANNOT_BE_GENERATED: 'Orders cannot be generated',
   FAILED_TO_CREATE_BUYER_ORDER: 'Failed to create buyer order',
   VENDOR_NOT_FOUND: 'Vendor not found',
+  INVALID_ORDER_REQUEST: 'Invalid request for creating the payment for order',
+  FAILED_TO_PAY_FOR_ORDER: 'Failed to pay for order',
 };

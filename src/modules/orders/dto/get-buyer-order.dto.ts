@@ -5,7 +5,7 @@ import { IsNotEmpty, IsNumber, IsUUID } from 'class-validator';
 import { AddressDTO } from './address.dto';
 import { OrderDTO } from './order.dto';
 
-export class CreateBuyerOrderDTO {
+export class GetBuyerOrderDTO {
   @ApiProperty({
     example: `{order1, order2, ...}`,
     description: 'The orders of the payment',
@@ -31,6 +31,22 @@ export class CreateBuyerOrderDTO {
   @IsNumber()
   @IsNotEmpty()
   price: number;
+
+  @ApiProperty({
+    example: '2024-06-28 21:04:24',
+    description: 'The date the order was created',
+    type: Date,
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: 15,
+    description: 'The shipping all orders',
+    type: Number,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  shipping: number;
 
   @ApiProperty({
     example: `{Canada, Street1, Street2, ...}`,

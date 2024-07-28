@@ -1,10 +1,12 @@
 import { Controller, Get, Param, Body, Post } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -13,8 +15,10 @@ import { Errors } from 'src/common/errors';
 import { ResponseCartItemDto } from 'src/modules/cart/response-cart.dto';
 import { OrdersService } from 'src/modules/orders/orders.service';
 
+import { responseDescrptions } from '../../common/response-descriptions';
+
 import { CreateBuyerOrderDTO } from './dto/create-buyer-order.dto';
-import { CreateOrderDTO } from './dto/create-order.dto';
+import { GetBuyerOrderDTO } from './dto/get-buyer-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
 
 @ApiTags('orders')
@@ -24,49 +28,6 @@ import { OrderResponseDTO } from './dto/order-response.dto';
 })
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
-
-  @Get()
-  @ApiOperation({
-    summary: 'Get all orders',
-    tags: ['Orders Endpoints'],
-    description: 'This endpoint returns a list of orders.',
-  })
-  @ApiOkResponse({
-    description: 'The list of orders',
-    type: [OrderResponseDTO],
-  })
-  async findAll(): Promise<OrderResponseDTO[]> {
-    return this.ordersService.findAll();
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a new order',
-    tags: ['Order Endpoints'],
-    description: 'This endpoint creates a new order.',
-  })
-  @ApiOkResponse({
-    description: 'The order has been successfully created',
-    type: OrderResponseDTO,
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: {
-          type: 'string',
-          example: Errors.USER_UNAUTHORIZED,
-        },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
-  async createOrder(
-    @Body() createOrderDTO: CreateOrderDTO,
-  ): Promise<OrderResponseDTO> {
-    return this.ordersService.createOrder(createOrderDTO);
-  }
 
   @Get('vendor/:id')
   @ApiOperation({
@@ -166,5 +127,58 @@ export class OrdersController {
     @Body() responseCartItemDto: ResponseCartItemDto[],
   ): Promise<CreateBuyerOrderDTO> {
     return this.ordersService.createBuyerOrder(responseCartItemDto);
+  }
+
+  @Post('pay')
+  @ApiOperation({
+    summary: 'Create a buyer order',
+    tags: ['Order Endpoints'],
+    description: 'This endpoint creates a new buyer order.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: {
+          type: 'string',
+          example: Errors.INVALID_ORDER_REQUEST,
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to upload photo',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_PAY_FOR_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async payForOrder(@Body() getBuyerOrderDTO: GetBuyerOrderDTO): Promise<void> {
+    return this.ordersService.payForOrder(getBuyerOrderDTO);
   }
 }

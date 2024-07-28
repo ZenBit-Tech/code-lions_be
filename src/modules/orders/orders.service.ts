@@ -16,8 +16,9 @@ import { User } from 'src/modules/users/user.entity';
 import { Product } from '../products/entities/product.entity';
 
 import { CreateBuyerOrderDTO } from './dto/create-buyer-order.dto';
-import { CreateOrderDTO } from './dto/create-order.dto';
+import { GetBuyerOrderDTO } from './dto/get-buyer-order.dto';
 import { OrderDTO } from './dto/order.dto';
+import { BuyerOrder } from './entities/buyer-order.entity';
 import { Status } from './entities/order-status.enum';
 
 @Injectable()
@@ -29,6 +30,8 @@ export class OrdersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Product)
     private readonly productRepository: Repository<ProductResponseDTO>,
+    @InjectRepository(BuyerOrder)
+    private readonly buyerOrderRepository: Repository<BuyerOrder>,
   ) {}
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
@@ -58,53 +61,6 @@ export class OrdersService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_FETCH_ORDERS_BY_VENDOR,
       );
-    }
-  }
-
-  async findAll(): Promise<OrderResponseDTO[]> {
-    try {
-      const orders = await this.orderRepository.find({
-        relations: ['products', 'address', 'user'],
-      });
-
-      return orders.map((order) => new OrderResponseDTO(order));
-    } catch (error) {
-      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_ORDERS);
-    }
-  }
-
-  async createOrder(createOrderDTO: CreateOrderDTO): Promise<OrderResponseDTO> {
-    try {
-      const { vendorId, buyerId, price, productIds } = createOrderDTO;
-
-      const vendor = await this.userRepository.findOne({
-        where: { id: vendorId },
-      });
-      const buyer = await this.userRepository.findOne({
-        where: { id: buyerId },
-      });
-      const products = await this.productRepository.findByIds(productIds);
-
-      if (!vendor || !buyer || products.length !== productIds.length) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
-      const order = this.orderRepository.create({
-        vendorId,
-        buyerId,
-        price,
-        products,
-        status: Status.NEW_ORDER,
-      });
-
-      await this.orderRepository.save(order);
-
-      return new OrderResponseDTO(order);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
     }
   }
 
@@ -147,6 +103,7 @@ export class OrdersService {
           ordersMap.get(cartItem.vendorId).products.push(product);
         } else {
           ordersMap.set(cartItem.vendorId, {
+            vendorId: vendor.id,
             vendorName: vendor.name,
             products: [product],
           });
@@ -161,6 +118,7 @@ export class OrdersService {
 
       const createBuyerOrderDTO: CreateBuyerOrderDTO = {
         orders,
+        userId: buyer.id,
         price: responseCartItemDto.reduce(
           (total, cartItem) => total + cartItem.price,
           0,
@@ -175,6 +133,69 @@ export class OrdersService {
       };
 
       return createBuyerOrderDTO;
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
+    }
+  }
+
+  async payForOrder(getBuyerOrderDTO: GetBuyerOrderDTO): Promise<void> {
+    const { userId, orders, price, address, shipping, createdAt } =
+      getBuyerOrderDTO;
+
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const buyerOrder = new BuyerOrder();
+
+      buyerOrder.price = price;
+      buyerOrder.user = user;
+
+      const productPromises = orders.map((order) =>
+        Promise.all(
+          order.products.map((product) =>
+            this.productRepository.findOne({
+              where: { id: product.productId },
+            }),
+          ),
+        ),
+      );
+
+      const products = await Promise.all(productPromises);
+
+      if (products.flat().includes(undefined)) {
+        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+      }
+
+      const orderEntities = orders.map((orderDTO) => {
+        const order = new Order();
+
+        order.shipping = shipping / orderDTO.products.length;
+        order.products = orderDTO.products.map((productDTO) => {
+          return products
+            .flat()
+            .find((product) => product.id === productDTO.productId);
+        });
+        order.price = orderDTO.products.reduce(
+          (total, cartItem) => total + cartItem.price,
+          0,
+        );
+        order.status = Status.NEW_ORDER;
+        order.createdAt = createdAt;
+        order.vendorId = orderDTO.vendorId;
+        order.buyerId = userId;
+        order.address = address;
+
+        return order;
+      });
+
+      buyerOrder.orders = orderEntities;
+
+      await this.buyerOrderRepository.save(buyerOrder);
+      await this.orderRepository.save(orderEntities);
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
     }
