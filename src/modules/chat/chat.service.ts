@@ -58,8 +58,6 @@ export class ChatService {
       .orderBy('message.createdAt', 'DESC')
       .getMany();
 
-    console.log(chatRooms);
-
     return await Promise.all(
       chatRooms.map((chatRoom) => this.toGetUserChatsDto(chatRoom, userId)),
     );
