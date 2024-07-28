@@ -54,9 +54,11 @@ export class ChatService {
       .leftJoinAndSelect('chatRoom.participants', 'participant')
       .leftJoinAndSelect('chatRoom.messages', 'message')
       .leftJoinAndSelect('message.sender', 'sender')
-      .where('participant.id = :userId', { userId })
+      .where('participant.id != :userId', { userId })
       .orderBy('message.createdAt', 'DESC')
       .getMany();
+
+    console.log(chatRooms);
 
     return await Promise.all(
       chatRooms.map((chatRoom) => this.toGetUserChatsDto(chatRoom, userId)),
