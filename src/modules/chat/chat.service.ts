@@ -130,10 +130,6 @@ export class ChatService {
         relations: ['participants'],
       });
 
-      this.eventsGateway.server
-        .to(existingChatRoomId.chatRoom_id)
-        .emit('newChat', existingChatRoom);
-
       return existingChatRoom;
     }
 
@@ -143,14 +139,7 @@ export class ChatService {
 
     const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
 
-    savedChatRoom.participants.forEach((participant) => {
-      this.eventsGateway.server
-        .to(participant.id)
-        .emit('newChat', savedChatRoom);
-    });
-    this.eventsGateway.server
-      .to(savedChatRoom.id)
-      .emit('newChat', savedChatRoom);
+    this.eventsGateway.server.emit('newChat', savedChatRoom);
 
     if (content) {
       await this.sendMessage(userId, {
