@@ -33,13 +33,6 @@ export class GetBuyerOrderDTO {
   price: number;
 
   @ApiProperty({
-    example: '2024-06-28 21:04:24',
-    description: 'The date the order was created',
-    type: Date,
-  })
-  createdAt: Date;
-
-  @ApiProperty({
     example: 15,
     description: 'The shipping all orders',
     type: Number,

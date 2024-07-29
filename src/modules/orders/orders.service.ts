@@ -140,8 +140,7 @@ export class OrdersService {
   }
 
   async payForOrder(getBuyerOrderDTO: GetBuyerOrderDTO): Promise<void> {
-    const { userId, orders, price, address, shipping, createdAt } =
-      getBuyerOrderDTO;
+    const { userId, orders, price, address, shipping } = getBuyerOrderDTO;
 
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -185,7 +184,7 @@ export class OrdersService {
           0,
         );
         order.status = Status.NEW_ORDER;
-        order.createdAt = createdAt;
+        order.createdAt = new Date();
         order.vendorId = orderDTO.vendorId;
         order.buyerId = userId;
         order.address = address;
