@@ -88,19 +88,6 @@ export class OrdersController {
       },
     },
   })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: {
-          type: 'string',
-          example: Errors.USER_UNAUTHORIZED,
-        },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
   @ApiInternalServerErrorResponse({
     description: 'Failed to fetch orders by vendor',
     schema: {
@@ -129,19 +116,6 @@ export class OrdersController {
   @ApiOkResponse({
     description: 'The buyer order has been successfully created',
     type: [CreateBuyerOrderDTO],
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: {
-          type: 'string',
-          example: Errors.USER_UNAUTHORIZED,
-        },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
   })
   @ApiInternalServerErrorResponse({
     description: 'Failed to create buyer order',
@@ -185,19 +159,6 @@ export class OrdersController {
           example: Errors.INVALID_ORDER_REQUEST,
         },
         error: { type: 'string', example: 'Bad Request' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: {
-          type: 'string',
-          example: Errors.USER_UNAUTHORIZED,
-        },
-        error: { type: 'string', example: 'Unauthorized' },
       },
     },
   })
