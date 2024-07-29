@@ -174,4 +174,39 @@ export class ChatController {
   ): Promise<ChatRoom> {
     return this.chatService.createChat(userId, chat);
   }
+
+  @Post('/support')
+  @ApiOperation({
+    summary: 'Create a new chat room with an admin',
+    tags: ['Chat Endpoints'],
+    description:
+      'This endpoint creates a new chat room with an admin and returns the newly created chat room.',
+  })
+  @ApiCreatedResponse({
+    description: 'The chat room has been successfully created',
+    type: ChatRoom,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: 'Unauthorized' },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create chat room',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: 'Failed to create chat room' },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async createChatWithAdmin(@GetUserId() userId: string): Promise<ChatRoom> {
+    return this.chatService.createChatWithAdmin(userId);
+  }
 }

@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 
 import { EventsGateway } from '../events/events.gateway';
@@ -149,6 +150,54 @@ export class ChatService {
         content,
       });
     }
+
+    return savedChatRoom;
+  }
+
+  async createChatWithAdmin(userId: string): Promise<ChatRoom> {
+    const adminUser = await this.userRepository.findOne({
+      where: { role: Role.ADMIN },
+    });
+
+    if (!adminUser) {
+      throw new NotFoundException('Admin user not found');
+    }
+
+    const firstUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!firstUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    const existingChatRoomId = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .select('chatRoom.id')
+      .leftJoin('chatRoom.participants', 'participant')
+      .where('participant.id IN (:...userIds)', {
+        userIds: [userId, adminUser.id],
+      })
+      .groupBy('chatRoom.id')
+      .having('COUNT(participant.id) = 2')
+      .getRawOne();
+
+    if (existingChatRoomId) {
+      const existingChatRoom = await this.chatRoomRepository.findOne({
+        where: { id: existingChatRoomId.chatRoom_id },
+        relations: ['participants'],
+      });
+
+      return existingChatRoom;
+    }
+
+    const chatRoom = this.chatRoomRepository.create({
+      participants: [firstUser, adminUser],
+    });
+
+    const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
+
+    this.eventsGateway.server.emit('newChat', savedChatRoom);
 
     return savedChatRoom;
   }
