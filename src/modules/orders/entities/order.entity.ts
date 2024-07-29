@@ -114,6 +114,7 @@ export class Order {
     description: 'The address of the order',
     type: AddressDTO,
   })
+  @Column({ type: 'json', nullable: true })
   address: AddressDTO;
 
   @ManyToMany(() => User, (user) => user.productsOrder)

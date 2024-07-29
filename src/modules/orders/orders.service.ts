@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
-import { ResponseCartItemDto } from 'src/modules/cart/response-cart.dto';
+import { Cart } from 'src/modules/cart/cart.entity';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
@@ -15,8 +15,6 @@ import { User } from 'src/modules/users/user.entity';
 
 import { Product } from '../products/entities/product.entity';
 
-import { CreateBuyerOrderDTO } from './dto/create-buyer-order.dto';
-import { GetBuyerOrderDTO } from './dto/get-buyer-order.dto';
 import { OrderDTO } from './dto/order.dto';
 import { BuyerOrder } from './entities/buyer-order.entity';
 import { Status } from './entities/order-status.enum';
@@ -32,6 +30,8 @@ export class OrdersService {
     private readonly productRepository: Repository<ProductResponseDTO>,
     @InjectRepository(BuyerOrder)
     private readonly buyerOrderRepository: Repository<BuyerOrder>,
+    @InjectRepository(Cart)
+    private readonly cartRepository: Repository<Cart>,
   ) {}
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
@@ -65,23 +65,28 @@ export class OrdersService {
     }
   }
 
-  async createBuyerOrder(
-    responseCartItemDto: ResponseCartItemDto[],
-  ): Promise<CreateBuyerOrderDTO> {
-    const [{ userId }]: ResponseCartItemDto[] = responseCartItemDto;
-
+  async createOrdersForUser(
+    userId: string,
+    shippingPrice: number,
+  ): Promise<void> {
     try {
-      const buyer = await this.userRepository.findOne({
-        where: { id: userId },
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const cartItems = await this.cartRepository.find({
+        where: { userId: userId },
       });
 
-      if (!buyer) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      if (!cartItems.length) {
+        throw new NotFoundException(Errors.CART_IS_EMPTY);
       }
 
       const ordersMap = new Map<string, OrderDTO>();
 
-      for (const cartItem of responseCartItemDto) {
+      for (const cartItem of cartItems) {
         const vendor = await this.userRepository.findOne({
           where: { id: cartItem.vendorId },
         });
@@ -90,10 +95,18 @@ export class OrdersService {
           throw new NotFoundException(Errors.VENDOR_NOT_FOUND);
         }
 
+        const productResponseDTO = await this.productRepository.findOne({
+          where: { id: cartItem.productId },
+        });
+
+        if (!productResponseDTO) {
+          throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+        }
+
         const product = {
           productId: cartItem.productId,
           productUrl: cartItem.productUrl,
-          name: cartItem.name,
+          name: productResponseDTO.name,
           size: cartItem.size,
           color: cartItem.color,
           duration: cartItem.duration,
@@ -117,85 +130,62 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDERS_CANNOT_BE_GENERATED);
       }
 
-      const createBuyerOrderDTO: CreateBuyerOrderDTO = {
-        orders,
-        userId: buyer.id,
-        price: responseCartItemDto.reduce(
-          (total, cartItem) => total + cartItem.price,
-          0,
-        ),
-        address: {
-          addressLine1: buyer.addressLine1,
-          addressLine2: buyer.addressLine2,
-          country: buyer.country,
-          state: buyer.state,
-          city: buyer.city,
-        },
-      };
-
-      return createBuyerOrderDTO;
-    } catch (error) {
-      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
-    }
-  }
-
-  async payForOrder(getBuyerOrderDTO: GetBuyerOrderDTO): Promise<void> {
-    const { userId, orders, price, address, shipping } = getBuyerOrderDTO;
-
-    try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
       const buyerOrder = new BuyerOrder();
 
-      buyerOrder.price = price;
-      buyerOrder.user = user;
+      let totalPrice = 0;
 
-      const productPromises = orders.map((order) =>
-        Promise.all(
-          order.products.map((product) =>
-            this.productRepository.findOne({
-              where: { id: product.productId },
-            }),
-          ),
-        ),
-      );
-
-      const products = await Promise.all(productPromises);
-
-      if (products.flat().includes(undefined)) {
-        throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
-      }
-
-      const orderEntities = orders.map((orderDTO) => {
-        const order = new Order();
-
-        order.shipping = shipping / orderDTO.products.length;
-        order.products = orderDTO.products.map((productDTO) => {
-          return products
-            .flat()
-            .find((product) => product.id === productDTO.productId);
-        });
-        order.price = orderDTO.products.reduce(
-          (total, cartItem) => total + cartItem.price,
-          0,
-        );
-        order.status = Status.NEW_ORDER;
-        order.createdAt = new Date();
-        order.vendorId = orderDTO.vendorId;
-        order.buyerId = userId;
-        order.address = address;
-
-        return order;
+      cartItems.forEach((item) => {
+        totalPrice += parseFloat(String(item.price));
       });
 
-      buyerOrder.orders = orderEntities;
+      totalPrice += parseFloat(String(shippingPrice));
+
+      buyerOrder.user = user;
+      buyerOrder.status = Status.NEW_ORDER;
+      buyerOrder.shipping = shippingPrice;
+      buyerOrder.price = totalPrice;
+      buyerOrder.orders = [];
+
+      for (const orderDTO of orders) {
+        const order = new Order();
+
+        order.vendorId = orderDTO.vendorId;
+        order.buyerId = userId;
+        order.shipping = shippingPrice / orders.length;
+        order.products = [];
+
+        for (const productDTO of orderDTO.products) {
+          const product = await this.productRepository.findOne({
+            where: { id: productDTO.productId },
+          });
+
+          if (!product) {
+            throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
+          }
+
+          order.products.push(product);
+        }
+
+        totalPrice = 0;
+        orderDTO.products.forEach((product) => {
+          totalPrice += parseFloat(String(product.price));
+        });
+        order.price = totalPrice;
+        order.status = Status.NEW_ORDER;
+        order.createdAt = new Date();
+        order.address = {
+          addressLine1: user.addressLine1,
+          addressLine2: user.addressLine2,
+          country: user.country,
+          state: user.state,
+          city: user.city,
+        };
+
+        buyerOrder.orders.push(order);
+      }
 
       await this.buyerOrderRepository.save(buyerOrder);
-      await this.orderRepository.save(orderEntities);
+      await this.orderRepository.save(buyerOrder.orders);
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
     }

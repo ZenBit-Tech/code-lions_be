@@ -183,4 +183,5 @@ export const Errors = {
   VENDOR_NOT_FOUND: 'Vendor not found',
   INVALID_ORDER_REQUEST: 'Invalid request for creating the payment for order',
   FAILED_TO_PAY_FOR_ORDER: 'Failed to pay for order',
+  CART_IS_EMPTY: 'There is no products in card',
 };

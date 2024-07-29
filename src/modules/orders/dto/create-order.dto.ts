@@ -1,41 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsNotEmpty, IsNumber, IsUUID, IsArray } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsUUID } from 'class-validator';
 
-export class CreateOrderDTO {
-  @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
-    description: 'The ID of the vendor',
-    type: String,
-  })
+export class CreateOrderDto {
+  @ApiProperty({ example: '877f0535-eb91-4159-b51a-7c44ebbc9f37' })
   @IsUUID()
-  @IsNotEmpty()
-  vendorId: string;
+  userId: string;
 
-  @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
-    description: 'The ID of the buyer',
-    type: String,
-  })
-  @IsUUID()
-  @IsNotEmpty()
-  buyerId: string;
-
-  @ApiProperty({
-    example: 15000,
-    description: 'The price of the order',
-    type: Number,
-  })
+  @ApiProperty({ example: 50 })
   @IsNumber()
   @IsNotEmpty()
-  price: number;
-
-  @ApiProperty({
-    example: ['product1', 'product2'],
-    description: 'The products of the order',
-    type: [String],
-  })
-  @IsArray()
-  @IsNotEmpty()
-  productIds: string[];
+  shippingPrice: number;
 }

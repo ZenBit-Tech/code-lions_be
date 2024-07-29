@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Body, Post, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Body,
+  Post,
+  UseGuards,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -17,14 +25,12 @@ import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
-import { ResponseCartItemDto } from 'src/modules/cart/response-cart.dto';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
-import { CreateBuyerOrderDTO } from './dto/create-buyer-order.dto';
-import { GetBuyerOrderDTO } from './dto/get-buyer-order.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
 
 @ApiTags('orders')
@@ -107,38 +113,6 @@ export class OrdersController {
     return this.ordersService.findByVendor(vendorId);
   }
 
-  @Post('create-order')
-  @ApiOperation({
-    summary: 'Create a buyer order',
-    tags: ['Order Endpoints'],
-    description: 'This endpoint creates a new buyer order.',
-  })
-  @ApiOkResponse({
-    description: 'The buyer order has been successfully created',
-    type: [CreateBuyerOrderDTO],
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Failed to create buyer order',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 500 },
-        message: {
-          type: 'string',
-          example: Errors.FAILED_TO_CREATE_BUYER_ORDER,
-        },
-        error: { type: 'string', example: 'Internal Server Error' },
-      },
-    },
-  })
-  @ApiBody({
-    type: [ResponseCartItemDto],
-  })
-  async createBuyerOrder(
-    @Body() responseCartItemDto: ResponseCartItemDto[],
-  ): Promise<CreateBuyerOrderDTO> {
-    return this.ordersService.createBuyerOrder(responseCartItemDto);
-  }
-
   @Post('pay')
   @ApiOperation({
     summary: 'Create a buyer order',
@@ -175,7 +149,17 @@ export class OrdersController {
       },
     },
   })
-  async payForOrder(@Body() getBuyerOrderDTO: GetBuyerOrderDTO): Promise<void> {
-    return this.ordersService.payForOrder(getBuyerOrderDTO);
+  @ApiBody({ type: CreateOrderDto })
+  async createOrdersForUser(
+    @Body() createOrderDto: CreateOrderDto,
+  ): Promise<void> {
+    const { userId, shippingPrice } = createOrderDto;
+
+    try {
+      await this.ordersService.createOrdersForUser(userId, shippingPrice);
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
+    }
   }
 }

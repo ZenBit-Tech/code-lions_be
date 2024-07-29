@@ -12,6 +12,8 @@ import {
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { User } from 'src/modules/users/user.entity';
 
+import { Status } from './order-status.enum';
+
 @Entity('buyer_order')
 export class BuyerOrder {
   @ApiProperty({
@@ -29,6 +31,27 @@ export class BuyerOrder {
   })
   @Column({ nullable: false, type: 'decimal', precision: 10, scale: 2 })
   price: number;
+
+  @ApiProperty({
+    example: 150,
+    description: 'The order`s shipping',
+    type: Number,
+  })
+  @Column({ type: 'int' })
+  shipping: number;
+
+  @ApiProperty({
+    example: 'published',
+    description: 'The status of the buyer`s order',
+    enum: Status,
+  })
+  @Column({
+    type: 'enum',
+    enum: Status,
+    nullable: false,
+    default: Status.NEW_ORDER,
+  })
+  status: Status;
 
   @ApiProperty({
     example: '61c674384-f944-401b-949b-b76e8793bdc9',
