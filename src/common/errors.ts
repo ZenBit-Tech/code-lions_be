@@ -125,6 +125,7 @@ export const Errors = {
   FAILED_TO_DELETE_REVIEW: 'Failed to delete review',
   CONFLICT_REVIEW_SAME_ROLE: (role: string): string =>
     `You cannot review the other ${role}s`,
+  FAILED_TO_HANDLE_LOW_RATING_REVIEWS: 'Failed to handle low rating reviews',
   CONFLICT_REVIEW_EXAMPLE: 'You cannot review the other user role',
   FAILED_TO_ADD_ORDER: 'Failed to add an order',
   REVIEW_ON_BEHALF_OF_OTHER_USER: 'You cannot review on behalf of another user',
@@ -145,6 +146,17 @@ export const Errors = {
   FAILED_TO_REMOVE_PRODUCT_FROM_CART: 'Failed to remove product from cart',
   CART_NOT_FOUND: 'Cart not found',
   FAILED_TO_RETRIEVE_CART: 'Failed to retrieve cart',
+  INVALID_DURATION:
+    'To rent longer than 7 days, please, upgrade your rating to 4.9 stars',
+  PRICE_LIMIT_EXCEEDED:
+    'To rent more than $1000, please, upgrade your rating to 4.9 stars',
+  EXTENDED_PRIVILEGES_REQUIRED:
+    'To rent more than $2500 and longer than 7 days, please, upgrade your average rating to 4.9 stars and receive three 5-star ratings',
+  CONFLICT_ACCOUNT_DEACTIVATED: (
+    deactivationDate: string,
+    reactivationDate: string,
+  ): string =>
+    `The ability to rent products is limited from ${deactivationDate} to ${reactivationDate}, to appeal this - contact support@blackcircle.com`,
   FAILED_TO_FETCH_PRODUCTS_BY_VENDOR: 'Failed to fetch products by vendor',
   FAILED_TO_DELETE_PRODUCT: 'Failed to delete product',
   FAILED_TO_APPROVE_PRODUCT: 'Failed to approve product',
@@ -184,4 +196,5 @@ export const Errors = {
   INVALID_ORDER_REQUEST: 'Invalid request for creating the payment for order',
   FAILED_TO_PAY_FOR_ORDER: 'Failed to pay for order',
   CART_IS_EMPTY: 'There is no products in card',
+  FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
 };

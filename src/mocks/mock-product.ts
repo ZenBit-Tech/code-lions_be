@@ -31,9 +31,12 @@ const mockUser: User = {
   cardNumber: '',
   expireDate: '',
   cvvCode: '',
+  willHideRentalRules: false,
   createdAt: undefined,
   lastUpdatedAt: undefined,
   deletedAt: undefined,
+  deactivationTimestamp: null,
+  reactivationTimestamp: null,
   onboardingStep: 0,
   rating: 0,
   orders: 0,
@@ -50,6 +53,7 @@ const mockUser: User = {
   messages: [],
   productsOrder: [],
   buyerOrders: [],
+  readMessages: [],
 };
 
 export const mockProduct: Product = {

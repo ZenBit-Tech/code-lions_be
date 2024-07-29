@@ -34,6 +34,7 @@ import {
   ApiQuery,
   ApiServiceUnavailableResponse,
   ApiConsumes,
+  ApiNoContentResponse,
 } from '@nestjs/swagger';
 
 import { ErrorResponse } from 'src/common/error-response';
@@ -1044,5 +1045,63 @@ export class UsersController {
     @Body('order') order: number,
   ): Promise<UserResponseDto> {
     return await this.usersService.updateUserOrders(id, order);
+  }
+
+  @Patch(':id/hide-rental-rules')
+  @UseGuards(UserIdGuard)
+  @Roles(Role.BUYER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Hide the rental rules',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint hides the rental rules for user when he adds the product to the cart.',
+  })
+  @ApiNoContentResponse({
+    status: 204,
+    description: 'Hide rental rules column was successfully updated.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update user profile',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_UPDATE_PROFILE },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the user to update hide rental rules column',
+  })
+  async hideRentalRules(@Param('id') userId: string): Promise<void> {
+    return await this.usersService.hideRentalRules(userId);
   }
 }

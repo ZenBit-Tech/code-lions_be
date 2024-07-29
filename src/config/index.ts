@@ -25,3 +25,19 @@ export const MAX_PRODUCT_PDF_SIZE = 10485760;
 export const MAX_AVATAR_SIZE = 2097152;
 export const MAX_ORDER_NUMBER = 9999;
 export const MIN_ORDER_NUMBER = 1000;
+export const RATING_FIVE = 5;
+export const NUMBER_OF_FIVE_RATINGS = 3;
+export const AVERAGE_RATING_FOUR_POINT_NINE = 4.9;
+export const DURATION_FOURTEEN_DAYS = 14;
+export const DURATION_SEVEN_DAYS = 7;
+export const ORDERS_SUM_ZERO = 0;
+export const PRICE_ONE_THOUSAND = 1000;
+export const PRICE_TWO_THOUSAND_FIVE_HUNDRED = 2500;
+export const RATING_THREE = 3;
+export const LOW_RATINGS_COUNT_ONE = 1;
+export const LOW_RATINGS_COUNT_TWO = 2;
+export const DECIMAL_PRECISION = 2;
+export const RENTAL_RULES_LINK = 'https://code-lions.netlify.app/how-it-works';
+
+/* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+export const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;

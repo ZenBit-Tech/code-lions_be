@@ -120,6 +120,12 @@ export class ProductResponseDTO {
   colors: string[];
 
   @ApiProperty({
+    example: 'file-1718301871158-882823500.pdf',
+    description: 'The URL of the PDF file which is attached to the product',
+  })
+  pdfUrl: string;
+
+  @ApiProperty({
     type: VendorDTO,
     description: 'The vendor of the product',
   })

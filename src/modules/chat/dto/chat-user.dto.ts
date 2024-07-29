@@ -2,20 +2,24 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ChatUserDto {
   @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
-    description: 'The ID of the chat partner',
+    description: 'Unique identifier of the user',
+    example: '3d14ab90-3182-4cd5-bae4-08b97832a8b9',
   })
   id: string;
 
   @ApiProperty({
+    description: 'Name of the user',
     example: 'John Doe',
-    description: 'The name of the chat partner',
   })
   name: string;
 
   @ApiProperty({
-    example: 'file-1718301871158-882823500.jpg',
-    description: 'The photo URL of the chat partner',
+    description: "URL of the user's profile photo",
+    example: 'https://example.com/uploads/avatars/user-photo.jpeg',
   })
   photoUrl: string;
+
+  constructor(partial: Partial<ChatUserDto>) {
+    Object.assign(this, partial);
+  }
 }
