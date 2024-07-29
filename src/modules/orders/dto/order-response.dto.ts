@@ -50,6 +50,7 @@ export class OrderResponseDTO {
   createdAt: Date;
 
   @ApiProperty({
+    example: ['product1', 'product2'],
     type: [ProductResponseDTO],
     description: 'The products of the order',
   })

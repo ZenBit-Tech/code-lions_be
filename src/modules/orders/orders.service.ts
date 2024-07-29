@@ -45,8 +45,9 @@ export class OrdersService {
       }
 
       const orders = await this.orderRepository.find({
-        where: { vendorId },
-        relations: ['products', 'address', 'user'],
+        where: { vendorId: vendorId },
+        relations: ['products'],
+        order: { createdAt: 'DESC' },
       });
 
       if (!orders.length) {
