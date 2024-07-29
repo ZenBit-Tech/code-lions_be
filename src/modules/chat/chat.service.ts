@@ -52,9 +52,11 @@ export class ChatService {
     const chatRooms = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
       .leftJoinAndSelect('chatRoom.participants', 'participant')
+      .leftJoinAndSelect('chatRoom.participants', 'secondParticipant')
       .leftJoinAndSelect('chatRoom.messages', 'message')
       .leftJoinAndSelect('message.sender', 'sender')
-      .where('participant.id != :userId', { userId })
+      .where('participant.id = :userId', { userId })
+      .andWhere('secondParticipant.id != :userId', { userId })
       .orderBy('message.createdAt', 'DESC')
       .getMany();
 
@@ -73,7 +75,7 @@ export class ChatService {
       .leftJoinAndSelect('chatRoom.messages', 'message')
       .leftJoinAndSelect('message.sender', 'sender')
       .where('chatRoom.id = :chatId', { chatId })
-      .orderBy('message.createdAt', 'DESC')
+      .orderBy('message.createdAt', 'ASC')
       .getOne();
 
     if (!chatRoom) {
