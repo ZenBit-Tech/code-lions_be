@@ -76,6 +76,7 @@ export const mockProduct: Product = {
   createdAt: new Date(),
   lastUpdatedAt: new Date(),
   deletedAt: new Date(),
+  isAvailable: true,
   images: [],
   user: mockUser,
   color: [],

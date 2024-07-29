@@ -4,9 +4,9 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
-  ManyToMany,
   JoinTable,
   Column,
+  OneToMany,
 } from 'typeorm';
 
 import { Order } from 'src/modules/orders/entities/order.entity';
@@ -70,7 +70,7 @@ export class BuyerOrder {
     description: 'The IDs of the orders',
     type: [String],
   })
-  @ManyToMany(() => Order, (order) => order.buyerOrders, { cascade: true })
+  @OneToMany(() => Order, (order) => order.buyerOrders, { cascade: true })
   @JoinTable({
     name: 'buyer_order_orders',
     joinColumn: {

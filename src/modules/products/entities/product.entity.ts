@@ -208,6 +208,13 @@ export class Product {
   @DeleteDateColumn({ type: 'timestamp', nullable: true })
   deletedAt: Date;
 
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if the product is available',
+  })
+  @Column({ default: true })
+  isAvailable: boolean;
+
   @OneToMany(() => Cart, (cart) => cart.product)
   cart: Cart[];
 

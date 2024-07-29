@@ -7,6 +7,7 @@ import {
   ManyToMany,
   JoinTable,
   BeforeInsert,
+  ManyToOne,
 } from 'typeorm';
 
 import { MAX_ORDER_NUMBER, MIN_ORDER_NUMBER } from 'src/config';
@@ -121,8 +122,8 @@ export class Order {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToMany(() => BuyerOrder, (buyerOrder) => buyerOrder.orders)
-  buyerOrders: BuyerOrder[];
+  @ManyToOne(() => BuyerOrder, (buyerOrder) => buyerOrder.orders)
+  buyerOrders: BuyerOrder;
 
   @BeforeInsert()
   async setOrderNumber(): Promise<void> {
