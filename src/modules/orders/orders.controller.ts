@@ -1,7 +1,9 @@
-import { Controller, Get, Param, Body, Post } from '@nestjs/common';
+import { Controller, Get, Param, Body, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -11,21 +13,55 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
+import { responseDescrptions } from 'src/common/response-descriptions';
+import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { ResponseCartItemDto } from 'src/modules/cart/response-cart.dto';
 import { OrdersService } from 'src/modules/orders/orders.service';
-
-import { responseDescrptions } from '../../common/response-descriptions';
+import { Role } from 'src/modules/roles/role.enum';
+import { Roles } from 'src/modules/roles/roles.decorator';
+import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateBuyerOrderDTO } from './dto/create-buyer-order.dto';
 import { GetBuyerOrderDTO } from './dto/get-buyer-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
 
 @ApiTags('orders')
-@Controller('orders')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.BUYER, Role.VENDOR, Role.ADMIN)
+@ApiBearerAuth()
 @ApiInternalServerErrorResponse({
-  description: 'Internal server error',
+  description: responseDescrptions.error,
+  type: ErrorResponse,
 })
+@ApiForbiddenResponse({
+  description: 'User does not have permission to access this resource',
+  schema: {
+    properties: {
+      statusCode: { type: 'integer', example: 403 },
+      message: {
+        type: 'string',
+        example: 'Forbidden resource',
+      },
+      error: { type: 'string', example: 'Forbidden' },
+    },
+  },
+})
+@ApiUnauthorizedResponse({
+  description: 'Unauthorized - No token or invalid token or expired token',
+  schema: {
+    properties: {
+      statusCode: { type: 'integer', example: 401 },
+      message: {
+        type: 'string',
+        example: Errors.USER_UNAUTHORIZED,
+      },
+      error: { type: 'string', example: 'Unauthorized' },
+    },
+  },
+})
+@Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
