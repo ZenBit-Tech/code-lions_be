@@ -921,4 +921,30 @@ export class UsersService {
       throw new InternalServerErrorException(Errors.FAILED_TO_REACTIVATE_USERS);
     }
   }
+
+  async updateFollowStatus(
+    vendorId: string,
+    isFollowed: boolean,
+  ): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: vendorId },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.VENDOR_NOT_FOUND);
+      }
+
+      user.isFollowed = isFollowed;
+
+      return this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPDATE_FOLLOW_STATUS,
+      );
+    }
+  }
 }

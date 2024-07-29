@@ -187,4 +187,6 @@ export const Errors = {
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
+  VENDOR_NOT_FOUND: 'Vendor with the given ID does not exist',
+  FAILED_TO_UPDATE_FOLLOW_STATUS: 'Failed to update follow status',
 };
