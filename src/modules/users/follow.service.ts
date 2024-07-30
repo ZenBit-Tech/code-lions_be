@@ -42,9 +42,7 @@ export class FollowService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_UPDATE_FOLLOW_STATUS,
-      );
+      throw new InternalServerErrorException(Errors.FAILED_TO_FOLLOW_VENDOR);
     }
   }
 
@@ -74,9 +72,7 @@ export class FollowService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_UPDATE_FOLLOW_STATUS,
-      );
+      throw new InternalServerErrorException(Errors.FAILED_TO_UNFOLLOW_VENDOR);
     }
   }
 }

@@ -188,5 +188,6 @@ export const Errors = {
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
   VENDOR_NOT_FOUND: 'Vendor with the given ID does not exist',
-  FAILED_TO_UPDATE_FOLLOW_STATUS: 'Failed to update follow status',
+  FAILED_TO_FOLLOW_VENDOR: 'Failed to follow vendor',
+  FAILED_TO_UNFOLLOW_VENDOR: 'Failed to unfollow vendor',
 };
