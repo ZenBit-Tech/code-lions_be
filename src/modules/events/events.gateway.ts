@@ -87,6 +87,7 @@ export class EventsGateway
     const userChats = await this.chatService.getUserChats(client.userId);
 
     if (userChats) {
+      client.join(client.userId);
       userChats.forEach((chat) => client.join(chat.id));
     }
   }
@@ -110,12 +111,18 @@ export class EventsGateway
     client: SocketWithAuth,
     sendMessageDto: SendMessageDto,
   ): Promise<Message> {
+    const secondUser = await this.chatService.getChatSecondParticipant(
+      client.userId,
+      sendMessageDto.chatId,
+    );
     const message = await this.chatService.sendMessage(
       client.userId,
       sendMessageDto,
     );
 
-    this.server.to(message.chatRoom.id).emit('newMessage', message);
+    this.server
+      .to([message.chatRoom.id, secondUser.id])
+      .emit('newMessage', message);
 
     return message;
   }

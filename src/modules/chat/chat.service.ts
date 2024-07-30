@@ -142,7 +142,9 @@ export class ChatService {
 
     const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
 
-    this.eventsGateway.server.emit('newChat', savedChatRoom);
+    this.eventsGateway.server
+      .to([firstUser.id, secondUser.id])
+      .emit('newChat', savedChatRoom);
 
     if (content) {
       await this.sendMessage(userId, {
@@ -197,7 +199,9 @@ export class ChatService {
 
     const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
 
-    this.eventsGateway.server.emit('newChat', savedChatRoom);
+    this.eventsGateway.server
+      .to([firstUser.id, adminUser.id])
+      .emit('newChat', savedChatRoom);
 
     return savedChatRoom;
   }
@@ -289,6 +293,32 @@ export class ChatService {
     });
 
     return lastMessage || null;
+  }
+
+  async getChatSecondParticipant(
+    firstUserId: string,
+    chatId: string,
+  ): Promise<User> {
+    const firstIndexOfArray = 0;
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .select(['chatRoom.id', 'participant.id'])
+      .leftJoin('chatRoom.participants', 'participant')
+      .where('participant.id <> :participantId', { participantId: firstUserId })
+      .andWhere('chatRoom.id = :chatId', { chatId })
+      .getOne();
+
+    if (!chatRoom) {
+      throw new NotFoundException(`Chat with id:${chatId} is not found`);
+    }
+
+    if (!chatRoom.participants.length) {
+      throw new NotFoundException(
+        `No second participant found in chat with id:${chatId}`,
+      );
+    }
+
+    return chatRoom.participants[firstIndexOfArray];
   }
 
   private toChatRoomResponseDto(
