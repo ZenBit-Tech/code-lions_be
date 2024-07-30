@@ -59,6 +59,7 @@ import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserSizeDto } from './dto/update-user-size.dto';
 import { UserCardDto } from './dto/user-card.dto';
+import { UserStatusResponseDto } from './dto/user-status-response.dto';
 import { Order } from './order.enum';
 import { UserIdGuard } from './user-id.guard';
 import { User } from './user.entity';
@@ -1103,5 +1104,51 @@ export class UsersController {
   })
   async hideRentalRules(@Param('id') userId: string): Promise<void> {
     return await this.usersService.hideRentalRules(userId);
+  }
+
+  @Get(':id/status')
+  @ApiOperation({
+    summary: 'Get the online status and last active time of a user',
+    description:
+      'This endpoint returns the online status and last active time of a user.',
+  })
+  @ApiOkResponse({
+    description: 'User status retrieved successfully',
+    type: UserStatusResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: { type: 'string', example: 'User not found' },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: 'Unauthorized' },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch user status',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: 'Failed to fetch user status' },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async getUserStatus(
+    @Param('id') userId: string,
+  ): Promise<UserStatusResponseDto> {
+    return this.usersService.getUserStatus(userId);
   }
 }

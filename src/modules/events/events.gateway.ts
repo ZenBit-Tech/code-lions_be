@@ -90,10 +90,22 @@ export class EventsGateway
       client.join(client.userId);
       userChats.forEach((chat) => client.join(chat.id));
     }
+
+    await this.userService.setUserOnline(client.userId);
+    this.server.emit('userStatus', { userId: client.userId, status: 'online' });
   }
 
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: SocketWithAuth): Promise<void> {
     this.Logger.log(`Client disconnected: ${client.id}`);
+
+    await this.userService.setUserOffline(client.userId);
+    const lastActive = await this.userService.getLastActiveTime(client.userId);
+
+    this.server.emit('userStatus', {
+      userId: client.userId,
+      status: 'offline',
+      lastActive,
+    });
   }
 
   @SubscribeMessage('getUserChats')
