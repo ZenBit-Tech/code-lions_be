@@ -31,7 +31,7 @@ export class MessageResponseDto {
     description: 'Details of the user who sent the message',
     type: ChatUserDto,
   })
-  sender: ChatUserDto;
+  sender: Partial<ChatUserDto>;
 
   constructor(partial: Partial<MessageResponseDto>) {
     Object.assign(this, partial);

@@ -401,6 +401,8 @@ export class ChatService {
           id: chatPartner.id,
           name: chatPartner.name,
           photoUrl: chatPartner.photoUrl,
+          isOnline: chatPartner.isOnline,
+          lastActiveAt: chatPartner.lastActiveAt,
         })
       : null;
 
