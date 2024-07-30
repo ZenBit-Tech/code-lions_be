@@ -37,6 +37,8 @@ export const LOW_RATINGS_COUNT_ONE = 1;
 export const LOW_RATINGS_COUNT_TWO = 2;
 export const DECIMAL_PRECISION = 2;
 export const RENTAL_RULES_LINK = 'https://code-lions.netlify.app/how-it-works';
+export const IS_VALID_URL =
+  /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
 
 /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
 export const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;

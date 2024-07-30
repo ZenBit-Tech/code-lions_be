@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { IS_VALID_URL } from 'src/config';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 
@@ -227,10 +228,26 @@ export class ChatService {
       throw new NotFoundException('User not found');
     }
 
+    let determinedFileType = fileType;
+
+    if (!fileType) {
+      if (content && content.match(IS_VALID_URL)) {
+        determinedFileType = chatContentType.LINK;
+      } else if (fileUrl) {
+        if (fileUrl.startsWith('image/')) {
+          determinedFileType = chatContentType.IMAGE;
+        } else {
+          determinedFileType = chatContentType.FILE;
+        }
+      } else {
+        determinedFileType = chatContentType.TEXT;
+      }
+    }
+
     const message = this.messageRepository.create({
       content,
       fileUrl,
-      fileType,
+      fileType: determinedFileType,
       chatRoom,
       sender: user,
     });

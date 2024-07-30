@@ -284,18 +284,12 @@ export class ChatController {
     const fileUrl = request.uploadedFileUrl;
     const mimeType = request.file.mimetype;
 
-    let fileType: string;
-
-    if (mimeType.startsWith('image/')) {
-      fileType = chatContentType.IMAGE;
-    } else {
-      fileType = chatContentType.FILE;
-    }
-
     await this.chatService.sendMessage(userId, {
       chatId,
       fileUrl,
-      fileType,
+      fileType: mimeType.startsWith('image/')
+        ? chatContentType.IMAGE
+        : chatContentType.FILE,
     });
   }
 }
