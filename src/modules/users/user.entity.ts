@@ -13,6 +13,7 @@ import {
 
 import { Cart } from 'src/modules/cart/cart.entity';
 import { ChatRoom } from 'src/modules/chat/entities/chat-room.entity';
+import { MessageRead } from 'src/modules/chat/entities/message-read.entity';
 import { Message } from 'src/modules/chat/entities/message.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
@@ -311,4 +312,7 @@ export class User {
 
   @ManyToMany(() => User, (user) => user.followers)
   following: User[];
+
+  @OneToMany(() => MessageRead, (messageRead) => messageRead.user)
+  readMessages: MessageRead[];
 }

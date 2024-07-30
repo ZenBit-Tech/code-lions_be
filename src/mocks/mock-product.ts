@@ -53,6 +53,7 @@ const mockUser: User = {
   messages: [],
   followers: [],
   following: [],
+  readMessages: [],
 };
 
 export const mockProduct: Product = {
