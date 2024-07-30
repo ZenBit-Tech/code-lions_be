@@ -8,6 +8,7 @@ import {
   DeleteDateColumn,
   OneToMany,
   ManyToMany,
+  JoinTable,
 } from 'typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -293,4 +294,21 @@ export class User {
 
   @OneToMany(() => Message, (message) => message.sender)
   messages: Message[];
+
+  @ManyToMany(() => User, (user) => user.following)
+  @JoinTable({
+    name: 'user_follows',
+    joinColumn: {
+      name: 'buyerId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'vendorId',
+      referencedColumnName: 'id',
+    },
+  })
+  followers: User[];
+
+  @ManyToMany(() => User, (user) => user.followers)
+  following: User[];
 }

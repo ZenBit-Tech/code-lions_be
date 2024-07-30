@@ -8,7 +8,8 @@ import { MailerModule } from 'src/modules/mailer/mailer.module';
 import { Product } from '../products/entities/product.entity';
 
 import { BestVendorsController } from './best-vendors.controller';
-import { VendorsController } from './follow-vendors.controller';
+import { FollowController } from './follow.controller';
+import { FollowService } from './follow.service';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -28,8 +29,8 @@ import { UsersService } from './users.service';
       }),
     }),
   ],
-  controllers: [UsersController, BestVendorsController, VendorsController],
-  providers: [UsersService],
-  exports: [UsersService],
+  controllers: [UsersController, BestVendorsController, FollowController],
+  providers: [UsersService, FollowService],
+  exports: [UsersService, FollowService],
 })
 export class UsersModule {}
