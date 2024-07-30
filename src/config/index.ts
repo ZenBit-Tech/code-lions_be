@@ -22,6 +22,7 @@ export const DEFAULT_ORDER = 'DESC';
 export const DEFAULT_SORT = 'createdAt';
 export const MAX_PRODUCT_PHOTO_SIZE = 52428800;
 export const MAX_PRODUCT_PDF_SIZE = 10485760;
+export const MAX_CHAT_FILE_SIZE = 5242880;
 export const MAX_AVATAR_SIZE = 2097152;
 export const RATING_FIVE = 5;
 export const NUMBER_OF_FIVE_RATINGS = 3;

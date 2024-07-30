@@ -13,6 +13,7 @@ import { User } from 'src/modules/users/user.entity';
 
 import { EventsGateway } from '../events/events.gateway';
 
+import { chatContentType } from './chat-content.enum';
 import {
   ChatRoomResponseDto,
   ChatUserDto,
@@ -210,7 +211,7 @@ export class ChatService {
     senderId: string,
     sendMessageDto: SendMessageDto,
   ): Promise<Message> {
-    const { chatId, content } = sendMessageDto;
+    const { chatId, content, fileUrl, fileType } = sendMessageDto;
 
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id: chatId },
@@ -228,6 +229,8 @@ export class ChatService {
 
     const message = this.messageRepository.create({
       content,
+      fileUrl,
+      fileType,
       chatRoom,
       sender: user,
     });
@@ -338,9 +341,20 @@ export class ChatService {
       : null;
 
     const messages = chatRoom.messages.map((message) => {
+      let contentType: string;
+
+      if (message.content) {
+        contentType = chatContentType.TEXT;
+      } else if (message.fileType === chatContentType.IMAGE) {
+        contentType = chatContentType.IMAGE;
+      } else {
+        contentType = chatContentType.FILE;
+      }
+
       return new MessageResponseDto({
         id: message.id,
-        content: message.content,
+        content: message.content || message.fileUrl,
+        contentType,
         createdAt: message.createdAt,
         sender: {
           id: message.sender.id,
@@ -379,10 +393,21 @@ export class ChatService {
     );
     const lastMessage = await this.getLastMessage(chatRoom.id);
 
+    let contentType: string;
+
+    if (lastMessage?.content) {
+      contentType = chatContentType.TEXT;
+    } else if (lastMessage?.fileType === chatContentType.IMAGE) {
+      contentType = chatContentType.IMAGE;
+    } else {
+      contentType = chatContentType.FILE;
+    }
+
     const lastMessageDto = lastMessage
       ? new MessageResponseDto({
           id: lastMessage.id,
-          content: lastMessage.content,
+          content: lastMessage.content || lastMessage.fileUrl,
+          contentType,
           createdAt: lastMessage.createdAt,
           sender: {
             id: lastMessage.sender.id,
