@@ -284,7 +284,11 @@ export class User {
     example: new Date(),
     description: 'The last active time of the user',
   })
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({
+    type: 'timestamp',
+    nullable: false,
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   lastActiveAt: Date;
 
   @OneToMany(() => Product, (product) => product.user)
