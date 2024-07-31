@@ -6,11 +6,13 @@ import {
   UpdateDateColumn,
   CreateDateColumn,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 
 import { User } from 'src/modules/users/user.entity';
 
 import { ChatRoom } from './chat-room.entity';
+import { MessageRead } from './message-read.entity';
 
 @Entity()
 export class Message {
@@ -55,4 +57,11 @@ export class Message {
   })
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date;
+
+  @ApiProperty({
+    type: () => [MessageRead],
+    description: 'The read statuses of the message',
+  })
+  @OneToMany(() => MessageRead, (messageRead) => messageRead.message)
+  reads: MessageRead[];
 }

@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Logger,
   UnauthorizedException,
   UseGuards,
@@ -18,10 +20,11 @@ import { Server, Socket } from 'socket.io';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
-import { CreateChatDto } from '../chat/dto/create-chat.dto';
-import { SendMessageDto } from '../chat/dto/send-message.dto';
-import { UserTypingDto } from '../chat/dto/user-typing.dto';
-import { ChatRoom } from '../chat/entities/chat-room.entity';
+import {
+  GetUserChatsDto,
+  SendMessageDto,
+  UserTypingDto,
+} from '../chat/dto/index';
 import { Message } from '../chat/entities/message.entity';
 import { UsersService } from '../users/users.service';
 
@@ -40,7 +43,9 @@ export class EventsGateway
   server: Server;
 
   constructor(
-    private readonly chatService: ChatService,
+    @Inject(forwardRef(() => ChatService))
+    private chatService: ChatService,
+
     private readonly jwtService: JwtService,
     private readonly userService: UsersService,
   ) {}
@@ -90,21 +95,14 @@ export class EventsGateway
     this.Logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('createChat')
-  async handleCreateChat(
-    client: SocketWithAuth,
-    createChatDto: CreateChatDto,
-  ): Promise<ChatRoom> {
-    const chatRoom = await this.chatService.createChat(
-      client.userId,
-      createChatDto,
-    );
+  @SubscribeMessage('getUserChats')
+  async handleGetUserChats(client: SocketWithAuth): Promise<GetUserChatsDto[]> {
+    const userId = client.userId;
+    const userChats = await this.chatService.getUserChats(userId);
 
-    chatRoom.participants.forEach((participant) => client.join(participant.id));
+    client.emit('userChats', userChats);
 
-    this.server.to(chatRoom.id).emit('newChat', chatRoom);
-
-    return chatRoom;
+    return userChats;
   }
 
   @SubscribeMessage('sendMessage')
@@ -128,6 +126,32 @@ export class EventsGateway
     userTypingDto: UserTypingDto,
   ): Promise<void> {
     userTypingDto.userId = client.userId;
-    this.server.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
+    client.broadcast.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
+  }
+
+  @SubscribeMessage('markMessageAsRead')
+  async handleMarkMessageAsRead(
+    client: SocketWithAuth,
+    data: { chatId: string },
+  ): Promise<void> {
+    const { chatId } = data;
+
+    await this.chatService.markMessageAsRead(client.userId, chatId);
+  }
+
+  @SubscribeMessage('countUnreadMessages')
+  async handleCountUnreadMessages(
+    client: SocketWithAuth,
+    data: { chatId: string },
+  ): Promise<number> {
+    const { chatId } = data;
+    const count = await this.chatService.countUnreadMessages(
+      client.userId,
+      chatId,
+    );
+
+    client.emit('unreadMessageCount', { chatId, count });
+
+    return count;
   }
 }

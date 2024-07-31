@@ -6,15 +6,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmConfigService } from 'src/config/typeorm';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { CartModule } from 'src/modules/cart/cart.module';
+import { ChatModule } from 'src/modules/chat/chat.module';
+import { EventsModule } from 'src/modules/events/events.module';
 import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
+import { OrdersModule } from 'src/modules/orders/orders.module';
 import { ProductsModule } from 'src/modules/products/products.module';
 import { ReviewsModule } from 'src/modules/reviews/reviews.module';
+import { StripeModule } from 'src/modules/stripe/stripe.module';
 import { UsersModule } from 'src/modules/users/users.module';
 import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
-
-import { ChatModule } from './modules/chat/chat.module';
-import { EventsModule } from './modules/events/events.module';
-import { StripeModule } from './modules/stripe/stripe.module';
 
 @Module({
   imports: [
@@ -41,6 +41,7 @@ import { StripeModule } from './modules/stripe/stripe.module';
         },
       }),
     }),
+    OrdersModule,
   ],
 })
 export class AppModule {}
