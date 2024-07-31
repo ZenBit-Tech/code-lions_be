@@ -35,8 +35,6 @@ export class FollowService {
 
       buyer.following.push(vendor);
 
-      vendor.isFollowed = true;
-
       return this.userRepository.save(buyer);
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -64,8 +62,6 @@ export class FollowService {
       buyer.following = buyer.following.filter(
         (followedVendor) => followedVendor.id !== vendor.id,
       );
-
-      vendor.isFollowed = false;
 
       await this.userRepository.save(buyer);
     } catch (error) {
