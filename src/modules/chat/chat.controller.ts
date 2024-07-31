@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, UseGuards, Param, Post, Body } from '@nestjs/common';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -6,20 +6,24 @@ import {
   ApiUnauthorizedResponse,
   ApiInternalServerErrorResponse,
   ApiParam,
+  ApiTags,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
+
+import { GetUserId } from 'src/common/decorators/get-user-id';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 
 import { ChatService } from './chat.service';
-import { ChatRoomResponseDto } from './dto/chat-room-response.dto';
+import {
+  ChatRoomResponseDto,
+  CreateChatDto,
+  GetUserChatsDto,
+} from './dto/index';
+import { ChatRoom } from './entities/chat-room.entity';
 
-type AuthenticatedUser = {
-  user: {
-    id: string;
-  };
-} & Request;
-
-UseGuards(JwtAuthGuard);
+@ApiTags('chats')
+@UseGuards(JwtAuthGuard)
 @Controller('chats')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
@@ -71,11 +75,7 @@ export class ChatController {
       },
     },
   })
-  async getUserChats(
-    @Request() req: AuthenticatedUser,
-  ): Promise<ChatRoomResponseDto[]> {
-    const userId = req.user.id;
-
+  async getUserChats(@GetUserId() userId: string): Promise<GetUserChatsDto[]> {
     return this.chatService.getUserChats(userId);
   }
 
@@ -132,10 +132,81 @@ export class ChatController {
   })
   async getChatById(
     @Param('id') chatId: string,
-    @Request() req: AuthenticatedUser,
+    @GetUserId() userId: string,
   ): Promise<ChatRoomResponseDto> {
-    const userId = req.user.id;
-
     return this.chatService.getChatById(chatId, userId);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Create a new chat room',
+    tags: ['Chat Endpoints'],
+    description:
+      'This endpoint creates a new chat room with the specified details and returns the newly created chat room.',
+  })
+  @ApiCreatedResponse({
+    description: 'The chat room has been successfully created',
+    type: ChatRoom,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: 'Unauthorized' },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create chat room',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: 'Failed to create chat room' },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async createChat(
+    @Body() chat: CreateChatDto,
+    @GetUserId() userId: string,
+  ): Promise<ChatRoom> {
+    return this.chatService.createChat(userId, chat);
+  }
+
+  @Post('/support')
+  @ApiOperation({
+    summary: 'Create a new chat room with an admin',
+    tags: ['Chat Endpoints'],
+    description:
+      'This endpoint creates a new chat room with an admin and returns the newly created chat room.',
+  })
+  @ApiCreatedResponse({
+    description: 'The chat room has been successfully created',
+    type: ChatRoom,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: 'Unauthorized' },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create chat room',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: 'Failed to create chat room' },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async createChatWithAdmin(@GetUserId() userId: string): Promise<ChatRoom> {
+    return this.chatService.createChatWithAdmin(userId);
   }
 }

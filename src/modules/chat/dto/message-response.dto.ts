@@ -4,26 +4,30 @@ import { ChatUserDto } from './chat-user.dto';
 
 export class MessageResponseDto {
   @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
-    description: 'The ID of the message',
+    description: 'Unique identifier of the message',
+    example: '7b4b5875-2d0c-4bee-924a-1bdc7e6d3ef4',
   })
   id: string;
 
   @ApiProperty({
-    example: 'Hello, world!',
-    description: 'The content of the message',
+    description: 'Content of the message',
+    example: 'Hello, how are you?',
   })
   content: string;
 
   @ApiProperty({
-    example: '2024-07-22T14:09:59.234Z',
-    description: 'The timestamp when the message was created',
+    description: 'Timestamp when the message was created',
+    example: '2024-07-24T09:38:17.495Z',
   })
   createdAt: Date;
 
   @ApiProperty({
-    type: () => ChatUserDto,
-    description: 'The sender of the message',
+    description: 'Details of the user who sent the message',
+    type: ChatUserDto,
   })
   sender: ChatUserDto;
+
+  constructor(partial: Partial<MessageResponseDto>) {
+    Object.assign(this, partial);
+  }
 }
