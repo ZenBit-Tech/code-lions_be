@@ -51,6 +51,8 @@ const mockUser: User = {
   wishlist: [],
   chatRooms: [],
   messages: [],
+  productsOrder: [],
+  buyerOrders: [],
   readMessages: [],
 };
 
@@ -78,9 +80,11 @@ export const mockProduct: Product = {
   createdAt: new Date(),
   lastUpdatedAt: new Date(),
   deletedAt: new Date(),
+  isAvailable: true,
   images: [],
   user: mockUser,
   color: [],
   cart: [],
   wishlistEntries: [],
+  orders: [],
 };

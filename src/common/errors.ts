@@ -186,5 +186,15 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
+  FAILED_TO_FETCH_ORDERS_BY_VENDOR: 'Failed to fetch orders bt vendor',
+  FAILED_TO_FETCH_ORDERS: 'Failed to fetch orders',
+  ORDERS_NOT_FOUND: 'Orders not found',
+  FAILED_TO_CREATE_ORDER: 'Failed to create order',
+  ORDERS_CANNOT_BE_GENERATED: 'Orders cannot be generated',
+  FAILED_TO_CREATE_BUYER_ORDER: 'Failed to create buyer order',
+  VENDOR_NOT_FOUND: 'Vendor not found',
+  INVALID_ORDER_REQUEST: 'Invalid request for creating the payment for order',
+  FAILED_TO_PAY_FOR_ORDER: 'Failed to pay for order',
+  CART_IS_EMPTY: 'There is no products in card',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
 };
