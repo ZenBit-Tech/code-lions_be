@@ -6,6 +6,7 @@ import {
   Post,
   UseGuards,
   InternalServerErrorException,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -114,6 +115,7 @@ export class OrdersController {
   }
 
   @Post('pay')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Create a buyer order',
     tags: ['Order Endpoints'],
@@ -151,15 +153,16 @@ export class OrdersController {
   })
   @ApiBody({ type: CreateOrderDto })
   async createOrdersForUser(
+    @Req() req: any,
     @Body() createOrderDto: CreateOrderDto,
   ): Promise<void> {
-    const { userId, shippingPrice } = createOrderDto;
+    const userId = req.user.id;
+    const { shippingPrice } = createOrderDto;
 
     try {
       await this.ordersService.createOrdersForUser(userId, shippingPrice);
     } catch (error) {
-      console.error('Failed to create order:', error);
-      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
+      throw new InternalServerErrorException('Failed to create order');
     }
   }
 }

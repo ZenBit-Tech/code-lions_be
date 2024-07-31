@@ -3,31 +3,33 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  JoinColumn,
+  ManyToOne,
   ManyToMany,
   JoinTable,
   BeforeInsert,
-  ManyToOne,
+  JoinColumn,
+  Index,
 } from 'typeorm';
 
-import { MAX_ORDER_NUMBER, MIN_ORDER_NUMBER } from 'src/config';
 import { Status } from 'src/modules/orders/entities/order-status.enum';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 import { AddressDTO } from '../dto/address.dto';
 
 import { BuyerOrder } from './buyer-order.entity';
 
 @Entity('orders')
+@Index('idx_orders_id', ['id'])
 export class Order {
   @ApiProperty({
     example: '61c674384-f944-401b-949b-b76e8793bdc9',
     description: 'The ID of the order',
     type: String,
   })
-  @PrimaryGeneratedColumn('uuid')
+  @Column('uuid')
   id: string;
 
   @ApiProperty({
@@ -35,8 +37,8 @@ export class Order {
     description: 'The order number',
     type: Number,
   })
-  @Column({ type: 'int', unique: true })
-  orderNumber: number;
+  @PrimaryGeneratedColumn({ type: 'int', name: 'orderId' })
+  orderId: number;
 
   @ApiProperty({
     example: 15,
@@ -122,18 +124,17 @@ export class Order {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @ApiProperty({
+    example: '61c674384-f944-401b-949b-b76e8793bdc9',
+    description: 'The ID of the buyer order',
+    type: String,
+  })
   @ManyToOne(() => BuyerOrder, (buyerOrder) => buyerOrder.orders)
-  buyerOrders: BuyerOrder;
+  @JoinColumn({ name: 'buyer_order_id' })
+  buyerOrder: BuyerOrder;
 
   @BeforeInsert()
-  async setOrderNumber(): Promise<void> {
-    this.orderNumber = await Order.createOrderNumber();
-  }
-
-  static async createOrderNumber(): Promise<number> {
-    return (
-      Math.floor(Math.random() * (MAX_ORDER_NUMBER - MIN_ORDER_NUMBER + 1)) +
-      MIN_ORDER_NUMBER
-    );
+  generateUUID(): void {
+    this.id = uuidv4();
   }
 }

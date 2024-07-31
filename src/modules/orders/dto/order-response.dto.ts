@@ -19,7 +19,7 @@ export class OrderResponseDTO {
     description: 'The order number',
     type: Number,
   })
-  orderNumber: number;
+  orderId: number;
 
   @ApiProperty({
     example: 15,
@@ -59,7 +59,7 @@ export class OrderResponseDTO {
 
   constructor(order: Order) {
     this.id = order.id;
-    this.orderNumber = order.orderNumber;
+    this.orderId = order.orderId;
     this.products = order.products;
     this.price = order.price;
     this.status = order.status;

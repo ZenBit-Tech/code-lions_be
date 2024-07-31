@@ -4,15 +4,12 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
-  JoinTable,
   Column,
   OneToMany,
 } from 'typeorm';
 
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { User } from 'src/modules/users/user.entity';
-
-import { Status } from './order-status.enum';
 
 @Entity('buyer_order')
 export class BuyerOrder {
@@ -23,6 +20,21 @@ export class BuyerOrder {
   })
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @ApiProperty({
+    example: ' pm_1Phqc5Cj7lDMnopKDgRwhwAb',
+    description: 'The Payment ID of the order',
+  })
+  @Column({ nullable: true, default: null })
+  paymentId: string | null;
+
+  @ApiProperty({
+    example: '2024-06-28 21:04:24',
+    description: 'The date the payment was done',
+    type: Date,
+  })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
 
   @ApiProperty({
     example: 15000,
@@ -41,17 +53,11 @@ export class BuyerOrder {
   shipping: number;
 
   @ApiProperty({
-    example: 'published',
-    description: 'The status of the buyer`s order',
-    enum: Status,
+    example: true,
+    description: 'Indicates the buyer order is paid',
   })
-  @Column({
-    type: 'enum',
-    enum: Status,
-    nullable: false,
-    default: Status.NEW_ORDER,
-  })
-  status: Status;
+  @Column({ default: false })
+  isPaid: boolean;
 
   @ApiProperty({
     example: '61c674384-f944-401b-949b-b76e8793bdc9',
@@ -70,17 +76,6 @@ export class BuyerOrder {
     description: 'The IDs of the orders',
     type: [String],
   })
-  @OneToMany(() => Order, (order) => order.buyerOrders, { cascade: true })
-  @JoinTable({
-    name: 'buyer_order_orders',
-    joinColumn: {
-      name: 'buyer_order_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'order_id',
-      referencedColumnName: 'id',
-    },
-  })
+  @OneToMany(() => Order, (order) => order.buyerOrder, { cascade: true })
   orders: Order[];
 }

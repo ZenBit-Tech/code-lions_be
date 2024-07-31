@@ -95,18 +95,18 @@ export class OrdersService {
           throw new NotFoundException(Errors.VENDOR_NOT_FOUND);
         }
 
-        const productResponseDTO = await this.productRepository.findOne({
+        const product = await this.productRepository.findOne({
           where: { id: cartItem.productId },
         });
 
-        if (!productResponseDTO) {
+        if (!product) {
           throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
         }
 
-        const product = {
+        const productForOrder = {
           productId: cartItem.productId,
           productUrl: cartItem.productUrl,
-          name: productResponseDTO.name,
+          name: product.name,
           size: cartItem.size,
           color: cartItem.color,
           duration: cartItem.duration,
@@ -114,12 +114,12 @@ export class OrdersService {
         };
 
         if (ordersMap.has(cartItem.vendorId)) {
-          ordersMap.get(cartItem.vendorId).products.push(product);
+          ordersMap.get(cartItem.vendorId).products.push(productForOrder);
         } else {
           ordersMap.set(cartItem.vendorId, {
             vendorId: vendor.id,
             vendorName: vendor.name,
-            products: [product],
+            products: [productForOrder],
           });
         }
       }
@@ -141,20 +141,22 @@ export class OrdersService {
       totalPrice += parseFloat(String(shippingPrice));
 
       buyerOrder.user = user;
-      buyerOrder.status = Status.NEW_ORDER;
+      buyerOrder.isPaid = false;
+      buyerOrder.createdAt = new Date();
+      buyerOrder.paymentId = '';
       buyerOrder.shipping = shippingPrice;
       buyerOrder.price = totalPrice;
       buyerOrder.orders = [];
 
-      for (const orderDTO of orders) {
-        const order = new Order();
+      for (const order of orders) {
+        const newOrder = new Order();
 
-        order.vendorId = orderDTO.vendorId;
-        order.buyerId = userId;
-        order.shipping = shippingPrice / orders.length;
-        order.products = [];
+        newOrder.vendorId = order.vendorId;
+        newOrder.buyerId = userId;
+        newOrder.shipping = shippingPrice / orders.length;
+        newOrder.products = [];
 
-        for (const productDTO of orderDTO.products) {
+        for (const productDTO of order.products) {
           const product = await this.productRepository.findOne({
             where: { id: productDTO.productId },
           });
@@ -163,17 +165,17 @@ export class OrdersService {
             throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
           }
 
-          order.products.push(product);
+          newOrder.products.push(product);
         }
 
         totalPrice = 0;
-        orderDTO.products.forEach((product) => {
+        order.products.forEach((product) => {
           totalPrice += parseFloat(String(product.price));
         });
-        order.price = totalPrice;
-        order.status = Status.NEW_ORDER;
-        order.createdAt = new Date();
-        order.address = {
+        newOrder.price = totalPrice;
+        newOrder.status = Status.NEW_ORDER;
+        newOrder.createdAt = new Date();
+        newOrder.address = {
           addressLine1: user.addressLine1,
           addressLine2: user.addressLine2,
           country: user.country,
@@ -181,7 +183,7 @@ export class OrdersService {
           city: user.city,
         };
 
-        buyerOrder.orders.push(order);
+        buyerOrder.orders.push(newOrder);
       }
 
       await this.buyerOrderRepository.save(buyerOrder);
