@@ -286,7 +286,7 @@ export class User {
   })
   @Column({
     type: 'timestamp',
-    nullable: false,
+    nullable: true,
     default: () => 'CURRENT_TIMESTAMP',
   })
   lastActiveAt: Date;
