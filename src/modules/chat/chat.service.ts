@@ -211,7 +211,7 @@ export class ChatService {
   async sendMessage(
     senderId: string,
     sendMessageDto: SendMessageDto,
-  ): Promise<Message> {
+  ): Promise<MessageResponseDto> {
     const { chatId, content, fileUrl, fileType } = sendMessageDto;
 
     const chatRoom = await this.chatRoomRepository.findOne({
@@ -252,7 +252,26 @@ export class ChatService {
       sender: user,
     });
 
-    return this.messageRepository.save(message);
+    const savedMessage = await this.messageRepository.save(message);
+
+    this.toMessageResponseDto(savedMessage);
+
+    return this.toMessageResponseDto(savedMessage);
+  }
+
+  async uploadFile(
+    senderId: string,
+    sendMessageDto: SendMessageDto,
+  ): Promise<void> {
+    const secondUser = await this.getChatSecondParticipant(
+      senderId,
+      sendMessageDto.chatId,
+    );
+    const message = await this.sendMessage(senderId, sendMessageDto);
+
+    this.eventsGateway.server
+      .to([sendMessageDto.chatId, secondUser.id])
+      .emit('newMessage', message);
   }
 
   async markMessageAsRead(userId: string, chatId: string): Promise<void> {
@@ -341,6 +360,30 @@ export class ChatService {
     return chatRoom.participants[firstIndexOfArray];
   }
 
+  private toMessageResponseDto(message: Message): MessageResponseDto {
+    let contentType: string;
+
+    if (message.content) {
+      contentType = chatContentType.TEXT;
+    } else if (message.fileType === chatContentType.IMAGE) {
+      contentType = chatContentType.IMAGE;
+    } else {
+      contentType = chatContentType.FILE;
+    }
+
+    return new MessageResponseDto({
+      id: message.id,
+      content: message.content || message.fileUrl,
+      contentType,
+      createdAt: message.createdAt,
+      sender: {
+        id: message.sender.id,
+        name: message.sender.name,
+        photoUrl: message.sender.photoUrl,
+      },
+    });
+  }
+
   private toChatRoomResponseDto(
     chatRoom: ChatRoom,
     userId: string,
@@ -358,27 +401,7 @@ export class ChatService {
       : null;
 
     const messages = chatRoom.messages.map((message) => {
-      let contentType: string;
-
-      if (message.content) {
-        contentType = chatContentType.TEXT;
-      } else if (message.fileType === chatContentType.IMAGE) {
-        contentType = chatContentType.IMAGE;
-      } else {
-        contentType = chatContentType.FILE;
-      }
-
-      return new MessageResponseDto({
-        id: message.id,
-        content: message.content || message.fileUrl,
-        contentType,
-        createdAt: message.createdAt,
-        sender: {
-          id: message.sender.id,
-          name: message.sender.name,
-          photoUrl: message.sender.photoUrl,
-        },
-      });
+      return this.toMessageResponseDto(message);
     });
 
     return new ChatRoomResponseDto({
@@ -412,29 +435,7 @@ export class ChatService {
     );
     const lastMessage = await this.getLastMessage(chatRoom.id);
 
-    let contentType: string;
-
-    if (lastMessage?.content) {
-      contentType = chatContentType.TEXT;
-    } else if (lastMessage?.fileType === chatContentType.IMAGE) {
-      contentType = chatContentType.IMAGE;
-    } else {
-      contentType = chatContentType.FILE;
-    }
-
-    const lastMessageDto = lastMessage
-      ? new MessageResponseDto({
-          id: lastMessage.id,
-          content: lastMessage.content || lastMessage.fileUrl,
-          contentType,
-          createdAt: lastMessage.createdAt,
-          sender: {
-            id: lastMessage.sender.id,
-            name: lastMessage.sender.name,
-            photoUrl: lastMessage.sender.photoUrl,
-          },
-        })
-      : null;
+    const lastMessageDto = this.toMessageResponseDto(lastMessage);
 
     return new GetUserChatsDto({
       id: chatRoom.id,

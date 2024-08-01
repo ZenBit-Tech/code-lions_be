@@ -22,10 +22,10 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import {
   GetUserChatsDto,
+  MessageResponseDto,
   SendMessageDto,
   UserTypingDto,
 } from '../chat/dto/index';
-import { Message } from '../chat/entities/message.entity';
 import { UsersService } from '../users/users.service';
 
 type SocketWithAuth = {
@@ -122,7 +122,7 @@ export class EventsGateway
   async handleSendMessage(
     client: SocketWithAuth,
     sendMessageDto: SendMessageDto,
-  ): Promise<Message> {
+  ): Promise<MessageResponseDto> {
     const secondUser = await this.chatService.getChatSecondParticipant(
       client.userId,
       sendMessageDto.chatId,
@@ -133,7 +133,7 @@ export class EventsGateway
     );
 
     this.server
-      .to([message.chatRoom.id, secondUser.id])
+      .to([sendMessageDto.chatId, secondUser.id])
       .emit('newMessage', message);
 
     return message;

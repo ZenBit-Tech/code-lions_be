@@ -284,7 +284,7 @@ export class ChatController {
     const fileUrl = request.uploadedFileUrl;
     const mimeType = request.file.mimetype;
 
-    await this.chatService.sendMessage(userId, {
+    await this.chatService.uploadFile(userId, {
       chatId,
       fileUrl,
       fileType: mimeType.startsWith('image/')
