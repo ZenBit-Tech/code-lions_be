@@ -120,6 +120,7 @@ export class StripeService {
       ) {
         throw error;
       }
+      this.Logger.error(error);
       throw new InternalServerErrorException(Errors.PAYMENT_ERROR);
     }
   }
