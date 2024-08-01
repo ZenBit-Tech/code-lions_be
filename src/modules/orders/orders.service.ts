@@ -14,6 +14,7 @@ import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dt
 import { User } from 'src/modules/users/user.entity';
 
 import { Product } from '../products/entities/product.entity';
+import { RoleForUser } from '../roles/role-user.enum';
 
 import { OrderDTO } from './dto/order.dto';
 import { SingleOrderResponse } from './dto/single-order-response.dto';
@@ -92,41 +93,41 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
       }
 
-      const aId =
-        user.role === 'vendor' ? orders[0].buyerId : orders[0].vendorId;
+      const partnerId =
+        user.role === RoleForUser.VENDOR
+          ? orders[0].buyerId
+          : orders[0].vendorId;
 
-      const a = await this.userRepository.findOne({
-        where: { id: aId },
+      const partner = await this.userRepository.findOne({
+        where: { id: partnerId },
       });
 
-      if (!a) {
+      if (!partner) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      const aName = a.name;
-      const aAddress = {
-        addressLine1: a.addressLine1,
-        addressLine2: a.addressLine2,
-        city: a.city,
-        state: a.state,
-        country: a.country,
+      const partnerName = partner.name;
+      const partnerAddress = {
+        addressLine1: partner.addressLine1,
+        addressLine2: partner.addressLine2,
+        city: partner.city,
+        state: partner.state,
+        country: partner.country,
       };
 
-      const order = {
+      const orderData = {
         order: orders.map((order) => new OrderResponseDTO(order)),
-        userName: aName,
-        userId: aId,
-        address: aAddress,
+        userName: partnerName,
+        userId: partnerId,
+        address: partnerAddress,
       };
 
-      return order;
+      return orderData;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_FETCH_ORDERS_BY_VENDOR,
-      );
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_ORDER);
     }
   }
 
@@ -259,10 +260,23 @@ export class OrdersService {
   }
 
   async rejectOrder(vendorId: string, orderId: number): Promise<void> {
-    const order = await this.orderRepository.findOne({ where: { orderId } });
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, vendorId },
+      });
 
-    order.status = Status.REJECTED;
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-    await this.orderRepository.save(order);
+      order.status = Status.REJECTED;
+
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+    }
   }
 }

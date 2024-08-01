@@ -9,6 +9,8 @@ import {
   InternalServerErrorException,
   Req,
   Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -19,6 +21,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -172,6 +175,44 @@ export class OrdersController {
   }
 
   @Get(':userId/:orderId')
+  @ApiOperation({
+    summary: 'Get order by user ID and order ID',
+    tags: ['Order Endpoints'],
+    description:
+      'This endpoint returns an order with related data by vendor or buyer ID and order ID.',
+  })
+  @ApiOkResponse({
+    description: 'The order  by vendor or buyer ID and order ID',
+    type: SingleOrderResponse,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given user id and order id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch order by user ID and order ID',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({ name: 'userId', description: 'The ID of the user' })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
   async getOrderByUserIdAndOrderId(
     @Param('userId') userId: string,
     @Param('orderId') orderId: number,
@@ -180,6 +221,42 @@ export class OrdersController {
   }
 
   @Patch(':orderId')
+  @ApiOperation({
+    summary: 'Reject the order by vendor',
+    tags: ['Order Endpoints'],
+    description: 'This endpoint changes status of the order to rejected.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to reject the order',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_REJECT_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
   async rejectOrder(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
