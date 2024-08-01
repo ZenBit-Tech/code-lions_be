@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
+import { Repository, Like, FindOptionsWhere } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
@@ -17,10 +17,13 @@ import {
   LIMIT_OF_BEST_VENDORS_PER_PAGE,
   LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
   LIMIT_USERS_PER_PAGE,
-  MAX_RATING,
   VERIFICATION_CODE_EXPIRATION,
 } from 'src/config';
-import { mapProducts } from 'src/modules/products/utils/mapProducts';
+import { GooglePayloadDto } from 'src/modules/auth/dto/google-payload.dto';
+import {
+  GetProductsOptions,
+  ProductsService,
+} from 'src/modules/products/products.service';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
 
@@ -29,7 +32,6 @@ import { UserWithTokensResponseDto } from '../auth/dto/user-with-tokens-response
 import { MailerService } from '../mailer/mailer.service';
 import { Product } from '../products/entities/product.entity';
 
-import { GooglePayloadDto } from './../auth/dto/google-payload.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { BestVendorsResponseDto } from './dto/get-best-vendors.dto';
 import { PersonalInfoDto } from './dto/personal-info.dto';
@@ -47,12 +49,11 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private productsService: ProductsService,
     private mailerService: MailerService,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
-  ) {
-    this.transformVendor = this.transformVendor.bind(this);
-  }
+  ) {}
 
   private async hashPassword(password: string): Promise<string> {
     try {
@@ -822,49 +823,37 @@ export class UsersService {
     }
   }
 
-  async getBestVendors(): Promise<BestVendorsResponseDto[]> {
+  async getBestVendors(
+    options: GetProductsOptions,
+  ): Promise<BestVendorsResponseDto[]> {
     try {
-      const bestVendors = await this.userRepository.find({
-        where: { role: Role.VENDOR, rating: MoreThanOrEqual(MAX_RATING) },
-        relations: [
-          'products',
-          'products.images',
-          'products.color',
-          'products.user',
-        ],
-        take: LIMIT_OF_BEST_VENDORS_PER_PAGE,
-      });
+      const bestVendors = await this.productsService.getBestVendors(
+        LIMIT_OF_BEST_VENDORS_PER_PAGE,
+        options,
+      );
 
       const bestVendorsWithLimitedProducts = await Promise.all(
         bestVendors.map(async (vendor) => {
-          const limitedProducts = await this.productRepository.find({
-            where: { vendorId: vendor.id },
-            relations: ['images', 'color', 'user'],
-            take: LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
+          const limitedProducts = await this.productsService.getProducts({
+            page: 1,
+            limit: LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
+            where: { key: 'vendorId', value: vendor.vendorId },
+            ...options,
           });
 
           return {
             ...vendor,
-            products: limitedProducts,
+            products: limitedProducts.products,
           };
         }),
       );
 
-      return bestVendorsWithLimitedProducts.map(this.transformVendor);
+      return bestVendorsWithLimitedProducts;
     } catch (error) {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_FETCH_BEST_VENDORS,
       );
     }
-  }
-
-  private transformVendor(vendor: User): BestVendorsResponseDto {
-    return {
-      vendorId: vendor.id,
-      vendorName: vendor.name,
-      photoUrl: vendor.photoUrl,
-      products: mapProducts(vendor.products),
-    };
   }
 
   async hideRentalRules(userId: string): Promise<void> {
