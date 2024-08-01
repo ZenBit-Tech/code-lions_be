@@ -36,6 +36,7 @@ import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserProfileByAdminDto } from './dto/update-user-profile-admin.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserCardDto } from './dto/user-card.dto';
+import { UserStatusResponseDto } from './dto/user-status-response.dto';
 import { OnboardingSteps } from './onboarding-steps.enum';
 import { Order } from './order.enum';
 import { User } from './user.entity';
@@ -920,5 +921,44 @@ export class UsersService {
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_REACTIVATE_USERS);
     }
+  }
+
+  async setUserOnline(userId: string): Promise<void> {
+    await this.userRepository.update(userId, {
+      isOnline: true,
+      lastActiveAt: new Date(),
+    });
+  }
+
+  async setUserOffline(userId: string): Promise<void> {
+    await this.userRepository.update(userId, {
+      isOnline: false,
+      lastActiveAt: new Date(),
+    });
+  }
+
+  async getLastActiveTime(userId: string): Promise<Date> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    return user?.lastActiveAt;
+  }
+
+  async isUserOnline(userId: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    return user?.isOnline;
+  }
+
+  async getUserStatus(userId: string): Promise<UserStatusResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return {
+      isOnline: user.isOnline,
+      lastActiveAt: user.lastActiveAt,
+    };
   }
 }
