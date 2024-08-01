@@ -4,14 +4,15 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { Errors } from 'src/common/errors';
 import { CANADA_POST_LOGO } from 'src/config';
-import { mockOrders } from 'src/mocks/mock-orders';
 import { CartService } from 'src/modules/cart/cart.service';
+import { OrdersService } from 'src/modules/orders/orders.service';
 import { ProductsService } from 'src/modules/products/products.service';
 import Stripe from 'stripe';
 
@@ -23,16 +24,20 @@ import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
 
 const minDifference = 0.01;
 const centsInDollar = 100;
+const successStatus = 'succeeded';
 
 @Injectable()
 export class StripeService {
   public readonly StripeApi: Stripe;
+  private readonly Logger = new Logger(StripeService.name);
+
   constructor(
     @Inject(MODULE_OPTIONS_TOKEN) private options: StripeModuleOptions,
     private usersServise: UsersService,
     private productsService: ProductsService,
     private configService: ConfigService,
     private cartService: CartService,
+    private ordersService: OrdersService,
   ) {
     this.StripeApi = new Stripe(this.options.apiKey, this.options.options);
   }
@@ -98,9 +103,9 @@ export class StripeService {
 
       const session = await this.StripeApi.checkout.sessions.create({
         line_items: lineItems,
-
-        payment_intent_data: {
-          transfer_group: mockOrders[0].transferGroup,
+        metadata: {
+          userId: customerId,
+          shippingPrice: shippingPrice,
         },
         mode: 'payment',
         success_url: this.configService.get<string>('STRIPE_SUCCESS_URL'),
@@ -126,12 +131,25 @@ export class StripeService {
 
       const paymentIntent =
         await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
-      const transferGroup = paymentIntent.transfer_group;
+      const metadata = session.metadata;
 
-      const userId = mockOrders.find(
-        (order) => order.transferGroup === transferGroup,
-      ).userId;
+      const { id: paymentId, amount_received: total, status } = paymentIntent;
+      const { userId, shippingPrice } = metadata;
 
+      const totalAmount = total / centsInDollar;
+      const isPaid = status === successStatus;
+
+      this.Logger.log(
+        `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
+      );
+
+      await this.ordersService.createOrdersForUser(
+        userId,
+        Number(shippingPrice),
+        totalAmount,
+        isPaid,
+        paymentId,
+      );
       await this.cartService.emptyCart(userId);
     }
 
@@ -139,20 +157,19 @@ export class StripeService {
   }
 
   async checkSignature(
-    event: string,
-    signature: string,
+    raw: Buffer | string,
+    signature: string | string[],
   ): Promise<Stripe.Event> {
     try {
       const consrtuctedEvent = this.StripeApi.webhooks.constructEvent(
-        event,
+        raw,
         signature,
         this.configService.get<string>('STRIPE_WEBHOOK_SECRET'),
       );
 
-      console.log(consrtuctedEvent);
-
       return consrtuctedEvent;
     } catch (error) {
+      this.Logger.error(error);
       throw new BadRequestException(Errors.INVALID_WEBHOOK_SIGNATURE);
     }
   }

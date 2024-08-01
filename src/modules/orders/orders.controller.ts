@@ -157,10 +157,16 @@ export class OrdersController {
     @Body() createOrderDto: CreateOrderDto,
   ): Promise<void> {
     const userId = req.user.id;
-    const { shippingPrice } = createOrderDto;
+    const { shippingPrice, totalAmount, isPaid, paymentId } = createOrderDto;
 
     try {
-      await this.ordersService.createOrdersForUser(userId, shippingPrice);
+      await this.ordersService.createOrdersForUser(
+        userId,
+        shippingPrice,
+        totalAmount,
+        isPaid,
+        paymentId,
+      );
     } catch (error) {
       throw new InternalServerErrorException('Failed to create order');
     }

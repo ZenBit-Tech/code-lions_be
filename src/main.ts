@@ -13,6 +13,7 @@ const configService = new ConfigService();
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: true,
+    rawBody: true,
   });
   const config = new DocumentBuilder()
     .setTitle('CodeLions')

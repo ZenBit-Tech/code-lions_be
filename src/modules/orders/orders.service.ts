@@ -68,6 +68,9 @@ export class OrdersService {
   async createOrdersForUser(
     userId: string,
     shippingPrice: number,
+    totalAmount: number,
+    isPaid: boolean,
+    paymentId: string,
   ): Promise<void> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -141,11 +144,11 @@ export class OrdersService {
       totalPrice += parseFloat(String(shippingPrice));
 
       buyerOrder.user = user;
-      buyerOrder.isPaid = false;
+      buyerOrder.isPaid = isPaid;
       buyerOrder.createdAt = new Date();
-      buyerOrder.paymentId = '';
+      buyerOrder.paymentId = paymentId;
       buyerOrder.shipping = shippingPrice;
-      buyerOrder.price = totalPrice;
+      buyerOrder.price = totalAmount;
       buyerOrder.orders = [];
 
       for (const order of orders) {

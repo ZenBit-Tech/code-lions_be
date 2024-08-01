@@ -1,13 +1,14 @@
 import {
   Body,
   Controller,
-  Headers,
   Post,
-  Request,
+  Req,
+  RawBodyRequest,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
+import { Request } from 'express';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { PaymentDto } from 'src/modules/stripe/dto/payment.dto';
@@ -28,7 +29,7 @@ export class StripeController {
   @Roles(Role.BUYER)
   async createCheckoutSession(
     @Body() payment: PaymentDto,
-    @Request() request: { user: User },
+    @Req() request: { user: User },
   ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
     const session = await this.stripeService.createCheckoutSession(
       request.user.id,
@@ -40,13 +41,11 @@ export class StripeController {
 
   @Post('webhook')
   async webhook(
-    @Headers('stripe-signature') signature: string,
-    @Body() event: string,
+    @Req() req: RawBodyRequest<Request>,
   ): Promise<{ received: boolean }> {
-    const checkedEvent = await this.stripeService.checkSignature(
-      event,
-      signature,
-    );
+    const rawBody = req.rawBody;
+    const sig = req.headers['stripe-signature'];
+    const checkedEvent = await this.stripeService.checkSignature(rawBody, sig);
 
     return await this.stripeService.webhookHandler(checkedEvent);
   }
