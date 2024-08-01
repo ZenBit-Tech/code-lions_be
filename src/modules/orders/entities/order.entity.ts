@@ -58,7 +58,7 @@ export class Order {
     name: 'order_products',
     joinColumn: {
       name: 'order_id',
-      referencedColumnName: 'id',
+      referencedColumnName: 'orderId',
     },
     inverseJoinColumn: {
       name: 'product_id',

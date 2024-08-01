@@ -16,6 +16,7 @@ import { User } from 'src/modules/users/user.entity';
 import { Product } from '../products/entities/product.entity';
 
 import { OrderDTO } from './dto/order.dto';
+import { SingleOrderResponse } from './dto/single-order-response.dto';
 import { BuyerOrder } from './entities/buyer-order.entity';
 import { Status } from './entities/order-status.enum';
 
@@ -55,6 +56,70 @@ export class OrdersService {
       }
 
       return orders.map((order) => new OrderResponseDTO(order));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_ORDERS_BY_VENDOR,
+      );
+    }
+  }
+
+  async findByUserIdAndOrderId(
+    userId: string,
+    orderId: number,
+  ): Promise<SingleOrderResponse> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const orders = await this.orderRepository.find({
+        where: [
+          { vendorId: userId, orderId },
+          { buyerId: userId, orderId },
+        ],
+        relations: ['products', 'products.images'],
+        order: { createdAt: 'DESC' },
+      });
+
+      if (!orders.length) {
+        throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
+      }
+
+      const aId =
+        user.role === 'vendor' ? orders[0].buyerId : orders[0].vendorId;
+
+      const a = await this.userRepository.findOne({
+        where: { id: aId },
+      });
+
+      if (!a) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const aName = a.name;
+      const aAddress = {
+        addressLine1: a.addressLine1,
+        addressLine2: a.addressLine2,
+        city: a.city,
+        state: a.state,
+        country: a.country,
+      };
+
+      const order = {
+        order: orders.map((order) => new OrderResponseDTO(order)),
+        userName: aName,
+        userId: aId,
+        address: aAddress,
+      };
+
+      return order;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

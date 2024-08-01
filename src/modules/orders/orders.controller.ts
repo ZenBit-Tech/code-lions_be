@@ -33,6 +33,7 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
+import { SingleOrderResponse } from './dto/single-order-response.dto';
 
 @ApiTags('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -164,5 +165,13 @@ export class OrdersController {
     } catch (error) {
       throw new InternalServerErrorException('Failed to create order');
     }
+  }
+
+  @Get(':userId/:orderId')
+  async getOrderByUserIdAndOrderId(
+    @Param('userId') userId: string,
+    @Param('orderId') orderId: number,
+  ): Promise<SingleOrderResponse> {
+    return await this.ordersService.findByUserIdAndOrderId(userId, orderId);
   }
 }
