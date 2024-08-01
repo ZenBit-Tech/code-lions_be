@@ -7,6 +7,7 @@ import {
   UseGuards,
   InternalServerErrorException,
   Req,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -17,6 +18,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -25,6 +27,7 @@ import {
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
+import { ORDERS_ON_PAGE } from 'src/config';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { Role } from 'src/modules/roles/role.enum';
@@ -33,6 +36,8 @@ import { RolesGuard } from 'src/modules/roles/roles.guard';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
+import { OrdersAndCountResponseDTO } from './dto/orders-count-response.dto';
+import { Status } from './entities/order-status.enum';
 
 @ApiTags('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -164,5 +169,80 @@ export class OrdersController {
     } catch (error) {
       throw new InternalServerErrorException('Failed to create order');
     }
+  }
+
+  @Get('vendor')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR)
+  @ApiOperation({
+    summary: 'Get orders of user',
+    tags: ['Order Endpoints'],
+    description: 'This endpoint returns a sorted list of user`s orders',
+  })
+  @ApiOkResponse({
+    description: 'The list of orders',
+    type: [OrderResponseDTO],
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch orders',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_ORDERS,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Order`s status',
+    schema: { type: 'string', default: Status.NEW_ORDER },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { type: 'number', default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Orders on a page limit',
+    schema: { type: 'number', default: ORDERS_ON_PAGE },
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'The field for sorting',
+    schema: { type: 'string', enum: ['orderId', 'price', 'createdAt'] },
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'The order for sorting',
+    schema: { type: 'string', enum: ['ASC', 'DESC'] },
+  })
+  async findOrdersByVendor(
+    @Req() req: any,
+    @Query('status') status?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = ORDERS_ON_PAGE,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ): Promise<OrdersAndCountResponseDTO> {
+    const vendorId = req.user.id;
+
+    return this.ordersService.findOrdersByVendor(
+      vendorId,
+      status,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    );
   }
 }

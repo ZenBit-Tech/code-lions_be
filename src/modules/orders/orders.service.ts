@@ -7,17 +7,30 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import { ORDERS_ON_PAGE } from 'src/config';
 import { Cart } from 'src/modules/cart/cart.entity';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
-
-import { Product } from '../products/entities/product.entity';
 
 import { OrderDTO } from './dto/order.dto';
 import { BuyerOrder } from './entities/buyer-order.entity';
 import { Status } from './entities/order-status.enum';
+
+type DateRange = { lower: Date; upper: Date };
+interface GetOrdersOptions {
+  where?: {
+    key: keyof Order;
+    value: string | DateRange;
+  };
+  status?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: string;
+}
 
 @Injectable()
 export class OrdersService {
@@ -190,6 +203,104 @@ export class OrdersService {
       await this.orderRepository.save(buyerOrder.orders);
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
+    }
+  }
+
+  private async getOrders(
+    options?: GetOrdersOptions,
+  ): Promise<{ orders: OrderResponseDTO[]; count: number }> {
+    try {
+      const queryBuilder = this.orderRepository
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.products', 'products')
+        .leftJoinAndSelect('order.buyerOrder', 'buyerOrder')
+        .select([
+          'order.orderId',
+          'order.status',
+          'order.price',
+          'order.createdAt',
+          'order.vendorId',
+          'order.buyerId',
+          'products',
+          'buyerOrder',
+        ]);
+
+      if (options?.where) {
+        if (options.where.key === 'createdAt') {
+          const dateRange = options.where.value as DateRange;
+
+          queryBuilder.andWhere(
+            `order.${options.where.key} BETWEEN :startDate AND :endDate`,
+            {
+              startDate: dateRange.lower,
+              endDate: dateRange.upper,
+            },
+          );
+        } else {
+          queryBuilder
+            .andWhere(`order.${options.where.key} = :${options.where.key}`)
+            .setParameter(options.where.key, options.where.value);
+        }
+      }
+
+      if (options?.status) {
+        queryBuilder.andWhere('order.status = :status', {
+          status: options.status,
+        });
+      }
+
+      if (options?.sortBy && options?.sortOrder) {
+        queryBuilder.orderBy(
+          `order.${options.sortBy}`,
+          options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
+        );
+      }
+
+      const page = options?.page || 1;
+
+      const limit = options?.limit || ORDERS_ON_PAGE;
+
+      const offset = (page - 1) * limit;
+
+      queryBuilder.skip(offset).take(limit);
+
+      const [orders, count] = await queryBuilder.getManyAndCount();
+
+      const mappedOrders = orders.map((order) => new OrderResponseDTO(order));
+
+      return {
+        orders: mappedOrders,
+        count: count,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_ORDERS);
+    }
+  }
+
+  async findOrdersByVendor(
+    vendorId: string,
+    status: string,
+    page: number,
+    limit: number,
+    sortBy: string,
+    sortOrder: string,
+  ): Promise<{ orders: OrderResponseDTO[]; count: number }> {
+    try {
+      return await this.getOrders({
+        page,
+        limit,
+        status,
+        sortBy,
+        sortOrder,
+        where: {
+          key: 'vendorId',
+          value: vendorId,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_VENDOR_ORDERS,
+      );
     }
   }
 }
