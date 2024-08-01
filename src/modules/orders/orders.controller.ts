@@ -31,6 +31,8 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
+import { GetUserId } from '../../common/decorators/get-user-id';
+
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
 
@@ -112,6 +114,48 @@ export class OrdersController {
     @Param('id') vendorId: string,
   ): Promise<OrderResponseDTO[]> {
     return this.ordersService.findByVendor(vendorId);
+  }
+
+  @Get('buyer')
+  @ApiOperation({
+    summary: 'Get all orders of buyer',
+    tags: ['Order Endpoints'],
+    description: 'This endpoint returns a list of buyer orders.',
+  })
+  @ApiOkResponse({
+    description: 'The list of buyer orders.',
+    type: [OrderResponseDTO],
+  })
+  @ApiNotFoundResponse({
+    description: 'Buyer not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch orders of this buyer',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_ORDERS,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async getBuyerOrders(
+    @GetUserId() userId: string,
+  ): Promise<OrderResponseDTO[]> {
+    return this.ordersService.getAllOrdersOfBuyer(userId);
   }
 
   @Post('pay')

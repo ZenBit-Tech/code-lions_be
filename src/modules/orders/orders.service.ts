@@ -65,6 +65,36 @@ export class OrdersService {
     }
   }
 
+  async getAllOrdersOfBuyer(buyerId: string): Promise<OrderResponseDTO[]> {
+    try {
+      const buyer = await this.userRepository.findOneById(buyerId);
+
+      if (!buyer) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const orders = await this.orderRepository
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.products', 'product')
+        .where('order.buyerId = :buyerId', { buyerId })
+        .orderBy('order.createdAt', 'DESC')
+        .getMany();
+
+      if (!orders.length) {
+        throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
+      }
+
+      return orders.map((order) => new OrderResponseDTO(order));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_ORDERS_BY_VENDOR,
+      );
+    }
+  }
+
   async createOrdersForUser(
     userId: string,
     shippingPrice: number,
