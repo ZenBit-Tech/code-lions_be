@@ -8,11 +8,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { IS_VALID_URL } from 'src/config';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 
 import { EventsGateway } from '../events/events.gateway';
 
+import { chatContentType } from './chat-content.enum';
 import {
   ChatRoomResponseDto,
   ChatUserDto,
@@ -142,7 +144,9 @@ export class ChatService {
 
     const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
 
-    this.eventsGateway.server.emit('newChat', savedChatRoom);
+    this.eventsGateway.server
+      .to([firstUser.id, secondUser.id])
+      .emit('newChat', savedChatRoom);
 
     if (content) {
       await this.sendMessage(userId, {
@@ -197,7 +201,9 @@ export class ChatService {
 
     const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
 
-    this.eventsGateway.server.emit('newChat', savedChatRoom);
+    this.eventsGateway.server
+      .to([firstUser.id, adminUser.id])
+      .emit('newChat', savedChatRoom);
 
     return savedChatRoom;
   }
@@ -205,8 +211,8 @@ export class ChatService {
   async sendMessage(
     senderId: string,
     sendMessageDto: SendMessageDto,
-  ): Promise<Message> {
-    const { chatId, content } = sendMessageDto;
+  ): Promise<MessageResponseDto> {
+    const { chatId, content, fileUrl, fileType } = sendMessageDto;
 
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id: chatId },
@@ -222,13 +228,50 @@ export class ChatService {
       throw new NotFoundException('User not found');
     }
 
+    let determinedFileType = fileType;
+
+    if (!fileType) {
+      if (content && content.match(IS_VALID_URL)) {
+        determinedFileType = chatContentType.LINK;
+      } else if (fileUrl) {
+        if (fileUrl.startsWith('image/')) {
+          determinedFileType = chatContentType.IMAGE;
+        } else {
+          determinedFileType = chatContentType.FILE;
+        }
+      } else {
+        determinedFileType = chatContentType.TEXT;
+      }
+    }
+
     const message = this.messageRepository.create({
       content,
+      fileUrl,
+      fileType: determinedFileType,
       chatRoom,
       sender: user,
     });
 
-    return this.messageRepository.save(message);
+    const savedMessage = await this.messageRepository.save(message);
+
+    this.toMessageResponseDto(savedMessage);
+
+    return this.toMessageResponseDto(savedMessage);
+  }
+
+  async uploadFile(
+    senderId: string,
+    sendMessageDto: SendMessageDto,
+  ): Promise<void> {
+    const secondUser = await this.getChatSecondParticipant(
+      senderId,
+      sendMessageDto.chatId,
+    );
+    const message = await this.sendMessage(senderId, sendMessageDto);
+
+    this.eventsGateway.server
+      .to([sendMessageDto.chatId, secondUser.id])
+      .emit('newMessage', message);
   }
 
   async markMessageAsRead(userId: string, chatId: string): Promise<void> {
@@ -291,6 +334,56 @@ export class ChatService {
     return lastMessage || null;
   }
 
+  async getChatSecondParticipant(
+    firstUserId: string,
+    chatId: string,
+  ): Promise<User> {
+    const firstIndexOfArray = 0;
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .select(['chatRoom.id', 'participant.id'])
+      .leftJoin('chatRoom.participants', 'participant')
+      .where('participant.id <> :participantId', { participantId: firstUserId })
+      .andWhere('chatRoom.id = :chatId', { chatId })
+      .getOne();
+
+    if (!chatRoom) {
+      throw new NotFoundException(`Chat with id:${chatId} is not found`);
+    }
+
+    if (!chatRoom.participants.length) {
+      throw new NotFoundException(
+        `No second participant found in chat with id:${chatId}`,
+      );
+    }
+
+    return chatRoom.participants[firstIndexOfArray];
+  }
+
+  private toMessageResponseDto(message: Message): MessageResponseDto {
+    let contentType: string;
+
+    if (message.content) {
+      contentType = chatContentType.TEXT;
+    } else if (message.fileType === chatContentType.IMAGE) {
+      contentType = chatContentType.IMAGE;
+    } else {
+      contentType = chatContentType.FILE;
+    }
+
+    return new MessageResponseDto({
+      id: message.id,
+      content: message.content || message.fileUrl,
+      contentType,
+      createdAt: message.createdAt,
+      sender: {
+        id: message.sender.id,
+        name: message.sender.name,
+        photoUrl: message.sender.photoUrl,
+      },
+    });
+  }
+
   private toChatRoomResponseDto(
     chatRoom: ChatRoom,
     userId: string,
@@ -308,16 +401,7 @@ export class ChatService {
       : null;
 
     const messages = chatRoom.messages.map((message) => {
-      return new MessageResponseDto({
-        id: message.id,
-        content: message.content,
-        createdAt: message.createdAt,
-        sender: {
-          id: message.sender.id,
-          name: message.sender.name,
-          photoUrl: message.sender.photoUrl,
-        },
-      });
+      return this.toMessageResponseDto(message);
     });
 
     return new ChatRoomResponseDto({
@@ -340,6 +424,8 @@ export class ChatService {
           id: chatPartner.id,
           name: chatPartner.name,
           photoUrl: chatPartner.photoUrl,
+          isOnline: chatPartner.isOnline,
+          lastActiveAt: chatPartner.lastActiveAt,
         })
       : null;
 
@@ -349,18 +435,7 @@ export class ChatService {
     );
     const lastMessage = await this.getLastMessage(chatRoom.id);
 
-    const lastMessageDto = lastMessage
-      ? new MessageResponseDto({
-          id: lastMessage.id,
-          content: lastMessage.content,
-          createdAt: lastMessage.createdAt,
-          sender: {
-            id: lastMessage.sender.id,
-            name: lastMessage.sender.name,
-            photoUrl: lastMessage.sender.photoUrl,
-          },
-        })
-      : null;
+    const lastMessageDto = this.toMessageResponseDto(lastMessage);
 
     return new GetUserChatsDto({
       id: chatRoom.id,

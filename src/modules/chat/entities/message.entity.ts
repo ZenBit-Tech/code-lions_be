@@ -27,8 +27,22 @@ export class Message {
     example: 'Hello, world!',
     description: 'The content of the message',
   })
-  @Column()
+  @Column({ nullable: true })
   content: string;
+
+  @ApiProperty({
+    example: 'https://example.com/uploads/photo.jpg',
+    description: 'The URL of the uploaded file',
+  })
+  @Column({ nullable: true })
+  fileUrl: string;
+
+  @ApiProperty({
+    example: 'photo',
+    description: 'The type of the uploaded file',
+  })
+  @Column({ nullable: true })
+  fileType: string;
 
   @ApiProperty({
     type: () => User,
