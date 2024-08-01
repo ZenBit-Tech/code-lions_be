@@ -360,28 +360,32 @@ export class ChatService {
     return chatRoom.participants[firstIndexOfArray];
   }
 
-  private toMessageResponseDto(message: Message): MessageResponseDto {
-    let contentType: string;
+  private toMessageResponseDto(message: Message): MessageResponseDto | null {
+    if (message) {
+      let contentType: string;
 
-    if (message.content) {
-      contentType = chatContentType.TEXT;
-    } else if (message.fileType === chatContentType.IMAGE) {
-      contentType = chatContentType.IMAGE;
-    } else {
-      contentType = chatContentType.FILE;
+      if (message.content) {
+        contentType = chatContentType.TEXT;
+      } else if (message.fileType === chatContentType.IMAGE) {
+        contentType = chatContentType.IMAGE;
+      } else {
+        contentType = chatContentType.FILE;
+      }
+
+      return new MessageResponseDto({
+        id: message.id,
+        content: message.content || message.fileUrl,
+        contentType,
+        createdAt: message.createdAt,
+        sender: {
+          id: message.sender.id,
+          name: message.sender.name,
+          photoUrl: message.sender.photoUrl,
+        },
+      });
     }
 
-    return new MessageResponseDto({
-      id: message.id,
-      content: message.content || message.fileUrl,
-      contentType,
-      createdAt: message.createdAt,
-      sender: {
-        id: message.sender.id,
-        name: message.sender.name,
-        photoUrl: message.sender.photoUrl,
-      },
-    });
+    return null;
   }
 
   private toChatRoomResponseDto(
