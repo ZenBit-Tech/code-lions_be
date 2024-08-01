@@ -1,4 +1,15 @@
-import { Controller, Get, UseGuards, Param, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  Param,
+  Post,
+  Body,
+  UseInterceptors,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -8,12 +19,18 @@ import {
   ApiParam,
   ApiTags,
   ApiCreatedResponse,
+  ApiConsumes,
+  ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 
 import { GetUserId } from 'src/common/decorators/get-user-id';
+import { ChatUploadInterceptor } from 'src/interceptors/file-upload/chat-upload.inteceptor';
+import { FileUploadRequest } from 'src/interceptors/file-upload/file-upload.interceptor';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 
+import { chatContentType } from './chat-content.enum';
 import { ChatService } from './chat.service';
 import {
   ChatRoomResponseDto,
@@ -23,6 +40,7 @@ import {
 import { ChatRoom } from './entities/chat-room.entity';
 
 @ApiTags('chats')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('chats')
 export class ChatController {
@@ -208,5 +226,70 @@ export class ChatController {
   })
   async createChatWithAdmin(@GetUserId() userId: string): Promise<ChatRoom> {
     return this.chatService.createChatWithAdmin(userId);
+  }
+
+  @Post(':chatId/file')
+  @ApiOperation({
+    summary: 'Upload a file or an image to a chat',
+    tags: ['Chat Endpoints'],
+    description:
+      'This endpoint uploads a file or an image to a chat and sends it as a message.',
+  })
+  @ApiCreatedResponse({
+    description:
+      'The file or image has been successfully uploaded and sent as a message.',
+    type: ChatRoomResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: 'Unauthorized' },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to upload image or file',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: 'Failed to upload image' },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'), ChatUploadInterceptor)
+  async uploadChatFile(
+    @Request() request: FileUploadRequest,
+    @Param('chatId') chatId: string,
+    @GetUserId() userId: string,
+  ): Promise<void> {
+    if (request.uploadError) {
+      throw new BadRequestException(request.uploadError.message);
+    }
+    const fileUrl = request.uploadedFileUrl;
+    const mimeType = request.file.mimetype;
+
+    await this.chatService.uploadFile(userId, {
+      chatId,
+      fileUrl,
+      fileType: mimeType.startsWith('image/')
+        ? chatContentType.IMAGE
+        : chatContentType.FILE,
+    });
   }
 }
