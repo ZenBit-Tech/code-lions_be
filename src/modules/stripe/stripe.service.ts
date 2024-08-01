@@ -81,7 +81,7 @@ export class StripeService {
                 name: product.name,
                 images: [product.images[0]],
               },
-              unit_amount: Number(product.price) * centsInDollar,
+              unit_amount: Math.round(Number(product.price) * centsInDollar),
             },
             quantity: 1,
           };
@@ -95,7 +95,7 @@ export class StripeService {
               name: 'Shipping',
               images: [CANADA_POST_LOGO],
             },
-            unit_amount: shippingPrice * centsInDollar,
+            unit_amount: Math.round(shippingPrice * centsInDollar),
           },
           quantity: 1,
         });
