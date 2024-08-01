@@ -63,10 +63,6 @@ export class OrdersService {
         order: { createdAt: 'DESC' },
       });
 
-      if (!orders.length) {
-        throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
-      }
-
       return orders.map((order) => new OrderResponseDTO(order));
     } catch (error) {
       if (error instanceof NotFoundException) {
