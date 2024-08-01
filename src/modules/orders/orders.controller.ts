@@ -1,12 +1,14 @@
 import {
   Controller,
   Get,
+  Patch,
   Param,
   Body,
   Post,
   UseGuards,
   InternalServerErrorException,
   Req,
+  Request,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -30,6 +32,8 @@ import { OrdersService } from 'src/modules/orders/orders.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
+
+import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
@@ -173,5 +177,15 @@ export class OrdersController {
     @Param('orderId') orderId: number,
   ): Promise<SingleOrderResponse> {
     return await this.ordersService.findByUserIdAndOrderId(userId, orderId);
+  }
+
+  @Patch(':orderId')
+  async rejectOrder(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('orderId') orderId: number,
+  ): Promise<void> {
+    const vendorId = request.user.id;
+
+    return await this.ordersService.rejectOrder(vendorId, orderId);
   }
 }

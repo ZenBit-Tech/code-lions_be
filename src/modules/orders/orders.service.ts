@@ -257,4 +257,12 @@ export class OrdersService {
       throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ORDER);
     }
   }
+
+  async rejectOrder(vendorId: string, orderId: number): Promise<void> {
+    const order = await this.orderRepository.findOne({ where: { orderId } });
+
+    order.status = Status.REJECTED;
+
+    await this.orderRepository.save(order);
+  }
 }
