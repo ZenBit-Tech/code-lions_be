@@ -31,12 +31,11 @@ import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
-
-import { UserResponseDto } from '../auth/dto/user-response.dto';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';

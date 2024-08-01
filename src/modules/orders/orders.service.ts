@@ -11,10 +11,9 @@ import { Cart } from 'src/modules/cart/cart.entity';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
+import { Product } from 'src/modules/products/entities/product.entity';
+import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { User } from 'src/modules/users/user.entity';
-
-import { Product } from '../products/entities/product.entity';
-import { RoleForUser } from '../roles/role-user.enum';
 
 import { OrderDTO } from './dto/order.dto';
 import { SingleOrderResponse } from './dto/single-order-response.dto';
@@ -80,7 +79,7 @@ export class OrdersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      const orders = await this.orderRepository.find({
+      const order = await this.orderRepository.find({
         where: [
           { vendorId: userId, orderId },
           { buyerId: userId, orderId },
@@ -89,14 +88,12 @@ export class OrdersService {
         order: { createdAt: 'DESC' },
       });
 
-      if (!orders.length) {
+      if (!order.length) {
         throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
       }
 
       const partnerId =
-        user.role === RoleForUser.VENDOR
-          ? orders[0].buyerId
-          : orders[0].vendorId;
+        user.role === RoleForUser.VENDOR ? order[0].buyerId : order[0].vendorId;
 
       const partner = await this.userRepository.findOne({
         where: { id: partnerId },
@@ -116,7 +113,7 @@ export class OrdersService {
       };
 
       const orderData = {
-        order: orders.map((order) => new OrderResponseDTO(order)),
+        order: order.map((order) => new OrderResponseDTO(order)),
         userName: partnerName,
         userId: partnerId,
         address: partnerAddress,
