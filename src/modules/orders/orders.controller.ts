@@ -7,6 +7,7 @@ import {
   UseGuards,
   InternalServerErrorException,
   Req,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -35,6 +36,7 @@ import { GetUserId } from '../../common/decorators/get-user-id';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
+import { Status } from './entities/order-status.enum';
 
 @ApiTags('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -154,8 +156,9 @@ export class OrdersController {
   })
   async getBuyerOrders(
     @GetUserId() userId: string,
+    @Query('statuses') statuses: Status[],
   ): Promise<OrderResponseDTO[]> {
-    return this.ordersService.getAllOrdersOfBuyer(userId);
+    return this.ordersService.getAllOrdersOfBuyer(userId, statuses);
   }
 
   @Post('pay')

@@ -65,7 +65,10 @@ export class OrdersService {
     }
   }
 
-  async getAllOrdersOfBuyer(buyerId: string): Promise<OrderResponseDTO[]> {
+  async getAllOrdersOfBuyer(
+    buyerId: string,
+    statuses: Status[],
+  ): Promise<OrderResponseDTO[]> {
     try {
       const buyer = await this.userRepository.findOneById(buyerId);
 
@@ -77,6 +80,7 @@ export class OrdersService {
         .createQueryBuilder('order')
         .leftJoinAndSelect('order.products', 'product')
         .where('order.buyerId = :buyerId', { buyerId })
+        .andWhere('order.status IN (:...statuses)', { statuses })
         .orderBy('order.createdAt', 'DESC')
         .getMany();
 
@@ -90,7 +94,7 @@ export class OrdersService {
         throw error;
       }
       throw new InternalServerErrorException(
-        Errors.FAILED_TO_FETCH_ORDERS_BY_VENDOR,
+        Errors.FAILED_TO_CREATE_BUYER_ORDER,
       );
     }
   }
