@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 import { IsUUID } from 'class-validator';
 
-export class FollowDto {
+export class FollowVendorDto {
   @ApiProperty({
     example: '2c674384-f944-401b-949b-b76e8793bdc2',
     description: 'The ID of the buyer',

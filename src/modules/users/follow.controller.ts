@@ -26,7 +26,7 @@ import { Role } from '../roles/role.enum';
 import { Roles } from '../roles/roles.decorator';
 import { RolesGuard } from '../roles/roles.guard';
 
-import { FollowDto } from './dto/follow.dto';
+import { FollowVendorDto } from './dto/follow.dto';
 import { FollowService } from './follow.service';
 import { User } from './user.entity';
 
@@ -89,8 +89,8 @@ export class FollowController {
       },
     },
   })
-  @ApiBody({ type: FollowDto })
-  async followVendor(@Body() followDto: FollowDto): Promise<User> {
+  @ApiBody({ type: FollowVendorDto })
+  async followVendor(@Body() followDto: FollowVendorDto): Promise<User> {
     return await this.followService.followVendor(followDto);
   }
 
@@ -141,8 +141,8 @@ export class FollowController {
       },
     },
   })
-  @ApiBody({ type: FollowDto })
-  async unfollowVendor(@Body() followDto: FollowDto): Promise<void> {
+  @ApiBody({ type: FollowVendorDto })
+  async unfollowVendor(@Body() followDto: FollowVendorDto): Promise<void> {
     return await this.followService.unfollowVendor(followDto);
   }
 }
