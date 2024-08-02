@@ -21,6 +21,7 @@ import {
 } from 'src/config';
 import { Status } from 'src/modules/products/entities/product-status.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { sortImages } from 'src/modules/products/utils/sortImages';
 import { Review } from 'src/modules/reviews/review.entity';
 import { User } from 'src/modules/users/user.entity';
 
@@ -126,9 +127,10 @@ export class CartService {
             throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
           }
 
-          const sortedImages: string[] = product.images
-            .map((image) => image.url)
-            .sort();
+          const sortedImages: string[] = sortImages(product.images).map(
+            (image) => image.url,
+          );
+
           const productUrl: string = sortedImages[0];
           const productColor: string = product.color[0].color;
 

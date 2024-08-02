@@ -46,6 +46,8 @@ const mockUser: User = {
   updateDatesBeforeUpdate: function (): void {
     throw new Error('Function not implemented.');
   },
+  isOnline: false,
+  lastActiveAt: undefined,
   products: [],
   cart: [],
   wishlist: [],
@@ -53,6 +55,8 @@ const mockUser: User = {
   messages: [],
   followers: [],
   following: [],
+  productsOrder: [],
+  buyerOrders: [],
   readMessages: [],
 };
 
@@ -80,9 +84,11 @@ export const mockProduct: Product = {
   createdAt: new Date(),
   lastUpdatedAt: new Date(),
   deletedAt: new Date(),
+  isAvailable: true,
   images: [],
   user: mockUser,
   color: [],
   cart: [],
   wishlistEntries: [],
+  orders: [],
 };

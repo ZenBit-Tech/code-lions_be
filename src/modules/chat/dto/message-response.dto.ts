@@ -16,6 +16,12 @@ export class MessageResponseDto {
   content: string;
 
   @ApiProperty({
+    description: 'Type of the content',
+    example: 'text',
+  })
+  contentType: string;
+
+  @ApiProperty({
     description: 'Timestamp when the message was created',
     example: '2024-07-24T09:38:17.495Z',
   })
@@ -25,7 +31,7 @@ export class MessageResponseDto {
     description: 'Details of the user who sent the message',
     type: ChatUserDto,
   })
-  sender: ChatUserDto;
+  sender: Partial<ChatUserDto>;
 
   constructor(partial: Partial<MessageResponseDto>) {
     Object.assign(this, partial);

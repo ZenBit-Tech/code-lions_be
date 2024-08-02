@@ -13,6 +13,7 @@ import { Status } from 'src/modules/products/entities/product-status.enum';
 import { ProductTypes } from 'src/modules/products/entities/product-types.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { Styles } from 'src/modules/products/entities/styles.enum';
+import { sortImages } from 'src/modules/products/utils/sortImages';
 import { User } from 'src/modules/users/user.entity';
 
 import { Wishlist } from './wishlist.entity';
@@ -147,7 +148,7 @@ export class WishlistService {
       pdfUrl: inputProduct.pdfUrl,
       images: !inputProduct?.images
         ? []
-        : inputProduct.images.map((image) => image.url),
+        : sortImages(inputProduct.images).map((image) => image.url),
       colors: !inputProduct?.color
         ? []
         : inputProduct.color.map((color) => color.color),

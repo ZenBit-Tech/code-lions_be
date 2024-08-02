@@ -15,6 +15,8 @@ import { Cart } from 'src/modules/cart/cart.entity';
 import { ChatRoom } from 'src/modules/chat/entities/chat-room.entity';
 import { MessageRead } from 'src/modules/chat/entities/message-read.entity';
 import { Message } from 'src/modules/chat/entities/message.entity';
+import { BuyerOrder } from 'src/modules/orders/entities/buyer-order.entity';
+import { Order } from 'src/modules/orders/entities/order.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { Role } from 'src/modules/roles/role.enum';
@@ -274,6 +276,24 @@ export class User {
     this.lastUpdatedAt = new Date();
   }
 
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if the user is currently online',
+  })
+  @Column({ default: false })
+  isOnline: boolean;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The last active time of the user',
+  })
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  lastActiveAt: Date;
+
   @OneToMany(() => Product, (product) => product.user)
   products: Product[];
 
@@ -305,6 +325,12 @@ export class User {
 
   @ManyToMany(() => User, (user) => user.followers)
   following: User[];
+
+  @ManyToMany(() => Order, (order) => order.user)
+  productsOrder: Order[];
+
+  @OneToMany(() => BuyerOrder, (buyerOrder) => buyerOrder.user)
+  buyerOrders: BuyerOrder[];
 
   @OneToMany(() => MessageRead, (messageRead) => messageRead.user)
   readMessages: MessageRead[];
