@@ -4,8 +4,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { MailerModule } from 'src/modules/mailer/mailer.module';
-
-import { Product } from '../products/entities/product.entity';
+import { Product } from 'src/modules/products/entities/product.entity';
+import { ProductsModule } from 'src/modules/products/products.module';
 
 import { BestVendorsController } from './best-vendors.controller';
 import { User } from './user.entity';
@@ -16,6 +16,7 @@ import { UsersService } from './users.service';
   imports: [
     TypeOrmModule.forFeature([User, Product]),
     MailerModule,
+    ProductsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({

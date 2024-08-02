@@ -11,6 +11,7 @@ export function mapProducts(products: Product[]): ProductResponseDTO[] {
       id: product.user?.id || '',
       name: product.user?.name || '',
       photoUrl: product.user?.photoUrl || '',
+      rating: product.user?.rating || 0,
     };
     const colors = product.color || [];
     const mappedColors = colors.map((color) => color.color);

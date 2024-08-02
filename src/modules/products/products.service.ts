@@ -7,7 +7,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  EntityManager,
+  SelectQueryBuilder,
+} from 'typeorm';
 
 import axios from 'axios';
 import { Errors } from 'src/common/errors';
@@ -31,7 +36,7 @@ import { mapProducts } from './utils/mapProducts';
 
 type DateRange = { lower: Date; upper: Date };
 
-interface GetProductsOptions {
+export interface GetProductsOptions {
   where?: {
     key: keyof Product;
     value: string | DateRange;
@@ -47,12 +52,21 @@ interface GetProductsOptions {
   size?: string;
   sortBy?: string;
   sortOrder?: string;
+  onlyInIdSet?: string[];
+  bestVendorsMode?: boolean;
   showNotFinished?: boolean;
 }
 
 export interface ProductsResponse {
   products: ProductResponseDTO[];
   count: number;
+}
+
+export interface VendorInfo {
+  vendorId: string;
+  vendorName: string;
+  photoUrl: string;
+  rating: number;
 }
 
 const newProduct = 'new';
@@ -347,6 +361,14 @@ export class ProductsService {
     return product.products[0];
   }
 
+  async findByIds(ids: string[]): Promise<ProductResponseDTO[]> {
+    const products = await this.getProducts({
+      onlyInIdSet: ids,
+    });
+
+    return products.products;
+  }
+
   async findLatest(): Promise<ProductsAndCountResponseDTO> {
     const today = new Date();
     const someDaysAgo = new Date();
@@ -413,7 +435,85 @@ export class ProductsService {
     return { products: publishedProducts, count: publishedProducts.length };
   }
 
-  private async getProducts(
+  async getBestVendors(
+    limit: number,
+    options?: GetProductsOptions,
+  ): Promise<VendorInfo[]> {
+    try {
+      const bestVendorsQuery = this.productRepository
+        .createQueryBuilder('product')
+
+        .leftJoinAndSelect('product.images', 'images')
+        .leftJoinAndSelect('product.user', 'user')
+        .leftJoinAndSelect('product.color', 'colors')
+        .leftJoinAndSelect('product.brand', 'brand')
+        .select([
+          'product.id',
+          'product.name',
+          'product.slug',
+          'product.price',
+          'product.description',
+          'product.vendorId',
+          'product.categories',
+          'product.style',
+          'product.type',
+          'product.status',
+          'product.size',
+          'product.brand',
+          'product.material',
+          'product.pdfUrl',
+          'product.createdAt',
+          'product.lastUpdatedAt',
+          'product.deletedAt',
+          'images',
+          'user.id as userId',
+          'user.name as userName',
+          'user.photoUrl as userPhotoUrl',
+          'user.rating as userRating',
+          'colors',
+          'brand.brand',
+        ])
+        .where(
+          'product.isProductCreationFinished = :isProductCreationFinished',
+          {
+            isProductCreationFinished: true,
+          },
+        )
+        .andWhere('product.deletedAt IS NULL')
+        .andWhere('product.status = :status', { status: 'published' });
+
+      this.applyFilters(bestVendorsQuery, options);
+
+      const bestVendors = await this.productRepository
+        .createQueryBuilder()
+        .select([
+          'product.userId as vendorId',
+          'product.userName as vendorName',
+          'product.userPhotoUrl as photoUrl',
+          'product.userRating as rating',
+        ])
+        .from(`(${bestVendorsQuery.getQuery()})`, 'product')
+        .setParameters(bestVendorsQuery.getParameters())
+        .groupBy('product.userId')
+        .orderBy('product.userRating', 'DESC')
+        .limit(limit)
+        .getRawMany();
+
+      return bestVendors.map((vendor) => ({
+        vendorId: vendor.vendorId,
+        vendorName: vendor.vendorName,
+        photoUrl: vendor.photoUrl,
+        rating: vendor.rating,
+      }));
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_BEST_VENDORS,
+      );
+    }
+  }
+
+  async getProducts(
     options?: GetProductsOptions,
   ): Promise<ProductsAndCountResponseDTO> {
     try {
@@ -445,6 +545,7 @@ export class ProductsService {
           'user.id',
           'user.name',
           'user.photoUrl',
+          'user.rating',
           'colors',
           'brand.brand',
         ]);
@@ -457,11 +558,18 @@ export class ProductsService {
           },
         );
       }
+
+      if (options?.onlyInIdSet) {
+        queryBuilder.andWhere('product.id IN (:...ids)', {
+          ids: options.onlyInIdSet,
+        });
+      }
+
       if (options?.where) {
         if (options.where.key === 'createdAt') {
           const dateRange = options.where.value as DateRange;
 
-          queryBuilder.where(
+          queryBuilder.andWhere(
             `product.${options.where.key} BETWEEN :startDate AND :endDate`,
             {
               startDate: dateRange.lower,
@@ -487,40 +595,7 @@ export class ProductsService {
         );
       }
 
-      if (options?.minPrice) {
-        queryBuilder.andWhere('product.price >= :minPrice', {
-          minPrice: options.minPrice,
-        });
-      }
-
-      if (options?.maxPrice) {
-        queryBuilder.andWhere('product.price <= :maxPrice', {
-          maxPrice: options.maxPrice,
-        });
-      }
-
-      if (options?.style) {
-        queryBuilder.andWhere('product.style = :style', {
-          style: options.style,
-        });
-      }
-
-      if (options?.size) {
-        queryBuilder.andWhere('product.size = :size', { size: options.size });
-      }
-
-      if (options?.color) {
-        queryBuilder.andWhere('colors.color = :color', {
-          color: options.color,
-        });
-      }
-
-      if (options?.sortBy && options?.sortOrder) {
-        queryBuilder.orderBy(
-          `product.${options.sortBy}`,
-          options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
-        );
-      }
+      this.applyFilters(queryBuilder, options);
 
       const page = options?.page || 1;
       const limit = options?.limit || PRODUCTS_ON_PAGE;
@@ -537,7 +612,48 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
+    }
+  }
+
+  private applyFilters(
+    queryBuilder: SelectQueryBuilder<Product>,
+    options?: GetProductsOptions,
+  ): void {
+    if (options?.minPrice) {
+      queryBuilder.andWhere('product.price >= :minPrice', {
+        minPrice: options.minPrice,
+      });
+    }
+
+    if (options?.maxPrice) {
+      queryBuilder.andWhere('product.price <= :maxPrice', {
+        maxPrice: options.maxPrice,
+      });
+    }
+
+    if (options?.style) {
+      queryBuilder.andWhere('product.style = :style', {
+        style: options.style,
+      });
+    }
+
+    if (options?.size) {
+      queryBuilder.andWhere('product.size = :size', { size: options.size });
+    }
+
+    if (options?.color) {
+      queryBuilder.andWhere('colors.color = :color', {
+        color: options.color,
+      });
+    }
+
+    if (options?.sortBy && options?.sortOrder) {
+      queryBuilder.orderBy(
+        `product.${options.sortBy}`,
+        options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
+      );
     }
   }
 
