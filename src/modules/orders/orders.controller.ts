@@ -23,6 +23,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -31,8 +32,6 @@ import { OrdersService } from 'src/modules/orders/orders.service';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
-
-import { GetUserId } from '../../common/decorators/get-user-id';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDTO } from './dto/order-response.dto';
