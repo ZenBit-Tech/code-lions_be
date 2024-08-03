@@ -45,7 +45,7 @@ export class Order {
     description: 'The order`s shipping',
     type: Number,
   })
-  @Column({ type: 'int' })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   shipping: number;
 
   @ApiProperty({

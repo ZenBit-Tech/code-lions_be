@@ -19,6 +19,18 @@ export class ChatUserDto {
   })
   photoUrl: string;
 
+  @ApiProperty({
+    description: 'Indicates if the user is currently online',
+    example: true,
+  })
+  isOnline: boolean;
+
+  @ApiProperty({
+    description: 'The timestamp of the last time the user was active',
+    example: '2024-07-24T09:38:17.495Z',
+  })
+  lastActiveAt: Date;
+
   constructor(partial: Partial<ChatUserDto>) {
     Object.assign(this, partial);
   }

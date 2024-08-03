@@ -186,6 +186,7 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
+  PAYMENT_ERROR: 'Payment error',
   FAILED_TO_FETCH_ORDERS_BY_VENDOR: 'Failed to fetch orders bt vendor',
   FAILED_TO_FETCH_ORDERS: 'Failed to fetch orders',
   ORDERS_NOT_FOUND: 'Orders not found',
@@ -198,4 +199,9 @@ export const Errors = {
   CART_IS_EMPTY: 'There is no products in card',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
   FAILED_TO_FETCH_VENDOR_ORDERS: 'Failed to fetch vendor orders',
+  SOME_PRODUCTS_NOT_FOUND: 'Some products not found',
+  PRICES_DO_NOT_MATCH:
+    'Prices of the products in the DB and cart are different',
+  EMPTY_CART_FAILED: 'Failed to empty cart',
+  INVALID_WEBHOOK_SIGNATURE: 'Invalid webhook signature',
 };

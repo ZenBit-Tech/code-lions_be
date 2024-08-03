@@ -275,6 +275,24 @@ export class User {
     this.lastUpdatedAt = new Date();
   }
 
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if the user is currently online',
+  })
+  @Column({ default: false })
+  isOnline: boolean;
+
+  @ApiProperty({
+    example: new Date(),
+    description: 'The last active time of the user',
+  })
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  lastActiveAt: Date;
+
   @OneToMany(() => Product, (product) => product.user)
   products: Product[];
 

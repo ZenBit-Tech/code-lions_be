@@ -22,10 +22,10 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import {
   GetUserChatsDto,
+  MessageResponseDto,
   SendMessageDto,
   UserTypingDto,
 } from '../chat/dto/index';
-import { Message } from '../chat/entities/message.entity';
 import { UsersService } from '../users/users.service';
 
 type SocketWithAuth = {
@@ -87,12 +87,25 @@ export class EventsGateway
     const userChats = await this.chatService.getUserChats(client.userId);
 
     if (userChats) {
+      client.join(client.userId);
       userChats.forEach((chat) => client.join(chat.id));
     }
+
+    await this.userService.setUserOnline(client.userId);
+    this.server.emit('userStatus', { userId: client.userId, status: 'online' });
   }
 
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: SocketWithAuth): Promise<void> {
     this.Logger.log(`Client disconnected: ${client.id}`);
+
+    await this.userService.setUserOffline(client.userId);
+    const lastActive = await this.userService.getLastActiveTime(client.userId);
+
+    this.server.emit('userStatus', {
+      userId: client.userId,
+      status: 'offline',
+      lastActive,
+    });
   }
 
   @SubscribeMessage('getUserChats')
@@ -109,13 +122,19 @@ export class EventsGateway
   async handleSendMessage(
     client: SocketWithAuth,
     sendMessageDto: SendMessageDto,
-  ): Promise<Message> {
+  ): Promise<MessageResponseDto> {
+    const secondUser = await this.chatService.getChatSecondParticipant(
+      client.userId,
+      sendMessageDto.chatId,
+    );
     const message = await this.chatService.sendMessage(
       client.userId,
       sendMessageDto,
     );
 
-    this.server.to(message.chatRoom.id).emit('newMessage', message);
+    this.server
+      .to([sendMessageDto.chatId, secondUser.id])
+      .emit('newMessage', message);
 
     return message;
   }

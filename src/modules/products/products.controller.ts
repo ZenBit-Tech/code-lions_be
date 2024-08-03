@@ -174,8 +174,8 @@ export class ProductsController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard, UserIdGuard)
-  @Roles(Role.VENDOR)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.BUYER)
   @Get('vendor/:id')
   @ApiOperation({
     summary: 'Get products by vendor ID',

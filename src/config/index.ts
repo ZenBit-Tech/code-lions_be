@@ -22,6 +22,7 @@ export const DEFAULT_ORDER = 'DESC';
 export const DEFAULT_SORT = 'createdAt';
 export const MAX_PRODUCT_PHOTO_SIZE = 52428800;
 export const MAX_PRODUCT_PDF_SIZE = 10485760;
+export const MAX_CHAT_FILE_SIZE = 5242880;
 export const MAX_AVATAR_SIZE = 2097152;
 export const MAX_ORDER_NUMBER = 9999;
 export const MIN_ORDER_NUMBER = 1000;
@@ -38,7 +39,11 @@ export const LOW_RATINGS_COUNT_ONE = 1;
 export const LOW_RATINGS_COUNT_TWO = 2;
 export const DECIMAL_PRECISION = 2;
 export const RENTAL_RULES_LINK = 'https://code-lions.netlify.app/how-it-works';
+export const IS_VALID_URL =
+  /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
 
 /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
 export const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 export const ORDERS_ON_PAGE = 16;
+export const CANADA_POST_LOGO =
+  'https://helpseo.net/files/uploads/canada-post.png';
