@@ -242,7 +242,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(Role.BUYER, Role.VENDOR)
+  @Roles(Role.BUYER, Role.VENDOR, Role.ADMIN)
   @ApiOperation({
     summary: 'Get user by ID',
     tags: ['Users Endpoints'],
