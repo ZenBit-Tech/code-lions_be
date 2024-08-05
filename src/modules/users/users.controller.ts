@@ -1211,4 +1211,38 @@ export class UsersController {
   ): Promise<void> {
     await this.usersService.changeEmail(userId, changeEmailDto.email);
   }
+
+  @Patch('toggle-notifications')
+  @ApiOperation({
+    summary: 'Toggle user notifications',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint allows the user to toggle their notifications setting.',
+  })
+  @ApiOkResponse({
+    description: 'The notification setting has been successfully toggled.',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: { type: 'string', example: Errors.USER_NOT_FOUND },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update notification setting',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_UPDATE_PROFILE },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async toggleNotifications(@GetUserId() userId: string): Promise<void> {
+    return this.usersService.toggleNotifications(userId);
+  }
 }

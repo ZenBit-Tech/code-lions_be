@@ -1015,4 +1015,22 @@ export class UsersService {
       lastActiveAt: user.lastActiveAt,
     };
   }
+
+  async toggleNotifications(userId: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.notificationsEnabled = !user.notificationsEnabled;
+      await this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
+  }
 }
