@@ -6,7 +6,6 @@ import { MAX_RATING, MIN_RATING } from 'src/config';
 
 export class CreateReviewDto {
   @IsString({ message: Errors.REVIEW_TEXT_NOT_STRING })
-  @IsNotEmpty({ message: Errors.REVIEW_TEXT_NOT_EMPTY })
   @ApiProperty({
     example: 'Great service! The dress was in excellent condition.',
     description: 'The text of the review',
@@ -26,6 +25,14 @@ export class CreateReviewDto {
     description: 'The ID of the user for whom the review was left',
   })
   userId: string;
+
+  @IsInt({ message: Errors.ORDER_ID_MUST_BE_AN_INT })
+  @IsNotEmpty({ message: Errors.ORDER_ID_NOT_EMPTY })
+  @ApiProperty({
+    example: 1,
+    description: 'The ID of the order to which review is written',
+  })
+  orderId: number;
 
   @IsString({ message: Errors.REVIEWER_ID_NOT_STRING })
   @IsNotEmpty({ message: Errors.REVIEWER_ID_NOT_EMPTY })

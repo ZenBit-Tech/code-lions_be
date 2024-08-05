@@ -116,6 +116,8 @@ export const Errors = {
   RATING_MAX: 'Rating must not exceed 5',
   USER_ID_NOT_STRING: 'User ID must be a string',
   USER_ID_NOT_EMPTY: 'User ID must not be empty',
+  ORDER_ID_MUST_BE_AN_INT: 'Order ID must be an integer',
+  ORDER_ID_NOT_EMPTY: 'Order ID must not be empty',
   REVIEWER_ID_NOT_STRING: 'Reviewer ID must be a string',
   REVIEWER_ID_NOT_EMPTY: 'Reviewer ID must not be empty',
   FAILED_TO_CREATE_REVIEW: 'Failed to create review',
@@ -186,8 +188,11 @@ export const Errors = {
   UNAUTHORIZED_TO_UPLOAD_PRODUCT_DOCUMENT:
     'Only active vendors can upload product documents',
   FAILED_TO_UPLOAD_PRODUCT_DOCUMENT: 'Failed to upload product document',
+  PAYMENT_ERROR: 'Payment error',
   FAILED_TO_FETCH_ORDERS_BY_VENDOR: 'Failed to fetch orders bt vendor',
   FAILED_TO_FETCH_ORDERS: 'Failed to fetch orders',
+  ORDER_NOT_FOUND: 'Order not found',
+  ORDER_NOT_RECEIVED: 'Order is not returned or received',
   ORDERS_NOT_FOUND: 'Orders not found',
   ORDER_NOT_FOUND: 'Order not found',
   FAILED_TO_CREATE_ORDER: 'Failed to create order',
@@ -200,4 +205,10 @@ export const Errors = {
   FAILED_TO_PAY_FOR_ORDER: 'Failed to pay for order',
   CART_IS_EMPTY: 'There is no products in card',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
+  FAILED_TO_FETCH_VENDOR_ORDERS: 'Failed to fetch vendor orders',
+  SOME_PRODUCTS_NOT_FOUND: 'Some products not found',
+  PRICES_DO_NOT_MATCH:
+    'Prices of the products in the DB and cart are different',
+  EMPTY_CART_FAILED: 'Failed to empty cart',
+  INVALID_WEBHOOK_SIGNATURE: 'Invalid webhook signature',
 };

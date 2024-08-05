@@ -19,6 +19,8 @@ import {
   THIRTY_DAYS,
 } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
+import { Status as orderStatus } from 'src/modules/orders/entities/order-status.enum';
+import { Order } from 'src/modules/orders/entities/order.entity';
 import { User } from 'src/modules/users/user.entity';
 
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -32,11 +34,14 @@ export class ReviewsService {
     private readonly reviewRepository: Repository<Review>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+
     private readonly mailerService: MailerService,
   ) {}
 
   async createReview(createReviewDto: CreateReviewDto): Promise<Review> {
-    const { userId, reviewerId, text, rating } = createReviewDto;
+    const { userId, reviewerId, text, rating, orderId } = createReviewDto;
 
     try {
       return await this.entityManager.transaction(
@@ -58,9 +63,22 @@ export class ReviewsService {
             );
           }
 
+          const order = await transactionalEntityManager.findOne(Order, {
+            where: { orderId },
+          });
+
+          if (!order) {
+            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+          }
+
+          if (order.status !== orderStatus.RECEIVED || orderStatus.RETURNED) {
+            throw new ConflictException(Errors.ORDER_NOT_RECEIVED);
+          }
+
           const review = this.reviewRepository.create({
             userId: user.id,
             reviewerId: reviewer.id,
+            orderId,
             text,
             rating,
             reviewerName: reviewer.name,

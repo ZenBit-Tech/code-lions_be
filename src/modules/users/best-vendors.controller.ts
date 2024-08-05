@@ -1,9 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiOperation,
   ApiOkResponse,
   ApiInternalServerErrorResponse,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 import { Errors } from 'src/common/errors';
@@ -38,7 +39,49 @@ export class BestVendorsController {
       },
     },
   })
-  async getBestVendors(): Promise<BestVendorsResponseDto[]> {
-    return await this.usersService.getBestVendors();
+  @ApiQuery({
+    name: 'minPrice',
+    required: false,
+    description: 'Minimum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'maxPrice',
+    required: false,
+    description: 'Maximum price',
+    schema: { type: 'number' },
+  })
+  @ApiQuery({
+    name: 'color',
+    required: false,
+    description: 'Product color',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'style',
+    required: false,
+    description: 'Product style',
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'size',
+    required: false,
+    description: 'Product size',
+    schema: { type: 'string' },
+  })
+  async getBestVendors(
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('color') color?: string,
+    @Query('style') style?: string,
+    @Query('size') size?: string,
+  ): Promise<BestVendorsResponseDto[]> {
+    return await this.usersService.getBestVendors({
+      minPrice,
+      maxPrice,
+      color,
+      style,
+      size,
+    });
   }
 }

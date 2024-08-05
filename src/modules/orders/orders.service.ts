@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import { ORDERS_ON_PAGE } from 'src/config';
+import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Cart } from 'src/modules/cart/cart.entity';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
@@ -15,12 +17,23 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { User } from 'src/modules/users/user.entity';
 
-import { UserResponseDto } from '../auth/dto/user-response.dto';
-
 import { OrderDTO } from './dto/order.dto';
 import { SingleOrderResponse } from './dto/single-order-response.dto';
 import { BuyerOrder } from './entities/buyer-order.entity';
 import { Status } from './entities/order-status.enum';
+
+type DateRange = { lower: Date; upper: Date };
+interface GetOrdersOptions {
+  where?: {
+    key: keyof Order;
+    value: string | DateRange;
+  };
+  status?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: string;
+}
 
 @Injectable()
 export class OrdersService {
@@ -52,10 +65,6 @@ export class OrdersService {
         relations: ['products'],
         order: { createdAt: 'DESC' },
       });
-
-      if (!orders.length) {
-        throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
-      }
 
       return orders.map((order) => new OrderResponseDTO(order));
     } catch (error) {
@@ -125,6 +134,9 @@ export class OrdersService {
   async createOrdersForUser(
     userId: string,
     shippingPrice: number,
+    totalAmount: number,
+    isPaid: boolean,
+    paymentId: string,
   ): Promise<void> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -198,11 +210,11 @@ export class OrdersService {
       totalPrice += parseFloat(String(shippingPrice));
 
       buyerOrder.user = user;
-      buyerOrder.isPaid = false;
+      buyerOrder.isPaid = isPaid;
       buyerOrder.createdAt = new Date();
-      buyerOrder.paymentId = '';
+      buyerOrder.paymentId = paymentId;
       buyerOrder.shipping = shippingPrice;
-      buyerOrder.price = totalPrice;
+      buyerOrder.price = totalAmount;
       buyerOrder.orders = [];
 
       for (const order of orders) {
@@ -268,6 +280,104 @@ export class OrdersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+    }
+  }
+
+  private async getOrders(
+    options?: GetOrdersOptions,
+  ): Promise<{ orders: OrderResponseDTO[]; count: number }> {
+    try {
+      const queryBuilder = this.orderRepository
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.products', 'products')
+        .leftJoinAndSelect('order.buyerOrder', 'buyerOrder')
+        .select([
+          'order.orderId',
+          'order.status',
+          'order.price',
+          'order.createdAt',
+          'order.vendorId',
+          'order.buyerId',
+          'products',
+          'buyerOrder',
+        ]);
+
+      if (options?.where) {
+        if (options.where.key === 'createdAt') {
+          const dateRange = options.where.value as DateRange;
+
+          queryBuilder.andWhere(
+            `order.${options.where.key} BETWEEN :startDate AND :endDate`,
+            {
+              startDate: dateRange.lower,
+              endDate: dateRange.upper,
+            },
+          );
+        } else {
+          queryBuilder
+            .andWhere(`order.${options.where.key} = :${options.where.key}`)
+            .setParameter(options.where.key, options.where.value);
+        }
+      }
+
+      if (options?.status) {
+        queryBuilder.andWhere('order.status = :status', {
+          status: options.status,
+        });
+      }
+
+      if (options?.sortBy && options?.sortOrder) {
+        queryBuilder.orderBy(
+          `order.${options.sortBy}`,
+          options.sortOrder === 'ASC' ? 'ASC' : 'DESC',
+        );
+      }
+
+      const page = options?.page || 1;
+
+      const limit = options?.limit || ORDERS_ON_PAGE;
+
+      const offset = (page - 1) * limit;
+
+      queryBuilder.skip(offset).take(limit);
+
+      const [orders, count] = await queryBuilder.getManyAndCount();
+
+      const mappedOrders = orders.map((order) => new OrderResponseDTO(order));
+
+      return {
+        orders: mappedOrders,
+        count: count,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_ORDERS);
+    }
+  }
+
+  async findOrdersByVendor(
+    vendorId: string,
+    status: string,
+    page: number,
+    limit: number,
+    sortBy: string,
+    sortOrder: string,
+  ): Promise<{ orders: OrderResponseDTO[]; count: number }> {
+    try {
+      return await this.getOrders({
+        page,
+        limit,
+        status,
+        sortBy,
+        sortOrder,
+        where: {
+          key: 'vendorId',
+          value: vendorId,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_VENDOR_ORDERS,
+      );
     }
   }
 }

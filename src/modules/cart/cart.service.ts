@@ -21,6 +21,7 @@ import {
 } from 'src/config';
 import { Status } from 'src/modules/products/entities/product-status.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { sortImages } from 'src/modules/products/utils/sortImages';
 import { Review } from 'src/modules/reviews/review.entity';
 import { User } from 'src/modules/users/user.entity';
 
@@ -126,10 +127,11 @@ export class CartService {
             throw new ConflictException(Errors.PRODUCT_ALREADY_IN_CART);
           }
 
-          const primaryPhoto: string[] = product.images
-            .filter((image) => image.isPrimary)
-            .map((img) => img.url);
-          const productUrl: string = primaryPhoto[0];
+          const sortedImages: string[] = sortImages(product.images).map(
+            (image) => image.url,
+          );
+
+          const productUrl: string = sortedImages[0];
           const productColor: string = product.color[0].color;
 
           const cartEntry = this.cartRepository.create({
@@ -173,6 +175,14 @@ export class CartService {
       throw new InternalServerErrorException(
         Errors.FAILED_TO_REMOVE_PRODUCT_FROM_CART,
       );
+    }
+  }
+
+  async emptyCart(userId: string): Promise<void> {
+    try {
+      await this.cartRepository.delete({ userId });
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.EMPTY_CART_FAILED);
     }
   }
 
