@@ -28,6 +28,7 @@ const mockUser: User = {
   clothesSize: '',
   jeansSize: '',
   shoesSize: '',
+  stripeAccount: '',
   cardNumber: '',
   expireDate: '',
   cvvCode: '',

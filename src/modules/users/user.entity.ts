@@ -173,6 +173,13 @@ export class User {
   shoesSize: string;
 
   @ApiProperty({
+    example: 'acct_1J1cYgSf7c6yQpJi',
+    description: 'ID of the connected Stripe account of the user',
+  })
+  @Column({ nullable: true })
+  stripeAccount: string;
+
+  @ApiProperty({
     example: '1234 5678 9012 3456',
     description: 'Card number of the user',
   })

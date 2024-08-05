@@ -152,6 +152,17 @@ export class StripeService {
         paymentId,
       );
       await this.cartService.emptyCart(userId);
+    } else if (event.type === 'account.updated') {
+      const account = event.data.object as Stripe.Account;
+
+      if (account.charges_enabled) {
+        const user = await this.usersServise.getUserByStripeAccount(account.id);
+
+        if (user) {
+          await this.usersServise.fihishOnboarding(user.id);
+        }
+        this.Logger.log(`Account onboarded: ${account.email}`);
+      }
     }
 
     return { received: true };
@@ -173,5 +184,48 @@ export class StripeService {
       this.Logger.error(error);
       throw new BadRequestException(Errors.INVALID_WEBHOOK_SIGNATURE);
     }
+  }
+
+  async createAccount(userId: string): Promise<string> {
+    try {
+      const user = await this.usersServise.getUserById(userId);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+      if (user.stripeAccount) {
+        return user.stripeAccount;
+      }
+      const account = await this.StripeApi.accounts.create({
+        country: 'CA',
+        email: user.email,
+
+        controller: {
+          fees: { payer: 'application' },
+          losses: { payments: 'application' },
+          stripe_dashboard: { type: 'express' },
+        },
+      });
+
+      await this.usersServise.updateUserStripeAccount(userId, account.id);
+
+      return account.id;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_CREATE_ACCOUNT);
+    }
+  }
+
+  async createAccountLink(
+    accountId: string,
+  ): Promise<Stripe.Response<Stripe.AccountLink>> {
+    return this.StripeApi.accountLinks.create({
+      account: accountId,
+      refresh_url: this.configService.get<string>('STRIPE_REFRESH_URL'),
+      return_url: this.configService.get<string>('STRIPE_RETURN_URL'),
+      type: 'account_onboarding',
+    });
   }
 }
