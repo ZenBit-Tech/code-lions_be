@@ -18,7 +18,7 @@ export class Review {
     example: 'Great service! The dress was in excellent condition.',
     description: 'The text of the review',
   })
-  @Column({ type: 'longtext' })
+  @Column({ type: 'longtext', nullable: true })
   text: string;
 
   @ApiProperty({ example: 5, description: 'The rating given in the review' })
@@ -27,6 +27,14 @@ export class Review {
   @Max(MAX_RATING, { message: Errors.RATING_MAX })
   @Column('int')
   rating: number;
+
+  @ApiProperty({
+    example: 1,
+    description: 'The order number',
+    type: Number,
+  })
+  @Column({ type: 'int' })
+  orderId: number;
 
   @ApiProperty({
     example: '61c674384-f944-401b-949b-b76e8793bdc9',
