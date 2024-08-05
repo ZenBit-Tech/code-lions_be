@@ -9,6 +9,7 @@ export const Errors = {
   CODE_LENGTH: `Otp must be exactly ${VERIFICATION_CODE_LENGTH} characters long`,
   DIGITS_ONLY: 'Otp must contain only digits',
   EMAIL_ALREADY_VERIFIED: 'Email already verified',
+  FAILED_TO_CHANGE_EMAIL: 'Failed to change email',
   FAILED_TO_CHANGE_PASSWORD: 'Failed to change password',
   FAILED_TO_CONFIRM_USER: 'Failed to confirm a user',
   FAILED_TO_CREATE_USER: 'Failed to create a user',
@@ -25,8 +26,6 @@ export const Errors = {
     'Failed to send email to the user deleted by admin',
   FAILED_TO_SEND_EMAIL_TO_SUSPENDED_USER:
     'Failed to send email to the user suspended by admin',
-  FAILED_TO_SEND_EMAIL_FOR_PASSWORD_CHANGE:
-    'Failed to send an email to the user',
   INTERNAL_SERVER_ERROR: 'Internal server error',
   INVALID_CREDENTIALS: 'Invalid email or password',
   INVALID_EMAIL: 'Invalid email',
