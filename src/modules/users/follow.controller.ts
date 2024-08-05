@@ -19,6 +19,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { GetUserId } from 'src/common/decorators/get-user-id';
 import { Errors } from 'src/common/errors';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -26,7 +27,7 @@ import { Role } from '../roles/role.enum';
 import { Roles } from '../roles/roles.decorator';
 import { RolesGuard } from '../roles/roles.guard';
 
-import { FollowVendorDto } from './dto/follow.dto';
+import { FollowVendorDto } from './dto/follow-request.dto';
 import { FollowService } from './follow.service';
 import { User } from './user.entity';
 
@@ -90,8 +91,14 @@ export class FollowController {
     },
   })
   @ApiBody({ type: FollowVendorDto })
-  async followVendor(@Body() followDto: FollowVendorDto): Promise<User> {
-    return await this.followService.followVendor(followDto);
+  async followVendor(
+    @GetUserId() buyerId: string,
+    @Body() followRequestDto: FollowVendorDto,
+  ): Promise<User> {
+    return await this.followService.followVendor(
+      buyerId,
+      followRequestDto.vendorId,
+    );
   }
 
   @Delete('unfollow')
@@ -142,7 +149,13 @@ export class FollowController {
     },
   })
   @ApiBody({ type: FollowVendorDto })
-  async unfollowVendor(@Body() followDto: FollowVendorDto): Promise<void> {
-    return await this.followService.unfollowVendor(followDto);
+  async unfollowVendor(
+    @GetUserId() buyerId: string,
+    @Body() followRequestDto: FollowVendorDto,
+  ): Promise<void> {
+    return await this.followService.unfollowVendor(
+      buyerId,
+      followRequestDto.vendorId,
+    );
   }
 }
