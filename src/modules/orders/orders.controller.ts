@@ -173,7 +173,7 @@ export class OrdersController {
     }
   }
 
-  @Get(':userId/:orderId')
+  @Get(':orderId')
   @ApiOperation({
     summary: 'Get order by user ID and order ID',
     tags: ['Order Endpoints'],
@@ -210,13 +210,14 @@ export class OrdersController {
       },
     },
   })
-  @ApiParam({ name: 'userId', description: 'The ID of the user' })
   @ApiParam({ name: 'orderId', description: 'The ID of the order' })
   async getOrderByUserIdAndOrderId(
-    @Param('userId') userId: string,
+    @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
   ): Promise<SingleOrderResponse> {
-    return await this.ordersService.findByUserIdAndOrderId(userId, orderId);
+    const user = request.user;
+
+    return await this.ordersService.findByUserIdAndOrderId(user, orderId);
   }
 
   @Patch(':orderId')

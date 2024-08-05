@@ -15,6 +15,8 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { User } from 'src/modules/users/user.entity';
 
+import { UserResponseDto } from '../auth/dto/user-response.dto';
+
 import { OrderDTO } from './dto/order.dto';
 import { SingleOrderResponse } from './dto/single-order-response.dto';
 import { BuyerOrder } from './entities/buyer-order.entity';
@@ -67,22 +69,14 @@ export class OrdersService {
   }
 
   async findByUserIdAndOrderId(
-    userId: string,
+    user: UserResponseDto,
     orderId: number,
   ): Promise<SingleOrderResponse> {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
       const order = await this.orderRepository.find({
         where: [
-          { vendorId: userId, orderId },
-          { buyerId: userId, orderId },
+          { vendorId: user.id, orderId },
+          { buyerId: user.id, orderId },
         ],
         relations: ['products', 'products.images'],
         order: { createdAt: 'DESC' },
