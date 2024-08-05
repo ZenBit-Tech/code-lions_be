@@ -8,13 +8,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import Stripe from 'stripe';
 
 import { Errors } from 'src/common/errors';
 import { CANADA_POST_LOGO } from 'src/config';
 import { CartService } from 'src/modules/cart/cart.service';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { ProductsService } from 'src/modules/products/products.service';
-import Stripe from 'stripe';
 
 import { UsersService } from '../users/users.service';
 

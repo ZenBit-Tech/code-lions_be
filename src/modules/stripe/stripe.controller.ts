@@ -15,19 +15,18 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-
 import { Request } from 'express';
+import Stripe from 'stripe';
+
 import { Errors } from 'src/common/errors';
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
+import { Role } from 'src/modules/roles/role.enum';
+import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { AccountLinkResponseDto } from 'src/modules/stripe/dto/account-link-response.dto';
 import { PaymentDto } from 'src/modules/stripe/dto/payment.dto';
 import { StripeService } from 'src/modules/stripe/stripe.service';
-import Stripe from 'stripe';
-
-import { Role } from '../roles/role.enum';
-import { Roles } from '../roles/roles.decorator';
-import { User } from '../users/user.entity';
+import { User } from 'src/modules/users/user.entity';
 
 @ApiTags('stripe')
 @Controller('stripe')

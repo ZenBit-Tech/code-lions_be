@@ -30,7 +30,7 @@ module.exports = {
         ],
         pathGroups: [
           {
-            pattern: '{@nestjs/**,typeorm}',
+            pattern: '{@nestjs/**,typeorm,stripe,express}',
             group: 'external',
             position: 'before',
           },
