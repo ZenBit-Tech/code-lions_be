@@ -414,9 +414,11 @@ export class UsersController {
     name: 'id',
     description: 'The ID of the user to soft delete',
   })
-  @Roles(Role.ADMIN)
-  async softDeleteUser(@Param('id') id: string): Promise<void> {
-    await this.usersService.softDeleteUser(id);
+  async softDeleteUser(
+    @Param('id') idToDelete: string,
+    @GetUserId() userId: string,
+  ): Promise<void> {
+    await this.usersService.softDeleteUser(idToDelete, userId);
   }
 
   @Post(':id/photo')

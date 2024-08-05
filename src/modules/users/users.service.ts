@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -437,22 +438,27 @@ export class UsersService {
     }
   }
 
-  async softDeleteUser(id: string): Promise<void> {
+  async softDeleteUser(idToDelete: string, userId: string): Promise<void> {
     try {
-      const user = await this.getUserById(id);
+      const userToDelete = await this.getUserById(idToDelete);
+      const user = await this.getUserById(userId);
 
-      const deleteResponse = await this.userRepository.softDelete(id);
+      if (userId !== user.id || user.role !== Role.ADMIN) {
+        throw new UnauthorizedException(Errors.USER_UNAUTHORIZED);
+      }
+
+      const deleteResponse = await this.userRepository.softDelete(idToDelete);
 
       if (!deleteResponse.affected) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
       const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: user.email,
+        receiverEmail: userToDelete.email,
         subject: 'Account deleted on CodeLions',
         templateName: 'soft-delete.hbs',
         context: {
-          name: user.name,
+          name: userToDelete.name,
         },
       });
 
@@ -464,7 +470,8 @@ export class UsersService {
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof ServiceUnavailableException
+        error instanceof ServiceUnavailableException ||
+        error instanceof UnauthorizedException
       ) {
         throw error;
       }
