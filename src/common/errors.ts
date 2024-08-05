@@ -25,6 +25,8 @@ export const Errors = {
     'Failed to send email to the user deleted by admin',
   FAILED_TO_SEND_EMAIL_TO_SUSPENDED_USER:
     'Failed to send email to the user suspended by admin',
+  FAILED_TO_SEND_EMAIL_FOR_PASSWORD_CHANGE:
+    'Failed to send an email to the user',
   INTERNAL_SERVER_ERROR: 'Internal server error',
   INVALID_CREDENTIALS: 'Invalid email or password',
   INVALID_EMAIL: 'Invalid email',

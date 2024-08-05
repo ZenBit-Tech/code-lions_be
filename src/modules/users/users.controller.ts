@@ -37,6 +37,7 @@ import {
   ApiNoContentResponse,
 } from '@nestjs/swagger';
 
+import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -49,6 +50,7 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
@@ -1103,5 +1105,52 @@ export class UsersController {
   })
   async hideRentalRules(@Param('id') userId: string): Promise<void> {
     return await this.usersService.hideRentalRules(userId);
+  }
+
+  @Patch('change-password')
+  @ApiOperation({
+    summary: 'Change user password',
+    tags: ['Users Endpoints'],
+    description: 'This endpoint allows the user to change their password.',
+  })
+  @ApiOkResponse({
+    description: 'The password has been successfully changed.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 400 },
+        message: { type: 'string', example: 'Invalid password' },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: { type: 'string', example: Errors.INVALID_TOKEN },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to change password',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.INTERNAL_SERVER_ERROR },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: ChangePasswordDto })
+  async changePassword(
+    @GetUserId() userId: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.usersService.changePassword(userId, changePasswordDto.password);
   }
 }

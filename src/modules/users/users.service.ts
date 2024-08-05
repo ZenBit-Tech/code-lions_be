@@ -503,7 +503,28 @@ export class UsersService {
     try {
       const hashedPassword = await this.hashPassword(password);
 
+      const user = await this.getUserById(id);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
       await this.userRepository.update({ id }, { password: hashedPassword });
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'The password was changed on CodeLions',
+        templateName: 'change-password.hbs',
+        context: {
+          name: user.name,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(
+          Errors.FAILED_TO_SEND_EMAIL_TO_SUSPENDED_USER,
+        );
+      }
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_PASSWORD);
     }
