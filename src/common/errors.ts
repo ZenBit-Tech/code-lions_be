@@ -194,7 +194,6 @@ export const Errors = {
   ORDER_NOT_FOUND: 'Order not found',
   ORDER_NOT_RECEIVED: 'Order is not returned or received',
   ORDERS_NOT_FOUND: 'Orders not found',
-  ORDER_NOT_FOUND: 'Order not found',
   FAILED_TO_CREATE_ORDER: 'Failed to create order',
   FAILED_TO_FETCH_ORDER: 'Failed to fetch order',
   FAILED_TO_REJECT_ORDER: 'Failed to reject order',
