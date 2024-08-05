@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   ServiceUnavailableException,
   UnprocessableEntityException,
@@ -10,7 +12,10 @@ import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
-import { VERIFICATION_CODE_LENGTH } from 'src/config';
+import {
+  VERIFICATION_CODE_EXPIRATION,
+  VERIFICATION_CODE_LENGTH,
+} from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
@@ -126,6 +131,10 @@ export class AuthService {
 
     if (!isValidPassword) {
       throw new BadRequestException(Errors.INVALID_CREDENTIALS);
+    }
+
+    if (!user.isEmailVerified) {
+      await this.sendVerificationOtp(user);
     }
 
     return this.usersService.buildUserResponseDto(user);
@@ -288,6 +297,51 @@ export class AuthService {
       }
 
       return newUser;
+    }
+  }
+
+  async changeEmail(id: string, email: string): Promise<void> {
+    try {
+      const user = await this.usersService.getUserById(id);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const userExists =
+        await this.usersService.getUserByEmailWithDeleted(email);
+
+      if (userExists) {
+        throw new ConflictException(Errors.USER_EXISTS);
+      }
+
+      const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
+      const otpExpiration = new Date(Date.now() + VERIFICATION_CODE_EXPIRATION);
+
+      await this.usersService.updateUserEmail(id, email, otp, otpExpiration);
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: email,
+        subject: 'The email was changed on CodeLions',
+        templateName: 'change-email.hbs',
+        context: {
+          name: user.name,
+          otp,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof ServiceUnavailableException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_EMAIL);
     }
   }
 }

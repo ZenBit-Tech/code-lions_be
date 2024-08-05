@@ -534,7 +534,12 @@ export class UsersService {
     }
   }
 
-  async changeEmail(id: string, email: string): Promise<void> {
+  async updateUserEmail(
+    id: string,
+    email: string,
+    otp: string,
+    otpExpiration: Date,
+  ): Promise<void> {
     try {
       const user = await this.getUserById(id);
 
@@ -542,34 +547,13 @@ export class UsersService {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
-      const userExists = await this.getUserByEmailWithDeleted(email);
+      user.email = email;
+      user.isEmailVerified = false;
+      user.otp = otp;
+      user.otpExpiration = otpExpiration;
 
-      if (userExists) {
-        throw new ConflictException(Errors.USER_EXISTS);
-      }
-
-      await this.userRepository.update({ id }, { email });
-
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: email,
-        subject: 'The email was changed on CodeLions',
-        templateName: 'change-email.hbs',
-        context: {
-          name: user.name,
-        },
-      });
-
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
+      await this.userRepository.save(user);
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException ||
-        error instanceof ServiceUnavailableException
-      ) {
-        throw error;
-      }
       throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_EMAIL);
     }
   }

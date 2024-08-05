@@ -50,8 +50,6 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 
-import { ChangeEmailDto } from './dto/change-email.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PersonalInfoDto } from './dto/personal-info.dto';
 import { UpdateUserAddressDto } from './dto/update-user-address.dto';
@@ -1106,110 +1104,6 @@ export class UsersController {
   })
   async hideRentalRules(@Param('id') userId: string): Promise<void> {
     return await this.usersService.hideRentalRules(userId);
-  }
-
-  @Patch('change-password')
-  @ApiOperation({
-    summary: 'Change user password',
-    tags: ['Users Endpoints'],
-    description: 'This endpoint allows the user to change their password.',
-  })
-  @ApiOkResponse({
-    description: 'The password has been successfully changed.',
-  })
-  @ApiBadRequestResponse({
-    description: 'Invalid request',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 400 },
-        message: { type: 'string', example: 'Invalid password' },
-        error: { type: 'string', example: 'Bad Request' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: { type: 'string', example: Errors.INVALID_TOKEN },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Failed to change password',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 500 },
-        message: { type: 'string', example: Errors.INTERNAL_SERVER_ERROR },
-        error: { type: 'string', example: 'Internal Server Error' },
-      },
-    },
-  })
-  @ApiBody({ type: ChangePasswordDto })
-  async changePassword(
-    @GetUserId() userId: string,
-    @Body() changePasswordDto: ChangePasswordDto,
-  ): Promise<void> {
-    await this.usersService.changePassword(userId, changePasswordDto.password);
-  }
-
-  @Patch('change-email')
-  @ApiOperation({
-    summary: 'Change user email',
-    tags: ['Users Endpoints'],
-    description: 'This endpoint allows the user to change their email.',
-  })
-  @ApiOkResponse({
-    description: 'The email has been successfully changed.',
-  })
-  @ApiBadRequestResponse({
-    description: 'Invalid request',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 400 },
-        message: { type: 'string', example: 'Invalid email' },
-        error: { type: 'string', example: 'Bad Request' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: { type: 'string', example: Errors.INVALID_TOKEN },
-        error: { type: 'string', example: 'Unauthorized' },
-      },
-    },
-  })
-  @ApiConflictResponse({
-    description: 'Email already in use',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 409 },
-        message: { type: 'string', example: Errors.USER_EXISTS },
-        error: { type: 'string', example: 'Conflict' },
-      },
-    },
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Failed to change email',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 500 },
-        message: { type: 'string', example: Errors.INTERNAL_SERVER_ERROR },
-        error: { type: 'string', example: 'Internal Server Error' },
-      },
-    },
-  })
-  @ApiBody({ type: ChangeEmailDto })
-  async changeEmail(
-    @GetUserId() userId: string,
-    @Body() changeEmailDto: ChangeEmailDto,
-  ): Promise<void> {
-    await this.usersService.changeEmail(userId, changeEmailDto.email);
   }
 
   @Patch('toggle-notifications')
