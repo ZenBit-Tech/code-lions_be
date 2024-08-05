@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import Stripe from 'stripe';
@@ -36,6 +37,68 @@ export class StripeController {
   @Post('create-checkout-session')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Create checkout session',
+    tags: ['stripe'],
+    description:
+      'Create checkout session and returns object with session id and link',
+  })
+  @ApiCreatedResponse({
+    description: 'Created checkout session',
+    type: AccountLinkResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user or not found product with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiConflictResponse({
+    description: 'Prices do not match',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 409 },
+        message: {
+          type: 'string',
+          example: Errors.PRICES_DO_NOT_MATCH,
+        },
+        error: { type: 'string', example: 'Conflict' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create checkout session',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.PAYMENT_ERROR,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
   @Roles(Role.BUYER)
   async createCheckoutSession(
     @Body() payment: PaymentDto,
