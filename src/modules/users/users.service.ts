@@ -229,6 +229,20 @@ export class UsersService {
     }
   }
 
+  async getUserByStripeAccount(stripeAccount: string): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { stripeAccount },
+      });
+
+      return user;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FETCH_USER_BY_STRIPE_ACCOUNT,
+      );
+    }
+  }
+
   async getUserByEmailWithDeleted(email: string): Promise<User> {
     try {
       const user = await this.userRepository.findOne({
@@ -553,6 +567,31 @@ export class UsersService {
     }
   }
 
+  async updateUserStripeAccount(
+    id: string,
+    stripeAccount: string,
+  ): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.stripeAccount = stripeAccount;
+      await this.userRepository.save(user);
+
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_UPDATE_USER_STRIPE_ACCOUNT,
+      );
+    }
+  }
+
   async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id } });
@@ -631,6 +670,29 @@ export class UsersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_SIZE);
+    }
+  }
+
+  async fihishOnboarding(userId: string): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.onboardingStep = OnboardingSteps.FINISH;
+      user.lastUpdatedAt = new Date();
+      await this.userRepository.save(user);
+
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_FINISH_ONBOARDING,
+      );
     }
   }
 

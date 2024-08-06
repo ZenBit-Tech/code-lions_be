@@ -210,4 +210,10 @@ export const Errors = {
     'Prices of the products in the DB and cart are different',
   EMPTY_CART_FAILED: 'Failed to empty cart',
   INVALID_WEBHOOK_SIGNATURE: 'Invalid webhook signature',
+  FAILED_TO_GET_USER_STRIPE_ACCOUNT: 'Failed to get user stripe account',
+  FAILED_TO_UPDATE_USER_STRIPE_ACCOUNT: 'Failed to update user stripe account',
+  FAILED_TO_CREATE_ACCOUNT: 'Failed to create account',
+  FAILED_TO_FINISH_ONBOARDING: 'Failed to finish onboarding',
+  FAILED_TO_FETCH_USER_BY_STRIPE_ACCOUNT:
+    'Failed to fetch user by stripe account',
 };
