@@ -27,12 +27,11 @@ import { Color } from 'src/modules/products/entities/color.entity';
 import { Image } from 'src/modules/products/entities/image.entity';
 import { Status } from 'src/modules/products/entities/product-status.enum';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { mapProducts } from 'src/modules/products/utils/mapProducts';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
 import { Wishlist } from 'src/modules/wishlist/wishlist.entity';
 import { v4 as uuidv4 } from 'uuid';
-
-import { mapProducts } from './utils/mapProducts';
 
 type DateRange = { lower: Date; upper: Date };
 
@@ -506,7 +505,6 @@ export class ProductsService {
         rating: vendor.rating,
       }));
     } catch (error) {
-      console.log(error);
       throw new InternalServerErrorException(
         Errors.FAILED_TO_FETCH_BEST_VENDORS,
       );
@@ -612,7 +610,6 @@ export class ProductsService {
         count: count,
       };
     } catch (error) {
-      console.log(error);
       throw new InternalServerErrorException(Errors.FAILED_TO_FETCH_PRODUCTS);
     }
   }

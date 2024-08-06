@@ -59,6 +59,7 @@ describe('ProductsService', () => {
       lastUpdatedAt: new Date('2024-07-05T18:15:14.950Z'),
       deletedAt: null,
       material: Materials.CHIFFON,
+      pdfUrl: '',
     },
   ];
 
@@ -193,6 +194,15 @@ describe('ProductsService', () => {
         lastUpdatedAt: new Date('2024-07-05T18:15:14.950Z'),
         deletedAt: null,
         onboardingStep: 1,
+        willHideRentalRules: false,
+        stripeAccount: null,
+        deactivationTimestamp: null,
+        reactivationTimestamp: null,
+        isOnline: false,
+        lastActiveAt: new Date('2024-07-05T18:15:14.950Z'),
+        productsOrder: [],
+        buyerOrders: [],
+        readMessages: [],
         rating: 4.5,
         orders: 2000,
         updateDatesBeforeInsert: jest.fn(),

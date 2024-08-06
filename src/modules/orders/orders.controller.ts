@@ -29,6 +29,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -124,6 +125,49 @@ export class OrdersController {
     @Param('id') vendorId: string,
   ): Promise<OrderResponseDTO[]> {
     return this.ordersService.findByVendor(vendorId);
+  }
+
+  @Get('buyer')
+  @ApiOperation({
+    summary: 'Get all orders of buyer',
+    tags: ['Order Endpoints'],
+    description: 'This endpoint returns a list of buyer orders.',
+  })
+  @ApiOkResponse({
+    description: 'The list of buyer orders.',
+    type: [OrderResponseDTO],
+  })
+  @ApiNotFoundResponse({
+    description: 'Buyer not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to fetch orders of this buyer',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_FETCH_ORDERS,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async getBuyerOrders(
+    @GetUserId() userId: string,
+    @Query('statuses') statuses: Status[],
+  ): Promise<OrderResponseDTO[]> {
+    return this.ordersService.getAllOrdersOfBuyer(userId, statuses);
   }
 
   @Post('pay')

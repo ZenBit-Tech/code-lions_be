@@ -8,9 +8,9 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
 
 import axios from 'axios';
-import { Request } from 'express';
 import { Observable, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { Errors } from 'src/common/errors';
