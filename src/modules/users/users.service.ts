@@ -512,10 +512,6 @@ export class UsersService {
 
       const user = await this.getUserById(id);
 
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
       await this.userRepository.update({ id }, { password: hashedPassword });
 
       const isMailSent = await this.mailerService.sendMail({

@@ -304,10 +304,6 @@ export class AuthService {
     try {
       const user = await this.usersService.getUserById(id);
 
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
       const userExists =
         await this.usersService.getUserByEmailWithDeleted(email);
 
