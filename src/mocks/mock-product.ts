@@ -53,6 +53,8 @@ const mockUser: User = {
   wishlist: [],
   chatRooms: [],
   messages: [],
+  followers: [],
+  following: [],
   productsOrder: [],
   buyerOrders: [],
   readMessages: [],

@@ -202,6 +202,8 @@ export const Errors = {
   FAILED_TO_PAY_FOR_ORDER: 'Failed to pay for order',
   CART_IS_EMPTY: 'There is no products in card',
   FAILED_TO_REACTIVATE_USERS: 'Failed to reactivate users',
+  FAILED_TO_FOLLOW_VENDOR: 'Failed to follow vendor',
+  FAILED_TO_UNFOLLOW_VENDOR: 'Failed to unfollow vendor',
   FAILED_TO_FETCH_VENDOR_ORDERS: 'Failed to fetch vendor orders',
   SOME_PRODUCTS_NOT_FOUND: 'Some products not found',
   PRICES_DO_NOT_MATCH:
