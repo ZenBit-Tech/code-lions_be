@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Request,
   UseGuards,
@@ -25,6 +26,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 
+import { GetUser } from 'src/common/decorators/get-user';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -449,13 +451,10 @@ export class AuthController {
   @ApiBody({ type: PasswordDto })
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
-    @Request() request: Request & { user: UserResponseDto },
+    @GetUser() user: UserResponseDto,
     @Body() passwordDto: PasswordDto,
   ): Promise<void> {
-    await this.authService.changePassword(
-      request.user.id,
-      passwordDto.password,
-    );
+    await this.authService.changePassword(user, passwordDto.password);
   }
 
   @Post('refresh-token')
@@ -570,5 +569,53 @@ export class AuthController {
     }
 
     return this.authService.generateUserWithTokensResponseDto(userViaGoogle);
+  }
+
+  @Patch('change-email')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Change user email',
+    description: 'This endpoint allows the user to change their email.',
+  })
+  @ApiOkResponse({
+    description: 'The email has been successfully changed.',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: { type: 'string', example: Errors.USER_NOT_FOUND },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiConflictResponse({
+    description: 'Email already in use',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 409 },
+        message: { type: 'string', example: Errors.USER_EXISTS },
+        error: { type: 'string', example: 'Conflict' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to change email',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.INTERNAL_SERVER_ERROR },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiBody({ type: EmailDto })
+  async changeEmail(
+    @GetUser() user: UserResponseDto,
+    @Body() changeEmailDto: EmailDto,
+  ): Promise<void> {
+    await this.authService.changeEmail(user, changeEmailDto.email);
   }
 }

@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -451,22 +452,29 @@ export class UsersService {
     }
   }
 
-  async softDeleteUser(id: string): Promise<void> {
+  async softDeleteUser(
+    idToDelete: string,
+    user: UserResponseDto,
+  ): Promise<void> {
     try {
-      const user = await this.getUserById(id);
+      const userToDelete = await this.getUserById(idToDelete);
 
-      const deleteResponse = await this.userRepository.softDelete(id);
+      if (idToDelete !== user.id && user.role !== Role.ADMIN) {
+        throw new UnauthorizedException(Errors.USER_UNAUTHORIZED);
+      }
+
+      const deleteResponse = await this.userRepository.softDelete(idToDelete);
 
       if (!deleteResponse.affected) {
         throw new NotFoundException(Errors.USER_NOT_FOUND);
       }
 
       const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: user.email,
+        receiverEmail: userToDelete.email,
         subject: 'Account deleted on CodeLions',
         templateName: 'soft-delete.hbs',
         context: {
-          name: user.name,
+          name: userToDelete.name,
         },
       });
 
@@ -478,7 +486,8 @@ export class UsersService {
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof ServiceUnavailableException
+        error instanceof ServiceUnavailableException ||
+        error instanceof UnauthorizedException
       ) {
         throw error;
       }
@@ -513,13 +522,53 @@ export class UsersService {
     }
   }
 
-  async changePassword(id: string, password: string): Promise<void> {
+  async changePassword(user: UserResponseDto, password: string): Promise<void> {
     try {
       const hashedPassword = await this.hashPassword(password);
 
-      await this.userRepository.update({ id }, { password: hashedPassword });
+      await this.userRepository.update(
+        { id: user.id },
+        { password: hashedPassword },
+      );
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: user.email,
+        subject: 'The password was changed on CodeLions',
+        templateName: 'change-password.hbs',
+        context: {
+          name: user.name,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
     } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
+        throw error;
+      }
       throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_PASSWORD);
+    }
+  }
+
+  async updateUserEmail(
+    user: User,
+    email: string,
+    otp: string,
+    otpExpiration: Date,
+  ): Promise<void> {
+    try {
+      user.email = email;
+      user.isEmailVerified = false;
+      user.otp = otp;
+      user.otpExpiration = otpExpiration;
+
+      await this.userRepository.save(user);
+    } catch (error) {
+      throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_EMAIL);
     }
   }
 
@@ -1011,5 +1060,23 @@ export class UsersService {
       isOnline: user.isOnline,
       lastActiveAt: user.lastActiveAt,
     };
+  }
+
+  async toggleNotifications(userId: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      user.notificationsEnabled = !user.notificationsEnabled;
+      await this.userRepository.save(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_UPDATE_PROFILE);
+    }
   }
 }
