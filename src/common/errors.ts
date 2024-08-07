@@ -195,6 +195,8 @@ export const Errors = {
   ORDER_NOT_RECEIVED: 'Order is not returned or received',
   ORDERS_NOT_FOUND: 'Orders not found',
   FAILED_TO_CREATE_ORDER: 'Failed to create order',
+  FAILED_TO_FETCH_ORDER: 'Failed to fetch order',
+  FAILED_TO_REJECT_ORDER: 'Failed to reject order',
   ORDERS_CANNOT_BE_GENERATED: 'Orders cannot be generated',
   FAILED_TO_CREATE_BUYER_ORDER: 'Failed to create buyer order',
   VENDOR_NOT_FOUND: 'Vendor not found',
