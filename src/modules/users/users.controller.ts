@@ -37,6 +37,7 @@ import {
   ApiNoContentResponse,
 } from '@nestjs/swagger';
 
+import { GetUser } from 'src/common/decorators/get-user';
 import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
@@ -416,9 +417,9 @@ export class UsersController {
   })
   async softDeleteUser(
     @Param('id') idToDelete: string,
-    @GetUserId() userId: string,
+    @GetUser() user: UserResponseDto,
   ): Promise<void> {
-    await this.usersService.softDeleteUser(idToDelete, userId);
+    await this.usersService.softDeleteUser(idToDelete, user);
   }
 
   @Post(':id/photo')

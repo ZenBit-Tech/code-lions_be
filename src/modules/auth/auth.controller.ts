@@ -26,7 +26,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 
-import { GetUserId } from 'src/common/decorators/get-user-id';
+import { GetUser } from 'src/common/decorators/get-user';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -451,13 +451,10 @@ export class AuthController {
   @ApiBody({ type: PasswordDto })
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
-    @Request() request: Request & { user: UserResponseDto },
+    @GetUser() user: UserResponseDto,
     @Body() passwordDto: PasswordDto,
   ): Promise<void> {
-    await this.authService.changePassword(
-      request.user.id,
-      passwordDto.password,
-    );
+    await this.authService.changePassword(user, passwordDto.password);
   }
 
   @Post('refresh-token')
@@ -616,9 +613,9 @@ export class AuthController {
   })
   @ApiBody({ type: EmailDto })
   async changeEmail(
-    @GetUserId() userId: string,
+    @GetUser() user: UserResponseDto,
     @Body() changeEmailDto: EmailDto,
   ): Promise<void> {
-    await this.authService.changeEmail(userId, changeEmailDto.email);
+    await this.authService.changeEmail(user, changeEmailDto.email);
   }
 }

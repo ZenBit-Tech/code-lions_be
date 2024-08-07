@@ -438,12 +438,14 @@ export class UsersService {
     }
   }
 
-  async softDeleteUser(idToDelete: string, userId: string): Promise<void> {
+  async softDeleteUser(
+    idToDelete: string,
+    user: UserResponseDto,
+  ): Promise<void> {
     try {
       const userToDelete = await this.getUserById(idToDelete);
-      const user = await this.getUserById(userId);
 
-      if (userId !== user.id || user.role !== Role.ADMIN) {
+      if (idToDelete !== user.id && user.role !== Role.ADMIN) {
         throw new UnauthorizedException(Errors.USER_UNAUTHORIZED);
       }
 
@@ -506,13 +508,14 @@ export class UsersService {
     }
   }
 
-  async changePassword(id: string, password: string): Promise<void> {
+  async changePassword(user: UserResponseDto, password: string): Promise<void> {
     try {
       const hashedPassword = await this.hashPassword(password);
 
-      const user = await this.getUserById(id);
-
-      await this.userRepository.update({ id }, { password: hashedPassword });
+      await this.userRepository.update(
+        { id: user.id },
+        { password: hashedPassword },
+      );
 
       const isMailSent = await this.mailerService.sendMail({
         receiverEmail: user.email,
@@ -538,18 +541,12 @@ export class UsersService {
   }
 
   async updateUserEmail(
-    id: string,
+    user: User,
     email: string,
     otp: string,
     otpExpiration: Date,
   ): Promise<void> {
     try {
-      const user = await this.getUserById(id);
-
-      if (!user) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
-
       user.email = email;
       user.isEmailVerified = false;
       user.otp = otp;

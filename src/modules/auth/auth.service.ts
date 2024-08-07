@@ -20,6 +20,8 @@ import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
 
+import { User } from '../users/user.entity';
+
 import { GooglePayloadDto } from './dto/google-payload.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetOtpDto } from './dto/reset-otp';
@@ -246,8 +248,8 @@ export class AuthService {
     return userWithTokens;
   }
 
-  async changePassword(id: string, password: string): Promise<void> {
-    await this.usersService.changePassword(id, password);
+  async changePassword(user: UserResponseDto, password: string): Promise<void> {
+    await this.usersService.changePassword(user, password);
   }
 
   async refreshToken(refreshToken: string): Promise<UserWithTokensResponseDto> {
@@ -300,10 +302,8 @@ export class AuthService {
     }
   }
 
-  async changeEmail(id: string, email: string): Promise<void> {
+  async changeEmail(user: UserResponseDto, email: string): Promise<void> {
     try {
-      const user = await this.usersService.getUserById(id);
-
       const userExists =
         await this.usersService.getUserByEmailWithDeleted(email);
 
@@ -314,7 +314,12 @@ export class AuthService {
       const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
       const otpExpiration = new Date(Date.now() + VERIFICATION_CODE_EXPIRATION);
 
-      await this.usersService.updateUserEmail(id, email, otp, otpExpiration);
+      await this.usersService.updateUserEmail(
+        user as User,
+        email,
+        otp,
+        otpExpiration,
+      );
 
       const isMailSent = await this.mailerService.sendMail({
         receiverEmail: email,
