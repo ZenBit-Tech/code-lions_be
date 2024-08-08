@@ -7,7 +7,7 @@ import { Type } from '../entities/notification-type.enum';
 
 export class CreateNotificationDTO {
   @ApiProperty({
-    example: 'Order rejection',
+    example: 'Shipping updates',
     description: 'The type of the notification',
     enum: Type,
   })
@@ -25,7 +25,7 @@ export class CreateNotificationDTO {
   orderId?: number;
 
   @ApiProperty({
-    example: 'shipped',
+    example: 'Waiting for returning',
     description: 'The shipping status of the order',
     enum: Status,
     required: false,

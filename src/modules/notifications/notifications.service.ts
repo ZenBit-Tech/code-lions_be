@@ -70,6 +70,9 @@ export class NotificationsService {
   private async generateNotification(
     notification: Notification,
   ): Promise<NotificationResponseDTO> {
+    const HOURS = 24;
+    const SECONDS_MINUTES = 60;
+    const MILLISECONDS = 1000;
     const { type, orderId, createdAt, shippingStatus, userId } = notification;
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -86,6 +89,24 @@ export class NotificationsService {
       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
     }
 
+    let returnAt = 0;
+
+    if (order.receivedAt && order.duration) {
+      returnAt =
+        order.receivedAt.getTime() +
+        order.duration *
+          HOURS *
+          SECONDS_MINUTES *
+          SECONDS_MINUTES *
+          MILLISECONDS;
+    }
+
+    const returnDate = new Date(returnAt).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
     const userName = user.name;
 
     switch (type) {
@@ -100,14 +121,14 @@ export class NotificationsService {
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We confirm that your order #${orderId} has been ${shippingStatus} for return/returned. Thank you for renting with us!`,
+          text: `Hi ${userName}. We confirm that your order #${orderId} status has been changed to '${shippingStatus}'. Thank you for renting with us!`,
         };
 
       case Type.RETURNED_REMINDER:
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We would like to remind you that your rental order #${orderId} is due for return on ${createdAt.toDateString()}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
+          text: `Hi ${userName}. We would like to remind you that your rental order #${orderId} is due for return on ${returnDate}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
         };
 
       case Type.CHANGED_PASSWORD:

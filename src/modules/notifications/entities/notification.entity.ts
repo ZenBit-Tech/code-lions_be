@@ -52,10 +52,10 @@ export class Notification {
   @ApiProperty({
     example: '4',
     description: 'The ID of the user receiving the notification',
-    type: String,
+    type: Number,
   })
   @Column({
-    type: 'number',
+    type: 'int',
     nullable: true,
   })
   orderId: number;
