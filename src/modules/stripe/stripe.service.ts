@@ -13,10 +13,10 @@ import Stripe from 'stripe';
 import { Errors } from 'src/common/errors';
 import { CANADA_POST_LOGO } from 'src/config';
 import { CartService } from 'src/modules/cart/cart.service';
+import { MailerService } from 'src/modules/mailer/mailer.service';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { ProductsService } from 'src/modules/products/products.service';
-
-import { UsersService } from '../users/users.service';
+import { UsersService } from 'src/modules/users/users.service';
 
 import { PaymentDto } from './dto/payment.dto';
 import { StripeModuleOptions } from './stripe.interfaces';
@@ -38,6 +38,7 @@ export class StripeService {
     private configService: ConfigService,
     private cartService: CartService,
     private ordersService: OrdersService,
+    private mailerService: MailerService,
   ) {
     this.StripeApi = new Stripe(this.options.apiKey, this.options.options);
   }
@@ -107,6 +108,9 @@ export class StripeService {
           userId: customerId,
           shippingPrice: shippingPrice,
         },
+        payment_intent_data: {
+          capture_method: 'manual',
+        },
         mode: 'payment',
         success_url: this.configService.get<string>('STRIPE_SUCCESS_URL'),
         cancel_url: this.configService.get<string>('STRIPE_CANCEL_URL'),
@@ -125,6 +129,51 @@ export class StripeService {
     }
   }
 
+  async captureMoney(
+    paymentIntentId: string,
+    amount: number,
+  ): Promise<boolean> {
+    try {
+      const intent = await this.StripeApi.paymentIntents.capture(
+        paymentIntentId,
+        {
+          amount_to_capture: Math.round(amount * centsInDollar),
+        },
+      );
+
+      console.log(intent);
+      if (intent.status !== successStatus) {
+        throw new Error('Payment intent status is not succeeded');
+      }
+
+      return true;
+    } catch (error) {
+      this.Logger.error(error);
+      this.Logger.error(
+        `Payment Intent ID: ${paymentIntentId}, amount: $${amount}`,
+      );
+
+      const parameters = JSON.stringify({
+        paymentIntentId,
+        amount,
+      });
+
+      await this.mailerService.sendMail({
+        receiverEmail: this.configService.get<string>('STRIPE_PROBLEMS_EMAIL'),
+        subject: 'Stripe money capture problem',
+        templateName: 'stripe-error.hbs',
+        context: {
+          action: 'captureMoney',
+          parameters: parameters,
+          error: JSON.stringify(error),
+          date: new Date(),
+        },
+      });
+
+      return false;
+    }
+  }
+
   async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -134,7 +183,8 @@ export class StripeService {
         await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
       const metadata = session.metadata;
 
-      const { id: paymentId, amount_received: total, status } = paymentIntent;
+      console.log(paymentIntent);
+      const { id: paymentId, amount_capturable: total, status } = paymentIntent;
       const { userId, shippingPrice } = metadata;
 
       const totalAmount = total / centsInDollar;

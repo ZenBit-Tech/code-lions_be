@@ -5,6 +5,7 @@ import {
   Req,
   RawBodyRequest,
   UseGuards,
+  Get,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -186,5 +187,13 @@ export class StripeController {
     const { url } = accountLink;
 
     return { url };
+  }
+
+  @Get('test')
+  async test(): Promise<boolean> {
+    return await this.stripeService.captureMoney(
+      'pi_3PlZkZCj7lDMnopK1Y73NyE7',
+      0,
+    );
   }
 }
