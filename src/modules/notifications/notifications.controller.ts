@@ -3,9 +3,7 @@ import {
   Post,
   Body,
   Get,
-  Param,
   UseGuards,
-  Req,
   InternalServerErrorException,
 } from '@nestjs/common';
 import {
@@ -21,6 +19,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -71,7 +70,7 @@ import { NotificationsService } from './notifications.service';
 export class NotificationsController {
   constructor(private readonly notificationService: NotificationsService) {}
 
-  @Post('create')
+  @Post()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Create a notification',
@@ -110,13 +109,11 @@ export class NotificationsController {
   })
   @ApiBody({ type: CreateNotificationDTO })
   async createNotification(
-    @Req() req: any,
+    @GetUserId() userId: string,
     @Body('type') type: Type,
-    @Body('orderId') orderId?: string,
+    @Body('orderId') orderId?: number,
     @Body('shippingStatus') shippingStatus?: Status,
   ): Promise<void> {
-    const userId = req.user.id;
-
     try {
       await this.notificationService.createNotification(
         type,
@@ -129,7 +126,7 @@ export class NotificationsController {
     }
   }
 
-  @Get(':userId')
+  @Get()
   @ApiOperation({
     summary: 'Get notifications by user ID',
     tags: ['notifications'],
@@ -166,7 +163,7 @@ export class NotificationsController {
     },
   })
   async getNotificationsByUser(
-    @Param('userId') userId: string,
+    @GetUserId() userId: string,
   ): Promise<NotificationResponseDTO[]> {
     return await this.notificationService.getNotificationsByUser(userId);
   }

@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { Errors } from 'src/common/errors';
 import { EventsGateway } from 'src/modules/events/events.gateway';
 import { Status } from 'src/modules/orders/entities/order-status.enum';
+import { Order } from 'src/modules/orders/entities/order.entity';
 import { User } from 'src/modules/users/user.entity';
 
 import { NotificationResponseDTO } from './dto/notification-response.dto';
@@ -23,6 +24,8 @@ export class NotificationsService {
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
     @Inject(forwardRef(() => EventsGateway))
     private eventsGateway: EventsGateway,
   ) {}
@@ -30,7 +33,7 @@ export class NotificationsService {
   async createNotification(
     type: Type,
     userId: string,
-    orderId?: string | null,
+    orderId?: number | null,
     shippingStatus?: Status | null,
   ): Promise<void> {
     const notification = new Notification();
@@ -73,6 +76,14 @@ export class NotificationsService {
 
     if (!user) {
       throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
+    const order = await this.orderRepository.findOne({
+      where: { orderId: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException(Errors.ORDER_NOT_FOUND);
     }
 
     const userName = user.name;

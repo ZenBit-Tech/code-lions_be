@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional } from 'class-validator';
 import { Status } from 'src/modules/orders/entities/order-status.enum';
 
 import { Type } from '../entities/notification-type.enum';
@@ -15,14 +15,14 @@ export class CreateNotificationDTO {
   type: Type;
 
   @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
+    example: '4',
     description: 'The ID of the order',
-    type: String,
+    type: Number,
     required: false,
   })
   @IsOptional()
-  @IsString()
-  orderId?: string;
+  @IsNumber()
+  orderId?: number;
 
   @ApiProperty({
     example: 'shipped',

@@ -50,15 +50,15 @@ export class Notification {
   userId: string;
 
   @ApiProperty({
-    example: '61c674384-f944-401b-949b-b76e8793bdc9',
+    example: '4',
     description: 'The ID of the user receiving the notification',
     type: String,
   })
   @Column({
-    type: 'uuid',
+    type: 'number',
     nullable: true,
   })
-  orderId: string;
+  orderId: number;
 
   @ApiProperty({
     example: 'published',
