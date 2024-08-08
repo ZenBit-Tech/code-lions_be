@@ -1,9 +1,9 @@
 export enum Status {
   NEW_ORDER = 'New order',
   SENT = 'Sent',
-  DELIVERED = 'Delivered',
+  SENT_BACK = 'Sent back',
   RECEIVED = 'Received',
-  WAITING_RETURNING = 'Waiting for returning',
+  OVERDUE = 'Overdue',
   RETURNED = 'Returned',
   REJECTED = 'Rejected',
 }
