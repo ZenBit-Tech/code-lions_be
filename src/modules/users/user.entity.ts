@@ -273,6 +273,13 @@ export class User {
   @Column({ type: 'int', default: 0 })
   orders: number;
 
+  @ApiProperty({
+    example: true,
+    description: 'Notifications enabled',
+  })
+  @Column({ default: true })
+  notificationsEnabled: boolean;
+
   @BeforeInsert()
   updateDatesBeforeInsert(): void {
     this.createdAt = new Date();

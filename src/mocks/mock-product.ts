@@ -41,6 +41,7 @@ const mockUser: User = {
   onboardingStep: 0,
   rating: 0,
   orders: 0,
+  notificationsEnabled: true,
   updateDatesBeforeInsert: function (): void {
     throw new Error('Function not implemented.');
   },
