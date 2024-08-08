@@ -61,7 +61,7 @@ export class Notification {
   orderId: number;
 
   @ApiProperty({
-    example: 'published',
+    example: 'Sent',
     description: 'The status of the order',
     enum: Status,
   })

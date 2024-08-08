@@ -25,7 +25,7 @@ export class CreateNotificationDTO {
   orderId?: number;
 
   @ApiProperty({
-    example: 'Waiting for returning',
+    example: 'Sent',
     description: 'The shipping status of the order',
     enum: Status,
     required: false,
