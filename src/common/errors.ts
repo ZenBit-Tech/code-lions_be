@@ -208,4 +208,9 @@ export const Errors = {
     'Prices of the products in the DB and cart are different',
   EMPTY_CART_FAILED: 'Failed to empty cart',
   INVALID_WEBHOOK_SIGNATURE: 'Invalid webhook signature',
+  NOTIFICATION_TEXT_IS_STRING: 'Notification text must be a string',
+  NOTIFICATION_TEXT_CANNOT_BE_EMPTY: 'Notification text cannot be empty',
+  FAILED_TO_FETCH_NOTIFICATIONS: 'Failed to fetch user`s notifications',
+  FAILED_TO_CREATE_NOTIFICATION: 'Failed to create notification',
+  INVALID_NOTIFICATION_REQUEST: 'Invalid request for creating notification',
 };

@@ -26,6 +26,8 @@ import {
   SendMessageDto,
   UserTypingDto,
 } from '../chat/dto/index';
+import { NotificationResponseDTO } from '../notifications/dto/notification-response.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 
 type SocketWithAuth = {
@@ -45,9 +47,10 @@ export class EventsGateway
   constructor(
     @Inject(forwardRef(() => ChatService))
     private chatService: ChatService,
-
     private readonly jwtService: JwtService,
     private readonly userService: UsersService,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   afterInit(server: Server): void {
@@ -172,5 +175,25 @@ export class EventsGateway
     client.emit('unreadMessageCount', { chatId, count });
 
     return count;
+  }
+
+  async sendNotificationToUser(
+    userId: string,
+    notification: NotificationResponseDTO,
+  ): Promise<void> {
+    this.server.to(userId).emit('newNotification', notification);
+  }
+
+  @SubscribeMessage('getNotifications')
+  async handleGetNotifications(
+    client: SocketWithAuth,
+    data: { userId: string },
+  ): Promise<NotificationResponseDTO[]> {
+    const notifications =
+      await this.notificationsService.getNotificationsByUser(data.userId);
+
+    client.emit('userNotifications', notifications);
+
+    return notifications;
   }
 }
