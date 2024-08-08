@@ -17,6 +17,7 @@ import {
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
+import { Errors } from 'src/common/errors';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
@@ -61,64 +62,82 @@ export class EventsGateway
         const token = socket.handshake.auth.token as string;
 
         if (!token) {
-          next(new UnauthorizedException('No token provided'));
+          next(new UnauthorizedException(Errors.NO_TOKEN_PROVIDED));
         }
 
         const { id: userId } = this.jwtService.decode(token);
 
         if (!userId) {
-          next(new UnauthorizedException('Invalid token'));
+          next(new UnauthorizedException(Errors.INVALID_TOKEN));
         }
 
         const user = await this.userService.getUserById(userId);
 
         if (!user) {
-          next(new BadRequestException("User doesn't exist!"));
+          next(new BadRequestException(Errors.USER_NOT_FOUND));
         }
 
         socket.userId = userId;
         next();
       } catch (error) {
-        next(new UnauthorizedException('Token verification failed'));
+        next(new UnauthorizedException(Errors.TOKEN_VERIFICATION_FAILED));
       }
     });
   }
 
   async handleConnection(client: SocketWithAuth): Promise<void> {
-    this.Logger.log(`Client connected: ${client.userId}`);
+    try {
+      this.Logger.log(`Client connected: ${client.userId}`);
 
-    const userChats = await this.chatService.getUserChats(client.userId);
+      const userChats = await this.chatService.getUserChats(client.userId);
 
-    if (userChats) {
-      client.join(client.userId);
-      userChats.forEach((chat) => client.join(chat.id));
+      if (userChats) {
+        client.join(client.userId);
+        userChats.forEach((chat) => client.join(chat.id));
+      }
+
+      await this.userService.setUserOnline(client.userId);
+      this.server.emit('userStatus', {
+        userId: client.userId,
+        status: 'online',
+      });
+    } catch (error) {
+      this.Logger.error(`Error in handleConnection: ${error.message}`);
     }
-
-    await this.userService.setUserOnline(client.userId);
-    this.server.emit('userStatus', { userId: client.userId, status: 'online' });
   }
 
   async handleDisconnect(client: SocketWithAuth): Promise<void> {
-    this.Logger.log(`Client disconnected: ${client.id}`);
+    try {
+      this.Logger.log(`Client disconnected: ${client.id}`);
 
-    await this.userService.setUserOffline(client.userId);
-    const lastActive = await this.userService.getLastActiveTime(client.userId);
+      await this.userService.setUserOffline(client.userId);
+      const lastActive = await this.userService.getLastActiveTime(
+        client.userId,
+      );
 
-    this.server.emit('userStatus', {
-      userId: client.userId,
-      status: 'offline',
-      lastActive,
-    });
+      this.server.emit('userStatus', {
+        userId: client.userId,
+        status: 'offline',
+        lastActive,
+      });
+    } catch (error) {
+      this.Logger.error(`Error in handleDisconnect: ${error.message}`);
+    }
   }
 
   @SubscribeMessage('getUserChats')
   async handleGetUserChats(client: SocketWithAuth): Promise<GetUserChatsDto[]> {
-    const userId = client.userId;
-    const userChats = await this.chatService.getUserChats(userId);
+    try {
+      const userId = client.userId;
+      const userChats = await this.chatService.getUserChats(userId);
 
-    client.emit('userChats', userChats);
+      client.emit('userChats', userChats);
 
-    return userChats;
+      return userChats;
+    } catch (error) {
+      this.Logger.error(`Error in handleGetUserChats: ${error.message}`);
+      throw new BadRequestException(Errors.UNABLE_TO_RETRIEVE_USER_CHATS);
+    }
   }
 
   @SubscribeMessage('sendMessage')
@@ -126,20 +145,25 @@ export class EventsGateway
     client: SocketWithAuth,
     sendMessageDto: SendMessageDto,
   ): Promise<MessageResponseDto> {
-    const secondUser = await this.chatService.getChatSecondParticipant(
-      client.userId,
-      sendMessageDto.chatId,
-    );
-    const message = await this.chatService.sendMessage(
-      client.userId,
-      sendMessageDto,
-    );
+    try {
+      const secondUser = await this.chatService.getChatSecondParticipant(
+        client.userId,
+        sendMessageDto.chatId,
+      );
+      const message = await this.chatService.sendMessage(
+        client.userId,
+        sendMessageDto,
+      );
 
-    this.server
-      .to([sendMessageDto.chatId, secondUser.id])
-      .emit('newMessage', message);
+      this.server
+        .to([sendMessageDto.chatId, secondUser.id])
+        .emit('newMessage', message);
 
-    return message;
+      return message;
+    } catch (error) {
+      this.Logger.error(`Error in handleSendMessage: ${error.message}`);
+      throw new BadRequestException(Errors.UNABLE_TO_SEND_MESSAGE);
+    }
   }
 
   @SubscribeMessage('userTyping')
@@ -147,8 +171,14 @@ export class EventsGateway
     client: SocketWithAuth,
     userTypingDto: UserTypingDto,
   ): Promise<void> {
-    userTypingDto.userId = client.userId;
-    client.broadcast.to(userTypingDto.chatId).emit('userTyping', userTypingDto);
+    try {
+      userTypingDto.userId = client.userId;
+      client.broadcast
+        .to(userTypingDto.chatId)
+        .emit('userTyping', userTypingDto);
+    } catch (error) {
+      this.Logger.error(`Error in handleUserTyping: ${error.message}`);
+    }
   }
 
   @SubscribeMessage('markMessageAsRead')
@@ -156,9 +186,13 @@ export class EventsGateway
     client: SocketWithAuth,
     data: { chatId: string },
   ): Promise<void> {
-    const { chatId } = data;
+    try {
+      const { chatId } = data;
 
-    await this.chatService.markMessageAsRead(client.userId, chatId);
+      await this.chatService.markMessageAsRead(client.userId, chatId);
+    } catch (error) {
+      this.Logger.error(`Error in handleMarkMessageAsRead: ${error.message}`);
+    }
   }
 
   @SubscribeMessage('countUnreadMessages')
@@ -166,15 +200,20 @@ export class EventsGateway
     client: SocketWithAuth,
     data: { chatId: string },
   ): Promise<number> {
-    const { chatId } = data;
-    const count = await this.chatService.countUnreadMessages(
-      client.userId,
-      chatId,
-    );
+    try {
+      const { chatId } = data;
+      const count = await this.chatService.countUnreadMessages(
+        client.userId,
+        chatId,
+      );
 
-    client.emit('unreadMessageCount', { chatId, count });
+      client.emit('unreadMessageCount', { chatId, count });
 
-    return count;
+      return count;
+    } catch (error) {
+      this.Logger.error(`Error in handleCountUnreadMessages: ${error.message}`);
+      throw new BadRequestException(Errors.UNABLE_TO_COUNT_UNREAD_MESSAGES);
+    }
   }
 
   async sendNotificationToUser(

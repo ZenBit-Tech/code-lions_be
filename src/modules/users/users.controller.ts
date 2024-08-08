@@ -37,6 +37,8 @@ import {
   ApiNoContentResponse,
 } from '@nestjs/swagger';
 
+import { GetUser } from 'src/common/decorators/get-user';
+import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
 import { Errors } from 'src/common/errors';
 import { responseDescrptions } from 'src/common/response-descriptions';
@@ -413,9 +415,11 @@ export class UsersController {
     name: 'id',
     description: 'The ID of the user to soft delete',
   })
-  @Roles(Role.ADMIN)
-  async softDeleteUser(@Param('id') id: string): Promise<void> {
-    await this.usersService.softDeleteUser(id);
+  async softDeleteUser(
+    @Param('id') idToDelete: string,
+    @GetUser() user: UserResponseDto,
+  ): Promise<void> {
+    await this.usersService.softDeleteUser(idToDelete, user);
   }
 
   @Post(':id/photo')
@@ -1103,5 +1107,39 @@ export class UsersController {
   })
   async hideRentalRules(@Param('id') userId: string): Promise<void> {
     return await this.usersService.hideRentalRules(userId);
+  }
+
+  @Patch('toggle-notifications')
+  @ApiOperation({
+    summary: 'Toggle user notifications',
+    tags: ['Users Endpoints'],
+    description:
+      'This endpoint allows the user to toggle their notifications setting.',
+  })
+  @ApiOkResponse({
+    description: 'The notification setting has been successfully toggled.',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: { type: 'string', example: Errors.USER_NOT_FOUND },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update notification setting',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: { type: 'string', example: Errors.FAILED_TO_UPDATE_PROFILE },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  async toggleNotifications(@GetUserId() userId: string): Promise<void> {
+    return this.usersService.toggleNotifications(userId);
   }
 }

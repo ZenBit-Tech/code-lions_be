@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Errors } from 'src/common/errors';
 import { IS_VALID_URL } from 'src/config';
 import { Role } from 'src/modules/roles/role.enum';
 import { User } from 'src/modules/users/user.entity';
@@ -43,321 +44,390 @@ export class ChatService {
   ) {}
 
   async getUserChats(userId: string): Promise<GetUserChatsDto[]> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['chatRooms', 'chatRooms.participants'],
-    });
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['chatRooms', 'chatRooms.participants'],
+      });
 
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      if (!user) {
+        throw new NotFoundException(Errors.USER_DOES_NOT_EXIST);
+      }
+
+      const chatRooms = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .leftJoinAndSelect('chatRoom.participants', 'participant')
+        .leftJoinAndSelect('chatRoom.participants', 'secondParticipant')
+        .leftJoinAndSelect('chatRoom.messages', 'message')
+        .leftJoinAndSelect('message.sender', 'sender')
+        .where('participant.id = :userId', { userId })
+        .andWhere('secondParticipant.id != :userId', { userId })
+        .orderBy('message.createdAt', 'DESC')
+        .getMany();
+
+      return await Promise.all(
+        chatRooms.map((chatRoom) => this.toGetUserChatsDto(chatRoom, userId)),
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_RETRIEVE_USER_CHATS);
     }
-
-    const chatRooms = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .leftJoinAndSelect('chatRoom.participants', 'participant')
-      .leftJoinAndSelect('chatRoom.participants', 'secondParticipant')
-      .leftJoinAndSelect('chatRoom.messages', 'message')
-      .leftJoinAndSelect('message.sender', 'sender')
-      .where('participant.id = :userId', { userId })
-      .andWhere('secondParticipant.id != :userId', { userId })
-      .orderBy('message.createdAt', 'DESC')
-      .getMany();
-
-    return await Promise.all(
-      chatRooms.map((chatRoom) => this.toGetUserChatsDto(chatRoom, userId)),
-    );
   }
 
   async getChatById(
     chatId: string,
     userId: string,
   ): Promise<ChatRoomResponseDto> {
-    const chatRoom = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .leftJoinAndSelect('chatRoom.participants', 'participant')
-      .leftJoinAndSelect('chatRoom.messages', 'message')
-      .leftJoinAndSelect('message.sender', 'sender')
-      .where('chatRoom.id = :chatId', { chatId })
-      .orderBy('message.createdAt', 'ASC')
-      .getOne();
+    try {
+      const chatRoom = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .leftJoinAndSelect('chatRoom.participants', 'participant')
+        .leftJoinAndSelect('chatRoom.messages', 'message')
+        .leftJoinAndSelect('message.sender', 'sender')
+        .where('chatRoom.id = :chatId', { chatId })
+        .orderBy('message.createdAt', 'ASC')
+        .getOne();
 
-    if (!chatRoom) {
-      throw new NotFoundException(`Chat room with ID ${chatId} not found`);
+      if (!chatRoom) {
+        throw new NotFoundException(Errors.CHAT_ROOM_NOT_FOUND);
+      }
+
+      if (
+        !chatRoom.participants.some((participant) => participant.id === userId)
+      ) {
+        throw new NotFoundException(Errors.USER_IS_NOT_IN_THIS_CHAT_ROOM);
+      }
+
+      return this.toChatRoomResponseDto(chatRoom, userId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_RETRIEVE_CHAT);
     }
-
-    if (
-      !chatRoom.participants.some((participant) => participant.id === userId)
-    ) {
-      throw new NotFoundException(
-        `User with ID ${userId} not part of chat room ${chatId}`,
-      );
-    }
-
-    return this.toChatRoomResponseDto(chatRoom, userId);
   }
 
   async createChat(
     userId: string,
     createChatDto: CreateChatDto,
   ): Promise<ChatRoom> {
-    const { chatPartnerId, content } = createChatDto;
+    try {
+      const { chatPartnerId, content } = createChatDto;
 
-    const firstUser = await this.userRepository.findOne({
-      where: { id: userId },
-    });
-
-    if (!firstUser) {
-      throw new NotFoundException('First user not found');
-    }
-
-    const secondUser = await this.userRepository.findOne({
-      where: { id: chatPartnerId },
-    });
-
-    if (!secondUser) {
-      throw new NotFoundException('Second user not found');
-    }
-
-    const existingChatRoomId = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .select('chatRoom.id')
-      .leftJoin('chatRoom.participants', 'participant')
-      .where('participant.id IN (:...userIds)', {
-        userIds: [userId, chatPartnerId],
-      })
-      .groupBy('chatRoom.id')
-      .having('COUNT(participant.id) = 2')
-      .getRawOne();
-
-    if (existingChatRoomId) {
-      const existingChatRoom = await this.chatRoomRepository.findOne({
-        where: { id: existingChatRoomId.chatRoom_id },
-        relations: ['participants'],
+      const firstUser = await this.userRepository.findOne({
+        where: { id: userId },
       });
 
-      return existingChatRoom;
-    }
+      if (!firstUser) {
+        throw new NotFoundException(Errors.FIRST_USER_NOT_FOUND);
+      }
 
-    const chatRoom = this.chatRoomRepository.create({
-      participants: [firstUser, secondUser],
-    });
-
-    const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
-
-    this.eventsGateway.server
-      .to([firstUser.id, secondUser.id])
-      .emit('newChat', savedChatRoom);
-
-    if (content) {
-      await this.sendMessage(userId, {
-        chatId: savedChatRoom.id,
-        content,
+      const secondUser = await this.userRepository.findOne({
+        where: { id: chatPartnerId },
       });
-    }
 
-    return savedChatRoom;
+      if (!secondUser) {
+        throw new NotFoundException(Errors.SECOND_USER_NOT_FOUND);
+      }
+
+      const existingChatRoomId = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .select('chatRoom.id')
+        .leftJoin('chatRoom.participants', 'participant')
+        .where('participant.id IN (:...userIds)', {
+          userIds: [userId, chatPartnerId],
+        })
+        .groupBy('chatRoom.id')
+        .having('COUNT(participant.id) = 2')
+        .getRawOne();
+
+      if (existingChatRoomId) {
+        const existingChatRoom = await this.chatRoomRepository.findOne({
+          where: { id: existingChatRoomId.chatRoom_id },
+          relations: ['participants'],
+        });
+
+        return existingChatRoom;
+      }
+
+      const chatRoom = this.chatRoomRepository.create({
+        participants: [firstUser, secondUser],
+      });
+
+      const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
+
+      this.eventsGateway.server
+        .to([firstUser.id, secondUser.id])
+        .emit('newChat', savedChatRoom);
+
+      if (content) {
+        await this.sendMessage(userId, {
+          chatId: savedChatRoom.id,
+          content,
+        });
+      }
+
+      return savedChatRoom;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_CREATE_CHAT);
+    }
   }
 
   async createChatWithAdmin(userId: string): Promise<ChatRoom> {
-    const adminUser = await this.userRepository.findOne({
-      where: { role: Role.ADMIN },
-    });
-
-    if (!adminUser) {
-      throw new NotFoundException('Admin user not found');
-    }
-
-    const firstUser = await this.userRepository.findOne({
-      where: { id: userId },
-    });
-
-    if (!firstUser) {
-      throw new NotFoundException('User not found');
-    }
-
-    const existingChatRoomId = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .select('chatRoom.id')
-      .leftJoin('chatRoom.participants', 'participant')
-      .where('participant.id IN (:...userIds)', {
-        userIds: [userId, adminUser.id],
-      })
-      .groupBy('chatRoom.id')
-      .having('COUNT(participant.id) = 2')
-      .getRawOne();
-
-    if (existingChatRoomId) {
-      const existingChatRoom = await this.chatRoomRepository.findOne({
-        where: { id: existingChatRoomId.chatRoom_id },
-        relations: ['participants'],
+    try {
+      const adminUser = await this.userRepository.findOne({
+        where: { role: Role.ADMIN },
       });
 
-      return existingChatRoom;
+      if (!adminUser) {
+        throw new NotFoundException(Errors.ADMIN_NOT_FOUND);
+      }
+
+      const firstUser = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!firstUser) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const existingChatRoomId = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .select('chatRoom.id')
+        .leftJoin('chatRoom.participants', 'participant')
+        .where('participant.id IN (:...userIds)', {
+          userIds: [userId, adminUser.id],
+        })
+        .groupBy('chatRoom.id')
+        .having('COUNT(participant.id) = 2')
+        .getRawOne();
+
+      if (existingChatRoomId) {
+        const existingChatRoom = await this.chatRoomRepository.findOne({
+          where: { id: existingChatRoomId.chatRoom_id },
+          relations: ['participants'],
+        });
+
+        return existingChatRoom;
+      }
+
+      const chatRoom = this.chatRoomRepository.create({
+        participants: [firstUser, adminUser],
+      });
+
+      const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
+
+      this.eventsGateway.server
+        .to([firstUser.id, adminUser.id])
+        .emit('newChat', savedChatRoom);
+
+      return savedChatRoom;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_CREATE_CHAT_WITH_ADMIN);
     }
-
-    const chatRoom = this.chatRoomRepository.create({
-      participants: [firstUser, adminUser],
-    });
-
-    const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
-
-    this.eventsGateway.server
-      .to([firstUser.id, adminUser.id])
-      .emit('newChat', savedChatRoom);
-
-    return savedChatRoom;
   }
 
   async sendMessage(
     senderId: string,
     sendMessageDto: SendMessageDto,
   ): Promise<MessageResponseDto> {
-    const { chatId, content, fileUrl, fileType } = sendMessageDto;
+    try {
+      const { chatId, content, fileUrl, fileType } = sendMessageDto;
 
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatId },
-    });
+      const chatRoom = await this.chatRoomRepository.findOne({
+        where: { id: chatId },
+      });
 
-    if (!chatRoom) {
-      throw new NotFoundException('Chat room not found');
-    }
-
-    const user = await this.userRepository.findOne({ where: { id: senderId } });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    let determinedFileType = fileType;
-
-    if (!fileType) {
-      if (content && content.match(IS_VALID_URL)) {
-        determinedFileType = chatContentType.LINK;
-      } else if (fileUrl) {
-        if (fileUrl.startsWith('image/')) {
-          determinedFileType = chatContentType.IMAGE;
-        } else {
-          determinedFileType = chatContentType.FILE;
-        }
-      } else {
-        determinedFileType = chatContentType.TEXT;
+      if (!chatRoom) {
+        throw new NotFoundException(Errors.CHAT_ROOM_NOT_FOUND);
       }
+
+      const user = await this.userRepository.findOne({
+        where: { id: senderId },
+      });
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      let determinedFileType = fileType;
+
+      if (!fileType) {
+        if (content && content.match(IS_VALID_URL)) {
+          determinedFileType = chatContentType.LINK;
+        } else if (fileUrl) {
+          if (fileUrl.startsWith('image/')) {
+            determinedFileType = chatContentType.IMAGE;
+          } else {
+            determinedFileType = chatContentType.FILE;
+          }
+        } else {
+          determinedFileType = chatContentType.TEXT;
+        }
+      }
+
+      const message = this.messageRepository.create({
+        content,
+        fileUrl,
+        fileType: determinedFileType,
+        chatRoom,
+        sender: user,
+      });
+
+      const savedMessage = await this.messageRepository.save(message);
+
+      this.toMessageResponseDto(savedMessage);
+
+      return this.toMessageResponseDto(savedMessage);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_SEND_MESSAGE);
     }
-
-    const message = this.messageRepository.create({
-      content,
-      fileUrl,
-      fileType: determinedFileType,
-      chatRoom,
-      sender: user,
-    });
-
-    const savedMessage = await this.messageRepository.save(message);
-
-    this.toMessageResponseDto(savedMessage);
-
-    return this.toMessageResponseDto(savedMessage);
   }
 
   async uploadFile(
     senderId: string,
     sendMessageDto: SendMessageDto,
   ): Promise<void> {
-    const secondUser = await this.getChatSecondParticipant(
-      senderId,
-      sendMessageDto.chatId,
-    );
-    const message = await this.sendMessage(senderId, sendMessageDto);
+    try {
+      const secondUser = await this.getChatSecondParticipant(
+        senderId,
+        sendMessageDto.chatId,
+      );
+      const message = await this.sendMessage(senderId, sendMessageDto);
 
-    this.eventsGateway.server
-      .to([sendMessageDto.chatId, secondUser.id])
-      .emit('newMessage', message);
+      this.eventsGateway.server
+        .to([sendMessageDto.chatId, secondUser.id])
+        .emit('newMessage', message);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_UPLOAD_FILE);
+    }
   }
 
   async markMessageAsRead(userId: string, chatId: string): Promise<void> {
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatId },
-      relations: [
-        'messages',
-        'messages.reads',
-        'messages.sender',
-        'messages.reads.user',
-      ],
-    });
+    try {
+      const chatRoom = await this.chatRoomRepository.findOne({
+        where: { id: chatId },
+        relations: [
+          'messages',
+          'messages.reads',
+          'messages.sender',
+          'messages.reads.user',
+        ],
+      });
 
-    if (!chatRoom) {
-      throw new NotFoundException('Chat room not found');
-    }
-
-    const messagesToMarkRead = chatRoom.messages.filter((message) => {
-      if (!message.sender) {
-        throw new BadRequestException(`Message ${message.id} has no sender`);
+      if (!chatRoom) {
+        throw new NotFoundException(Errors.CHAT_ROOM_NOT_FOUND);
       }
 
-      return (
-        message.sender.id !== userId &&
-        !message.reads.some((read) => read.user.id === userId)
-      );
-    });
+      const messagesToMarkRead = chatRoom.messages.filter((message) => {
+        if (!message.sender) {
+          throw new BadRequestException(Errors.MESSAGE_HAS_NO_SENDER);
+        }
 
-    const messageReads = messagesToMarkRead.map((message) => {
-      const messageRead = new MessageRead();
+        return (
+          message.sender.id !== userId &&
+          !message.reads.some((read) => read.user.id === userId)
+        );
+      });
 
-      messageRead.message = message;
-      messageRead.user = { id: userId } as User;
+      const messageReads = messagesToMarkRead.map((message) => {
+        const messageRead = new MessageRead();
 
-      return messageRead;
-    });
+        messageRead.message = message;
+        messageRead.user = { id: userId } as User;
 
-    await this.messageReadRepository.save(messageReads);
+        return messageRead;
+      });
+
+      await this.messageReadRepository.save(messageReads);
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.UNABLE_TO_MARK_MESSAGE_AS_READ);
+    }
   }
 
   async countUnreadMessages(userId: string, chatId: string): Promise<number> {
-    const count = await this.messageRepository
-      .createQueryBuilder('message')
-      .leftJoin('message.reads', 'reads')
-      .where('message.chatRoomId = :chatRoomId', { chatRoomId: chatId })
-      .andWhere('message.senderId != :userId', { userId })
-      .andWhere('(reads.userId IS NULL OR reads.userId != :userId)', { userId })
-      .getCount();
+    try {
+      const count = await this.messageRepository
+        .createQueryBuilder('message')
+        .leftJoin('message.reads', 'reads')
+        .where('message.chatRoomId = :chatRoomId', { chatRoomId: chatId })
+        .andWhere('message.senderId != :userId', { userId })
+        .andWhere('(reads.userId IS NULL OR reads.userId != :userId)', {
+          userId,
+        })
+        .getCount();
 
-    return count;
+      return count;
+    } catch (error) {
+      throw new BadRequestException(Errors.UNABLE_TO_COUNT_UNREAD_MESSAGES);
+    }
   }
 
   async getLastMessage(chatId: string): Promise<Message | null> {
-    const lastMessage = await this.messageRepository.findOne({
-      where: { chatRoom: { id: chatId } },
-      order: { createdAt: 'DESC' },
-      relations: ['sender'],
-    });
+    try {
+      const lastMessage = await this.messageRepository.findOne({
+        where: { chatRoom: { id: chatId } },
+        order: { createdAt: 'DESC' },
+        relations: ['sender'],
+      });
 
-    return lastMessage || null;
+      return lastMessage || null;
+    } catch (error) {
+      throw new BadRequestException(Errors.UNABLE_TO_RETRIEVE_LAST_MESSAGE);
+    }
   }
 
   async getChatSecondParticipant(
     firstUserId: string,
     chatId: string,
   ): Promise<User> {
-    const firstIndexOfArray = 0;
-    const chatRoom = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .select(['chatRoom.id', 'participant.id'])
-      .leftJoin('chatRoom.participants', 'participant')
-      .where('participant.id <> :participantId', { participantId: firstUserId })
-      .andWhere('chatRoom.id = :chatId', { chatId })
-      .getOne();
+    try {
+      const firstIndexOfArray = 0;
+      const chatRoom = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .select(['chatRoom.id', 'participant.id'])
+        .leftJoin('chatRoom.participants', 'participant')
+        .where('participant.id <> :participantId', {
+          participantId: firstUserId,
+        })
+        .andWhere('chatRoom.id = :chatId', { chatId })
+        .getOne();
 
-    if (!chatRoom) {
-      throw new NotFoundException(`Chat with id:${chatId} is not found`);
+      if (!chatRoom) {
+        throw new NotFoundException(Errors.CHAT_ROOM_NOT_FOUND);
+      }
+
+      if (!chatRoom.participants.length) {
+        throw new NotFoundException(Errors.SECOND_USER_NOT_FOUND);
+      }
+
+      return chatRoom.participants[firstIndexOfArray];
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(Errors.SECOND_USER_NOT_FOUND);
     }
-
-    if (!chatRoom.participants.length) {
-      throw new NotFoundException(
-        `No second participant found in chat with id:${chatId}`,
-      );
-    }
-
-    return chatRoom.participants[firstIndexOfArray];
   }
 
   private toMessageResponseDto(message: Message): MessageResponseDto | null {

@@ -28,6 +28,7 @@ const mockUser: User = {
   clothesSize: '',
   jeansSize: '',
   shoesSize: '',
+  stripeAccount: '',
   cardNumber: '',
   expireDate: '',
   cvvCode: '',
@@ -40,6 +41,7 @@ const mockUser: User = {
   onboardingStep: 0,
   rating: 0,
   orders: 0,
+  notificationsEnabled: true,
   updateDatesBeforeInsert: function (): void {
     throw new Error('Function not implemented.');
   },
@@ -53,6 +55,8 @@ const mockUser: User = {
   wishlist: [],
   chatRooms: [],
   messages: [],
+  followers: [],
+  following: [],
   productsOrder: [],
   buyerOrders: [],
   readMessages: [],

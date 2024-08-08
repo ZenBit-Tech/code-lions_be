@@ -8,6 +8,8 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { ProductsModule } from 'src/modules/products/products.module';
 
 import { BestVendorsController } from './best-vendors.controller';
+import { FollowController } from './follow.controller';
+import { FollowService } from './follow.service';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -28,8 +30,8 @@ import { UsersService } from './users.service';
       }),
     }),
   ],
-  controllers: [UsersController, BestVendorsController],
-  providers: [UsersService],
-  exports: [UsersService],
+  controllers: [UsersController, BestVendorsController, FollowController],
+  providers: [UsersService, FollowService],
+  exports: [UsersService, FollowService],
 })
 export class UsersModule {}
