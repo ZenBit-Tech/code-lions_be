@@ -191,9 +191,11 @@ export class StripeController {
 
   @Get('test')
   async test(): Promise<boolean> {
+    return await this.stripeService.returnMoney('pi_3PlZkZCj7lDMnopK1Y73NyE7');
+    /*
     return await this.stripeService.captureMoney(
-      'pi_3PlZkZCj7lDMnopK1Y73NyE7',
-      0,
-    );
+      'pi_3PleRfCj7lDMnopK1aEnq0Gb',
+      215,
+    );*/
   }
 }

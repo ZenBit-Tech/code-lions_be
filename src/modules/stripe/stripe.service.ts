@@ -141,7 +141,6 @@ export class StripeService {
         },
       );
 
-      console.log(intent);
       if (intent.status !== successStatus) {
         throw new Error('Payment intent status is not succeeded');
       }
@@ -158,17 +157,22 @@ export class StripeService {
         amount,
       });
 
-      await this.mailerService.sendMail({
-        receiverEmail: this.configService.get<string>('STRIPE_PROBLEMS_EMAIL'),
-        subject: 'Stripe money capture problem',
-        templateName: 'stripe-error.hbs',
-        context: {
-          action: 'captureMoney',
-          parameters: parameters,
-          error: JSON.stringify(error),
-          date: new Date(),
-        },
-      });
+      this.sendErrorMail('captureMoney', parameters, error);
+
+      return false;
+    }
+  }
+
+  async returnMoney(paymentIntentId: string): Promise<boolean> {
+    try {
+      await this.StripeApi.paymentIntents.cancel(paymentIntentId);
+
+      return true;
+    } catch (error) {
+      this.Logger.error(error);
+      this.Logger.error(`Payment Intent ID: ${paymentIntentId}`);
+
+      this.sendErrorMail('returnMoney', paymentIntentId, error);
 
       return false;
     }
@@ -276,6 +280,24 @@ export class StripeService {
       refresh_url: this.configService.get<string>('STRIPE_REFRESH_URL'),
       return_url: this.configService.get<string>('STRIPE_RETURN_URL'),
       type: 'account_onboarding',
+    });
+  }
+
+  private async sendErrorMail(
+    action: string,
+    parameters: string,
+    error: unknown,
+  ): Promise<void> {
+    await this.mailerService.sendMail({
+      receiverEmail: this.configService.get<string>('STRIPE_PROBLEMS_EMAIL'),
+      subject: 'Stripe money capture problem',
+      templateName: 'stripe-error.hbs',
+      context: {
+        action: 'captureMoney',
+        parameters: parameters,
+        error: JSON.stringify(error),
+        date: new Date(),
+      },
     });
   }
 }
