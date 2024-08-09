@@ -25,6 +25,8 @@ import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
 const minDifference = 0.01;
 const centsInDollar = 100;
 const successStatus = 'succeeded';
+const holdOnStatus = 'requires_capture';
+const currency = 'CAD';
 
 @Injectable()
 export class StripeService {
@@ -77,7 +79,7 @@ export class StripeService {
         products.map((product) => {
           return {
             price_data: {
-              currency: 'usd',
+              currency: currency,
               product_data: {
                 name: product.name,
                 images: [product.images[0]],
@@ -91,7 +93,7 @@ export class StripeService {
       if (shippingPrice > 0) {
         lineItems.push({
           price_data: {
-            currency: 'usd',
+            currency: currency,
             product_data: {
               name: 'Shipping',
               images: [CANADA_POST_LOGO],
@@ -112,6 +114,7 @@ export class StripeService {
           capture_method: 'manual',
         },
         mode: 'payment',
+        currency: currency,
         success_url: this.configService.get<string>('STRIPE_SUCCESS_URL'),
         cancel_url: this.configService.get<string>('STRIPE_CANCEL_URL'),
       });
@@ -145,6 +148,10 @@ export class StripeService {
         throw new Error('Payment intent status is not succeeded');
       }
 
+      this.Logger.log(
+        `Capture Money. Payment Intent ID: ${paymentIntentId}, amount: $${amount}`,
+      );
+
       return true;
     } catch (error) {
       this.Logger.error(error);
@@ -167,12 +174,52 @@ export class StripeService {
     try {
       await this.StripeApi.paymentIntents.cancel(paymentIntentId);
 
+      this.Logger.log(`Return Money. Payment Intent ID: ${paymentIntentId}`);
+
       return true;
     } catch (error) {
       this.Logger.error(error);
       this.Logger.error(`Payment Intent ID: ${paymentIntentId}`);
 
       this.sendErrorMail('returnMoney', paymentIntentId, error);
+
+      return false;
+    }
+  }
+
+  async transferMoneyToVendor(
+    vendorStripeAccount: string,
+    paymentIntentId: string,
+    amount: number,
+    fee: number,
+  ): Promise<boolean> {
+    try {
+      const transfer = await this.StripeApi.transfers.create({
+        amount: Math.round(amount * (centsInDollar - fee)),
+        currency: currency,
+        destination: vendorStripeAccount,
+        transfer_group: paymentIntentId,
+      });
+
+      this.Logger.log(
+        `Transfer ID: ${transfer.id}, amount: $${amount}, fee: ${fee}%`,
+      );
+
+      return true;
+    } catch (error) {
+      this.Logger.error(error);
+      this.Logger.error(
+        `Vendor Stripe Account: ${vendorStripeAccount}, Payment Intent ID: ${paymentIntentId}, amount: $${amount}, fee: ${fee}`,
+      );
+
+      const parameters = JSON.stringify({
+        vendorStripeAccount,
+        paymentIntentId,
+        amount,
+        fee,
+      });
+
+      this.sendErrorMail('transferMoneyToVendor', parameters, error);
 
       return false;
     }
@@ -187,12 +234,11 @@ export class StripeService {
         await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
       const metadata = session.metadata;
 
-      console.log(paymentIntent);
       const { id: paymentId, amount_capturable: total, status } = paymentIntent;
       const { userId, shippingPrice } = metadata;
 
       const totalAmount = total / centsInDollar;
-      const isPaid = status === successStatus;
+      const isPaid = status === holdOnStatus;
 
       this.Logger.log(
         `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
@@ -290,10 +336,10 @@ export class StripeService {
   ): Promise<void> {
     await this.mailerService.sendMail({
       receiverEmail: this.configService.get<string>('STRIPE_PROBLEMS_EMAIL'),
-      subject: 'Stripe money capture problem',
+      subject: `Stripe money capture problem [${action}]`,
       templateName: 'stripe-error.hbs',
       context: {
-        action: 'captureMoney',
+        action: action,
         parameters: parameters,
         error: JSON.stringify(error),
         date: new Date(),
