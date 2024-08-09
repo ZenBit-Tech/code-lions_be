@@ -267,6 +267,8 @@ export class OrdersService {
             throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
           }
 
+          product.isAvailable = false;
+          await this.productRepository.save(product);
           newOrder.products.push(product);
         }
 

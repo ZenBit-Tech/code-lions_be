@@ -133,6 +133,7 @@ export class WishlistService {
 
   private transformProduct(inputProduct: Product): ProductResponseDTO {
     return {
+      isAvailable: inputProduct.isAvailable,
       id: inputProduct.id,
       name: inputProduct.name,
       slug: inputProduct.slug,
