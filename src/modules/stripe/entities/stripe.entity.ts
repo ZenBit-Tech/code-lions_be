@@ -17,10 +17,10 @@ export class ApplicationFee {
   id: number;
 
   @ApiProperty({
-    example: 2.9,
+    example: 0.05,
     description: 'The application fee for the transaction',
   })
-  @Column({ type: 'decimal', precision: 5, scale: 2 })
+  @Column({ type: 'decimal', scale: 2 })
   applicationFee: number;
 
   @ApiProperty({
