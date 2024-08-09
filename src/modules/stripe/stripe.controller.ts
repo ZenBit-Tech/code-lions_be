@@ -5,7 +5,6 @@ import {
   Req,
   RawBodyRequest,
   UseGuards,
-  Get,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -120,7 +119,6 @@ export class StripeController {
     const rawBody = req.rawBody;
     const sig = req.headers['stripe-signature'];
 
-    console.log(rawBody, sig);
     if (!sig || !rawBody) {
       return { received: false };
     }
@@ -193,22 +191,5 @@ export class StripeController {
     const { url } = accountLink;
 
     return { url };
-  }
-
-  @Get('test')
-  async test(): Promise<boolean> {
-    return await this.stripeService.transferMoneyToVendor(
-      'acct_1PkN6GE7VApqfXxb',
-      'pi_3PleRfCj7lDMnopK1aEnq0Gb',
-      1,
-      0,
-    );
-    /*
-    return false;   
-    return await this.stripeService.returnMoney('pi_3PlZkZCj7lDMnopK1Y73NyE7');
-    return await this.stripeService.captureMoney(
-      'pi_3PleRfCj7lDMnopK1aEnq0Gb',
-      215,
-    );*/
   }
 }
