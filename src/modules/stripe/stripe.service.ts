@@ -226,6 +226,7 @@ export class StripeService {
   }
 
   async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
+    this.Logger.log(event);
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentIntentId = session.payment_intent as string;
@@ -253,10 +254,17 @@ export class StripeService {
       );
       await this.cartService.emptyCart(userId);
     } else if (event.type === 'account.updated') {
+      console.log(event);
+
       const account = event.data.object as Stripe.Account;
 
+      console.log(
+        `&&&&&&&&&&&&&&&&&account: ${account.id}, email: ${account.email}`,
+      );
       if (account.charges_enabled) {
         const user = await this.usersServise.getUserByStripeAccount(account.id);
+
+        console.log(`%%%%%%%%%%user: ${user?.id}, email: ${user?.email}`);
 
         if (user) {
           await this.usersServise.fihishOnboarding(user.id);
@@ -281,7 +289,15 @@ export class StripeService {
 
       return consrtuctedEvent;
     } catch (error) {
-      this.Logger.error(error);
+      /*
+            this.Logger.error(
+              error,
+              '==================',
+              raw.toString(),
+              '-------------------------------',
+              signature,
+              '==================',
+            );*/
       throw new BadRequestException(Errors.INVALID_WEBHOOK_SIGNATURE);
     }
   }
