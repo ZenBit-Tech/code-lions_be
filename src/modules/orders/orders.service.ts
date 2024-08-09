@@ -295,6 +295,23 @@ export class OrdersService {
     }
   }
 
+  private async checkIfOrdersSentOrRejected(
+    buyerOrderId: string,
+  ): Promise<boolean> {
+    const buyerOrder = await this.buyerOrderRepository.findOne({
+      where: { id: buyerOrderId },
+      relations: ['orders'],
+    });
+
+    const orders = buyerOrder.orders;
+
+    const areOrdersSentOrRejected = orders
+      .map((order) => order.status)
+      .some((status) => status === Status.REJECTED || status === Status.SENT);
+
+    return areOrdersSentOrRejected;
+  }
+
   async rejectOrder(vendorId: string, orderId: number): Promise<void> {
     try {
       const order = await this.orderRepository.findOne({
@@ -313,6 +330,128 @@ export class OrdersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+    }
+  }
+
+  async sendOrderByVendor(
+    vendorId: string,
+    orderId: number,
+    trackingNumber: string,
+  ): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, vendorId },
+      });
+
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
+
+      order.status = Status.SENT;
+      order.trackingNumber = trackingNumber;
+
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_SEND_ORDER);
+    }
+  }
+
+  async receiveOrderByBuyer(buyerId: string, orderId: number): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, buyerId },
+      });
+
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
+
+      order.status = Status.RECEIVED;
+      order.trackingNumber = null;
+
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_RECEIVE_ORDER);
+    }
+  }
+
+  async sendOrderByBuyer(
+    buyerId: string,
+    orderId: number,
+    trackingNumber: string,
+  ): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, buyerId },
+      });
+
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
+
+      order.status = Status.SENT_BACK;
+      order.trackingNumber = trackingNumber;
+
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_SEND_BACK);
+    }
+  }
+
+  async returnOrder(vendorId: string, orderId: number): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, vendorId },
+      });
+
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
+
+      order.status = Status.RETURNED;
+      order.trackingNumber = null;
+
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_RETURN_ORDER);
+    }
+  }
+
+  async paySendOrder(
+    buyerId: string,
+    orderId: number,
+    trackingNumber: string,
+  ): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, buyerId },
+      });
+
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
+
+      order.status = Status.SENT_BACK;
+      order.trackingNumber = trackingNumber;
+
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
     }
   }
 
