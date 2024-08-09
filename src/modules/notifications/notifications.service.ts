@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -16,6 +17,8 @@ import { User } from 'src/modules/users/user.entity';
 import { NotificationResponseDTO } from './dto/notification-response.dto';
 import { Type } from './entities/notification-type.enum';
 import { Notification } from './entities/notification.entity';
+
+const configService = new ConfigService();
 
 @Injectable()
 export class NotificationsService {
@@ -38,7 +41,14 @@ export class NotificationsService {
   ): Promise<void> {
     const notification = new Notification();
 
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(Errors.USER_NOT_FOUND);
+    }
+
     notification.type = type;
+    notification.user = user;
     notification.userId = userId;
     notification.orderId = orderId || null;
     notification.shippingStatus = shippingStatus || null;
@@ -89,6 +99,19 @@ export class NotificationsService {
       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
     }
 
+    let orderLink = '';
+
+    if (orderId) {
+      const APP_LINK = configService.get<string>('SITE_HOST');
+
+      if (user.role === 'buyer') {
+        orderLink = `<a href="${APP_LINK}/profile/orders/${orderId}">#${orderId}</a>`;
+      }
+      if (user.role === 'vendor') {
+        orderLink = `<a href="${APP_LINK}/vendor/orders/${orderId}">#${orderId}</a>`;
+      }
+    }
+
     let returnAt = 0;
 
     if (order.receivedAt && order.duration) {
@@ -114,21 +137,21 @@ export class NotificationsService {
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We regret to inform you that your recent order #${orderId} has been rejected. Please feel free to contact Vendor or Admin via chat. Thank you for your understanding.`,
+          text: `Hi ${userName}. We regret to inform you that your recent order #${orderLink} has been rejected. Please feel free to contact Vendor or Admin via chat. Thank you for your understanding.`,
         };
 
       case Type.SHIPPING_UPDATES:
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We confirm that your order #${orderId} status has been changed to '${shippingStatus}'. Thank you for renting with us!`,
+          text: `Hi ${userName}. We confirm that your order #${orderLink} status has been changed to '${shippingStatus}'. Thank you for renting with us!`,
         };
 
       case Type.RETURNED_REMINDER:
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We would like to remind you that your rental order #${orderId} is due for return on ${returnDate}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
+          text: `Hi ${userName}. We would like to remind you that your rental order #${orderLink} is due for return on ${returnDate}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
         };
 
       case Type.CHANGED_PASSWORD:

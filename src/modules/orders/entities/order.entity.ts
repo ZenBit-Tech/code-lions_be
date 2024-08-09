@@ -76,7 +76,7 @@ export class Order {
   price: number;
 
   @ApiProperty({
-    example: 'Sent',
+    example: Status.SENT,
     description: 'The status of the order',
     enum: Status,
   })
