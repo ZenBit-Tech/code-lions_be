@@ -5,6 +5,8 @@ import {
   Req,
   RawBodyRequest,
   UseGuards,
+  Get,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -28,6 +30,8 @@ import { AccountLinkResponseDto } from 'src/modules/stripe/dto/account-link-resp
 import { PaymentDto } from 'src/modules/stripe/dto/payment.dto';
 import { StripeService } from 'src/modules/stripe/stripe.service';
 import { User } from 'src/modules/users/user.entity';
+
+import { UpdateApplicationFeeDto } from './dto/update-application-fee.dto';
 
 @ApiTags('stripe')
 @Controller('stripe')
@@ -186,5 +190,113 @@ export class StripeController {
     const { url } = accountLink;
 
     return { url };
+  }
+
+  @Get('application-fee')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Get application fee',
+    tags: ['stripe'],
+    description: 'Get the current application fee.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Application fee not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.APPLICATION_FEE_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to retrieve application fee',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.INTERNAL_SERVER_ERROR,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @Roles(Role.ADMIN)
+  async getApplicationFee(): Promise<number> {
+    return this.stripeService.getApplicationFee();
+  }
+
+  @Patch('application-fee')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Update application fee',
+    tags: ['stripe'],
+    description: 'Update the current application fee.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Application fee not found',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.APPLICATION_FEE_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to update application fee',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.INTERNAL_SERVER_ERROR,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @Roles(Role.ADMIN)
+  async updateApplicationFee(
+    @Body() updateApplicationFee: UpdateApplicationFeeDto,
+  ): Promise<void> {
+    await this.stripeService.updateApplicationFee(
+      updateApplicationFee.applicationFee,
+    );
   }
 }
