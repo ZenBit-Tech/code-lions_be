@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'path';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import Handlebars from 'handlebars';
@@ -18,6 +18,7 @@ import { SendMailArgs } from './mailer.types';
 @Injectable()
 export class MailerService {
   private transporter: Transporter;
+  private readonly Logger = new Logger(MailerService.name);
 
   constructor(private readonly configService: ConfigService) {
     this.transporter = createTransport({
@@ -65,6 +66,8 @@ export class MailerService {
 
       return true;
     } catch (error) {
+      this.Logger.error(error);
+
       return false;
     }
   }
