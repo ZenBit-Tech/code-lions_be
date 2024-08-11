@@ -269,6 +269,7 @@ export class OrdersService {
 
           product.isAvailable = false;
           await this.productRepository.save(product);
+          await this.cartRepository.delete(product);
           newOrder.products.push(product);
         }
 

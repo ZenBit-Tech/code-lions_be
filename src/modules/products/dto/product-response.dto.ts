@@ -152,7 +152,7 @@ export class ProductResponseDTO {
   @ApiProperty({
     type: Boolean,
     example: true,
-    description: 'The field shows if the products is available',
+    description: 'The field shows if the product is available',
   })
   isAvailable: boolean;
 }
