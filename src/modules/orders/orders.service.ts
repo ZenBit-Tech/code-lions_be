@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { Interval } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -35,6 +36,8 @@ interface GetOrdersOptions {
   sortOrder?: string;
 }
 
+const everyMinute = 60000;
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -49,6 +52,35 @@ export class OrdersService {
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
   ) {}
+
+  @Interval(everyMinute)
+  async handleOverdueOrders(): Promise<void> {
+    try {
+      const now = new Date();
+      const orders = await this.orderRepository.find({
+        where: {
+          status: Status.RECEIVED,
+        },
+      });
+
+      for (const order of orders) {
+        if (order.receivedAt) {
+          const durationEndDate = new Date(order.receivedAt.getTime());
+
+          durationEndDate.setDate(durationEndDate.getDate() + order.duration);
+
+          if (now > durationEndDate) {
+            order.status = Status.OVERDUE;
+            await this.orderRepository.save(order);
+          }
+        }
+      }
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CHANGE_ORDER_STATUS,
+      );
+    }
+  }
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
     try {
@@ -252,7 +284,16 @@ export class OrdersService {
 
       for (const order of orders) {
         const newOrder = new Order();
+        const maxDurationProduct = order.products.reduce(
+          (maxProduct, currentProduct) => {
+            return currentProduct.duration > (maxProduct?.duration || 0)
+              ? currentProduct
+              : maxProduct;
+          },
+          null,
+        );
 
+        newOrder.duration = maxDurationProduct.duration;
         newOrder.vendorId = order.vendorId;
         newOrder.buyerId = userId;
         newOrder.shipping = shippingPrice / orders.length;
@@ -316,6 +357,30 @@ export class OrdersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+    }
+  }
+
+  async updateStatus(orderId: string, status: Status): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOneById(orderId);
+
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
+
+      order.status = status;
+
+      if (status === Status.RECEIVED) {
+        order.receivedAt = new Date();
+      }
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CHANGE_ORDER_STATUS,
+      );
     }
   }
 

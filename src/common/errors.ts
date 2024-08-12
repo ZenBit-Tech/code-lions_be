@@ -160,6 +160,7 @@ export const Errors = {
     reactivationDate: string,
   ): string =>
     `The ability to rent products is limited from ${deactivationDate} to ${reactivationDate}, to appeal this - contact support@blackcircle.com`,
+  FAILED_TO_CHANGE_ORDER_STATUS: 'Failed to change order status!',
   FAILED_TO_FETCH_PRODUCTS_BY_VENDOR: 'Failed to fetch products by vendor',
   FAILED_TO_DELETE_PRODUCT: 'Failed to delete product',
   FAILED_TO_APPROVE_PRODUCT: 'Failed to approve product',

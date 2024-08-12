@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -10,7 +11,10 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { User } from 'src/modules/users/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, User, Product, BuyerOrder, Cart])],
+  imports: [
+    TypeOrmModule.forFeature([Order, User, Product, BuyerOrder, Cart]),
+    ScheduleModule.forRoot(),
+  ],
   controllers: [OrdersController],
   providers: [OrdersService],
   exports: [OrdersService],
