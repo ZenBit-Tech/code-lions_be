@@ -241,4 +241,5 @@ export const Errors = {
   NO_TOKEN_PROVIDED: 'No token provided',
   TOKEN_VERIFICATION_FAILED: 'Token verification failed',
   UNABLE_TO_CREATE_NOTIFICATION: 'Unable to create notification',
+  INVALID_RAW_BODY: 'Invalid raw body',
 };

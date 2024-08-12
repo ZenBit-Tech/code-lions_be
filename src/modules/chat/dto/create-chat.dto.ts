@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsNotEmpty, IsUUID, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateChatDto {
   @ApiProperty({
@@ -8,7 +8,7 @@ export class CreateChatDto {
     description: 'The ID of the second user',
   })
   @IsNotEmpty()
-  @IsUUID()
+  @IsString()
   chatPartnerId: string;
 
   @ApiProperty({

@@ -628,6 +628,7 @@ export class UsersService {
       }
 
       user.stripeAccount = stripeAccount;
+      user.onboardingStep = OnboardingSteps.FINISH;
       await this.userRepository.save(user);
 
       return user;
