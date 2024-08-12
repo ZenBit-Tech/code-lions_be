@@ -118,6 +118,11 @@ export class StripeController {
   ): Promise<{ received: boolean }> {
     const rawBody = req.rawBody;
     const sig = req.headers['stripe-signature'];
+
+    if (!sig || !rawBody) {
+      return { received: false };
+    }
+
     const checkedEvent = await this.stripeService.checkSignature(rawBody, sig);
 
     return await this.stripeService.webhookHandler(checkedEvent);
