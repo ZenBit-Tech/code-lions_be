@@ -81,7 +81,10 @@ export class OrderResponseDTO {
     const seconds = 60;
     const milliseconds = 1000;
 
-    if (order.status === Status.RECEIVED && order.receivedAt) {
+    if (
+      (order.status === Status.RECEIVED || order.status === Status.OVERDUE) &&
+      order.receivedAt
+    ) {
       const expirationTime = new Date(
         order.receivedAt.getTime() +
           order.duration * hours * minutes * seconds * milliseconds,
