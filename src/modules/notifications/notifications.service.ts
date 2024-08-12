@@ -38,7 +38,7 @@ export class NotificationsService {
     userId: string,
     orderId?: number | null,
     shippingStatus?: Status | null,
-  ): Promise<void> {
+  ): Promise<NotificationResponseDTO> {
     const notification = new Notification();
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -61,6 +61,8 @@ export class NotificationsService {
       userId,
       notificationResponse,
     );
+
+    return notificationResponse;
   }
 
   async getNotificationsByUser(
@@ -105,10 +107,10 @@ export class NotificationsService {
       const APP_LINK = configService.get<string>('SITE_HOST');
 
       if (user.role === 'buyer') {
-        orderLink = `<a href="${APP_LINK}/profile/orders/${orderId}">#${orderId}</a>`;
+        orderLink = `<a href="${APP_LINK}profile/orders/${orderId}">#${orderId}</a>`;
       }
       if (user.role === 'vendor') {
-        orderLink = `<a href="${APP_LINK}/vendor/orders/${orderId}">#${orderId}</a>`;
+        orderLink = `<a href="${APP_LINK}vendor/orders/${orderId}">#${orderId}</a>`;
       }
     }
 
@@ -137,21 +139,21 @@ export class NotificationsService {
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We regret to inform you that your recent order #${orderLink} has been rejected. Please feel free to contact Vendor or Admin via chat. Thank you for your understanding.`,
+          text: `Hi ${userName}. We regret to inform you that your recent order ${orderLink} has been rejected. Please feel free to contact Vendor or Admin via chat. Thank you for your understanding.`,
         };
 
       case Type.SHIPPING_UPDATES:
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We confirm that your order #${orderLink} status has been changed to '${shippingStatus}'. Thank you for renting with us!`,
+          text: `Hi ${userName}. We confirm that your order ${orderLink} status has been changed to '${shippingStatus}'. Thank you for renting with us!`,
         };
 
       case Type.RETURNED_REMINDER:
         return {
           type: type,
           createdAt: createdAt,
-          text: `Hi ${userName}. We would like to remind you that your rental order #${orderLink} is due for return on ${returnDate}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
+          text: `Hi ${userName}. We would like to remind you that your rental order ${orderLink} is due for return on ${returnDate}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
         };
 
       case Type.CHANGED_PASSWORD:

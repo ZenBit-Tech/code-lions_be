@@ -1,10 +1,10 @@
 import {
-  Controller,
-  Post,
   Body,
+  Controller,
   Get,
-  UseGuards,
   InternalServerErrorException,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -15,7 +15,6 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
@@ -33,6 +32,7 @@ import { CreateNotificationDTO } from './dto/create-notification.dto';
 import { NotificationResponseDTO } from './dto/notification-response.dto';
 import { Type } from './entities/notification-type.enum';
 import { NotificationsService } from './notifications.service';
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.BUYER, Role.VENDOR)
 @ApiBearerAuth()
@@ -77,9 +77,9 @@ export class NotificationsController {
     tags: ['notifications'],
     description: 'This endpoint creates a new notification.',
   })
-  @ApiResponse({
-    status: 204,
-    description: responseDescrptions.success,
+  @ApiOkResponse({
+    description: 'The notification',
+    type: CreateNotificationDTO,
   })
   @ApiBadRequestResponse({
     description: 'Invalid request',
@@ -109,15 +109,18 @@ export class NotificationsController {
   })
   @ApiBody({ type: CreateNotificationDTO })
   async createNotification(
-    @GetUserId() userId: string,
+    @GetUserId() currentUserId: string,
     @Body('type') type: Type,
     @Body('orderId') orderId?: number,
+    @Body('userId') userId?: string,
     @Body('shippingStatus') shippingStatus?: Status,
-  ): Promise<void> {
+  ): Promise<NotificationResponseDTO> {
     try {
-      await this.notificationService.createNotification(
+      const finalUserId = userId || currentUserId;
+
+      return await this.notificationService.createNotification(
         type,
-        userId,
+        finalUserId,
         orderId,
         shippingStatus,
       );

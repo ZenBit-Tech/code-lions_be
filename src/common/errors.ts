@@ -240,4 +240,5 @@ export const Errors = {
   UNABLE_TO_RETRIEVE_LAST_MESSAGE: 'Unable to retrieve last message',
   NO_TOKEN_PROVIDED: 'No token provided',
   TOKEN_VERIFICATION_FAILED: 'Token verification failed',
+  UNABLE_TO_CREATE_NOTIFICATION: 'Unable to create notification',
 };
