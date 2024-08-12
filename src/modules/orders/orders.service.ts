@@ -336,12 +336,11 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDER_NOT_FOUND);
       }
 
-      // const products = order.products;
-
       order.status = Status.REJECTED;
 
       await queryRunner.manager.save(order);
 
+      // const products = order.products;
       // for (const product of products) {
       //   product.isAvailable = true;
       //   await queryRunner.manager.save(product);
@@ -401,13 +400,12 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDER_NOT_FOUND);
       }
 
-      // const products = order.products;
-
       order.status = Status.SENT;
       order.trackingNumber = trackingNumber;
 
       await queryRunner.manager.save(order);
 
+      // const products = order.products;
       // for (const product of products) {
       //   product.isAvailable = false;
       //   await queryRunner.manager.save(product);
@@ -442,13 +440,18 @@ export class OrdersService {
         throw error;
       }
 
-      throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+      throw new InternalServerErrorException(Errors.FAILED_TO_SEND_ORDER);
     } finally {
       await queryRunner.release();
     }
   }
 
   async receiveOrderByBuyer(buyerId: string, orderId: number): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const order = await this.orderRepository.findOne({
         where: { orderId, buyerId },
@@ -461,12 +464,39 @@ export class OrdersService {
       order.status = Status.RECEIVED;
       order.trackingNumber = null;
 
-      await this.orderRepository.save(order);
+      await queryRunner.manager.save(order);
+
+      const vendor = await this.userRepository.findOne({
+        where: { id: order.vendorId },
+      });
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: vendor.email,
+        subject: 'Buyer received your order!',
+        templateName: 'received-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await queryRunner.commitTransaction();
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      await queryRunner.rollbackTransaction();
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
         throw error;
       }
+
       throw new InternalServerErrorException(Errors.FAILED_TO_RECEIVE_ORDER);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -475,6 +505,11 @@ export class OrdersService {
     orderId: number,
     trackingNumber: string,
   ): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const order = await this.orderRepository.findOne({
         where: { orderId, buyerId },
@@ -487,12 +522,40 @@ export class OrdersService {
       order.status = Status.SENT_BACK;
       order.trackingNumber = trackingNumber;
 
-      await this.orderRepository.save(order);
+      await queryRunner.manager.save(order);
+
+      const vendor = await this.userRepository.findOne({
+        where: { id: order.vendorId },
+      });
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: vendor.email,
+        subject: 'Order sent back on CodeLions!',
+        templateName: 'sent-back-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await queryRunner.commitTransaction();
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      await queryRunner.rollbackTransaction();
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
         throw error;
       }
+
       throw new InternalServerErrorException(Errors.FAILED_TO_SEND_BACK);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -509,6 +572,13 @@ export class OrdersService {
       order.status = Status.RETURNED;
       order.trackingNumber = null;
 
+      // const products = order.products;
+
+      // for (const product of products) {
+      //   product.isAvailable = false;
+      //   await queryRunner.manager.save(product);
+      // }
+
       await this.orderRepository.save(order);
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -523,6 +593,11 @@ export class OrdersService {
     orderId: number,
     trackingNumber: string,
   ): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const order = await this.orderRepository.findOne({
         where: { orderId, buyerId },
@@ -535,12 +610,40 @@ export class OrdersService {
       order.status = Status.SENT_BACK;
       order.trackingNumber = trackingNumber;
 
-      await this.orderRepository.save(order);
+      await queryRunner.manager.save(order);
+
+      const vendor = await this.userRepository.findOne({
+        where: { id: order.vendorId },
+      });
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: vendor.email,
+        subject: 'Order sent back on CodeLions!',
+        templateName: 'sent-back-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await queryRunner.commitTransaction();
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      await queryRunner.rollbackTransaction();
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
         throw error;
       }
+
       throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
+    } finally {
+      await queryRunner.release();
     }
   }
 
