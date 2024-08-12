@@ -240,4 +240,5 @@ export const Errors = {
   UNABLE_TO_RETRIEVE_LAST_MESSAGE: 'Unable to retrieve last message',
   NO_TOKEN_PROVIDED: 'No token provided',
   TOKEN_VERIFICATION_FAILED: 'Token verification failed',
+  INVALID_RAW_BODY: 'Invalid raw body',
 };
