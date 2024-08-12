@@ -40,6 +40,10 @@ export interface GetProductsOptions {
     key: keyof Product;
     value: string | DateRange;
   };
+  andWhere?: {
+    key: keyof Product;
+    value: boolean;
+  };
   category?: string;
   search?: string;
   page?: number;
@@ -118,6 +122,7 @@ export class ProductsService {
       sortBy,
       sortOrder,
       where: { key: 'status', value: Status.PUBLISHED },
+      andWhere: { key: 'isAvailable', value: true },
     });
   }
 
@@ -145,6 +150,7 @@ export class ProductsService {
         sortBy,
         sortOrder,
         where: { key: 'vendorId', value: vendorId },
+        andWhere: { key: 'isAvailable', value: true },
       });
 
       return productsByVendorId;
@@ -384,15 +390,18 @@ export class ProductsService {
       },
     });
 
-    const publishedProducts = products.products.filter(
-      (item) => item.status === Status.PUBLISHED,
+    const publishedAndAvailableProducts = products.products.filter(
+      (item) => item.status === Status.PUBLISHED && item.isAvailable,
     );
 
-    if (publishedProducts.length === 0) {
+    if (publishedAndAvailableProducts.length === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return { products: publishedProducts, count: publishedProducts.length };
+    return {
+      products: publishedAndAvailableProducts,
+      count: publishedAndAvailableProducts.length,
+    };
   }
 
   async findBySize(
@@ -421,17 +430,20 @@ export class ProductsService {
       },
     });
 
-    const publishedProducts = [
+    const publishedAndAvailableProducts = [
       ...productsClothes.products,
       ...productsJeans.products,
       ...productsShoes.products,
-    ].filter((item) => item.status === Status.PUBLISHED);
+    ].filter((item) => item.status === Status.PUBLISHED && item.isAvailable);
 
-    if (publishedProducts.length === 0) {
+    if (publishedAndAvailableProducts.length === 0) {
       throw new NotFoundException(Errors.PRODUCT_NOT_FOUND);
     }
 
-    return { products: publishedProducts, count: publishedProducts.length };
+    return {
+      products: publishedAndAvailableProducts,
+      count: publishedAndAvailableProducts.length,
+    };
   }
 
   async getBestVendors(
@@ -539,6 +551,7 @@ export class ProductsService {
           'product.createdAt',
           'product.lastUpdatedAt',
           'product.deletedAt',
+          'product.isAvailable',
           'images',
           'user.id',
           'user.name',
@@ -578,6 +591,12 @@ export class ProductsService {
           queryBuilder
             .andWhere(`product.${options.where.key} = :${options.where.key}`)
             .setParameter(options.where.key, options.where.value);
+        }
+      }
+
+      if (options?.andWhere) {
+        if (options.andWhere.key === 'isAvailable') {
+          queryBuilder.andWhere(`product.${options.andWhere.key} = true`);
         }
       }
 

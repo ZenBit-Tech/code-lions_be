@@ -60,6 +60,7 @@ const mockUser: User = {
   productsOrder: [],
   buyerOrders: [],
   readMessages: [],
+  notifications: [],
 };
 
 export const mockProduct: Product = {

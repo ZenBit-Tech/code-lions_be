@@ -951,6 +951,10 @@ export class UsersService {
             page: 1,
             limit: LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
             where: { key: 'vendorId', value: vendor.vendorId },
+            andWhere: {
+              key: 'isAvailable',
+              value: true,
+            },
             ...options,
           });
 

@@ -238,7 +238,7 @@ export class OrdersController {
   })
   @ApiOkResponse({
     description: 'The list of orders',
-    type: [OrderResponseDTO],
+    type: OrdersAndCountResponseDTO,
   })
   @ApiInternalServerErrorResponse({
     description: 'Failed to fetch orders',
