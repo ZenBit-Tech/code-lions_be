@@ -17,6 +17,7 @@ import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
+import { StripeService } from 'src/modules/stripe/stripe.service';
 import { User } from 'src/modules/users/user.entity';
 
 import { OrderDTO } from './dto/order.dto';
@@ -51,6 +52,7 @@ export class OrdersService {
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     private mailerService: MailerService,
+    private stripeService: StripeService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -301,19 +303,47 @@ export class OrdersService {
 
   private async checkIfOrdersAreSentOrRejected(
     buyerOrderId: string,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const buyerOrder = await this.buyerOrderRepository.findOne({
       where: { id: buyerOrderId },
       relations: ['orders'],
     });
 
+    if (!buyerOrder) {
+      throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+    }
+
     const orders = buyerOrder.orders;
 
-    const areOrdersSentOrRejected = orders
-      .map((order) => order.status)
-      .some((status) => status === Status.REJECTED || status === Status.SENT);
+    const areAllOrdersSentOrRejected = orders.every(
+      (order) =>
+        order.status === Status.REJECTED || order.status === Status.SENT,
+    );
 
-    return areOrdersSentOrRejected;
+    if (!areAllOrdersSentOrRejected) {
+      return;
+    }
+
+    const sentOrders = orders.filter((order) => order.status === Status.SENT);
+    const rejectedOrders = orders.filter(
+      (order) => order.status === Status.REJECTED,
+    );
+
+    if (sentOrders.length === orders.length) {
+      await this.stripeService.captureMoney(
+        buyerOrder.paymentId,
+        buyerOrder.price,
+      );
+    } else if (rejectedOrders.length === orders.length) {
+      await this.stripeService.returnMoney(buyerOrder.paymentId);
+    } else {
+      const amount = sentOrders.reduce(
+        (total, order) => total + order.price + order.shipping,
+        0,
+      );
+
+      await this.stripeService.captureMoney(buyerOrder.paymentId, amount);
+    }
   }
 
   async rejectOrder(
@@ -365,6 +395,8 @@ export class OrdersService {
       }
 
       await queryRunner.commitTransaction();
+
+      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
 
@@ -430,6 +462,8 @@ export class OrdersService {
       }
 
       await queryRunner.commitTransaction();
+
+      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
 
@@ -482,6 +516,12 @@ export class OrdersService {
       if (!isMailSent) {
         throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
       }
+
+      // const totalOrderAmount: number = order.price + order.shipping;
+      // const paymentIntentId: string = order.buyerOrder.paymentId;
+      // const currentFee: number = await this.stripeService.getApplicationFee();
+
+      // await this.stripeService.transferMoneyToVendor(vendor.stripeAccount, paymentIntentId, totalOrderAmount, currentFee)
 
       await queryRunner.commitTransaction();
     } catch (error) {
