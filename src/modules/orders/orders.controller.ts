@@ -350,7 +350,7 @@ export class OrdersController {
     return await this.ordersService.findByUserIdAndOrderId(user, orderId);
   }
 
-  @Patch(':orderId')
+  @Patch('reject/:orderId')
   @ApiOperation({
     summary: 'Reject the order by vendor',
     tags: ['Order Endpoints'],
@@ -390,9 +390,79 @@ export class OrdersController {
   async rejectOrder(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
+    @Body('rejectReason') rejectReason: string,
   ): Promise<void> {
     const vendorId = request.user.id;
 
-    return await this.ordersService.rejectOrder(vendorId, orderId);
+    return await this.ordersService.rejectOrder(
+      vendorId,
+      orderId,
+      rejectReason,
+    );
+  }
+
+  @Patch('send/:orderId')
+  async sendOrderByVendor(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('orderId') orderId: number,
+    @Body('trackingNumber') trackingNumber: string,
+  ): Promise<void> {
+    const vendorId = request.user.id;
+
+    return await this.ordersService.sendOrderByVendor(
+      vendorId,
+      orderId,
+      trackingNumber,
+    );
+  }
+
+  @Patch('receive/:orderId')
+  async receiveOrderByBuyer(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('orderId') orderId: number,
+  ): Promise<void> {
+    const buyerId = request.user.id;
+
+    return await this.ordersService.receiveOrderByBuyer(buyerId, orderId);
+  }
+
+  @Patch('send-back/:orderId')
+  async sendBackOrderByBuyer(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('orderId') orderId: number,
+    @Body('trackingNumber') trackingNumber: string,
+  ): Promise<void> {
+    const buyerId = request.user.id;
+
+    return await this.ordersService.sendOrderByBuyer(
+      buyerId,
+      orderId,
+      trackingNumber,
+    );
+  }
+
+  @Patch('return/:orderId')
+  async returnOrderByVendor(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('orderId') orderId: number,
+  ): Promise<void> {
+    const vendorId = request.user.id;
+
+    return await this.ordersService.returnOrder(vendorId, orderId);
+  }
+
+  @Patch('pay-send/:orderId')
+  async paySendOrder(
+    @Request() request: Request & { user: UserResponseDto },
+    @Param('orderId') orderId: number,
+    @Body('trackingNumber') trackingNumber: string,
+  ): Promise<void> {
+    const buyerId = request.user.id;
+
+    return await this.ordersService.paySendOrder(
+      buyerId,
+      orderId,
+      trackingNumber,
+    );
   }
 }

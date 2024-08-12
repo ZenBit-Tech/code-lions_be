@@ -2,14 +2,16 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { ORDERS_ON_PAGE } from 'src/config';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Cart } from 'src/modules/cart/cart.entity';
+import { MailerService } from 'src/modules/mailer/mailer.service';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
@@ -48,6 +50,8 @@ export class OrdersService {
     private readonly buyerOrderRepository: Repository<BuyerOrder>,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
+    private mailerService: MailerService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
@@ -295,7 +299,7 @@ export class OrdersService {
     }
   }
 
-  private async checkIfOrdersSentOrRejected(
+  private async checkIfOrdersAreSentOrRejected(
     buyerOrderId: string,
   ): Promise<boolean> {
     const buyerOrder = await this.buyerOrderRepository.findOne({
@@ -312,24 +316,69 @@ export class OrdersService {
     return areOrdersSentOrRejected;
   }
 
-  async rejectOrder(vendorId: string, orderId: number): Promise<void> {
+  async rejectOrder(
+    vendorId: string,
+    orderId: number,
+    rejectReason: string,
+  ): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const order = await this.orderRepository.findOne({
         where: { orderId, vendorId },
+        relations: ['products'],
       });
 
       if (!order) {
         throw new NotFoundException(Errors.ORDER_NOT_FOUND);
       }
 
+      // const products = order.products;
+
       order.status = Status.REJECTED;
 
-      await this.orderRepository.save(order);
+      await queryRunner.manager.save(order);
+
+      // for (const product of products) {
+      //   product.isAvailable = true;
+      //   await queryRunner.manager.save(product);
+      // }
+
+      const buyer = await this.userRepository.findOne({
+        where: { id: order.buyerId },
+      });
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: buyer.email,
+        subject: 'Order rejected on CodeLions!',
+        templateName: 'reject-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          rejectReason,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await queryRunner.commitTransaction();
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      await queryRunner.rollbackTransaction();
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
         throw error;
       }
+
       throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -338,6 +387,11 @@ export class OrdersService {
     orderId: number,
     trackingNumber: string,
   ): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const order = await this.orderRepository.findOne({
         where: { orderId, vendorId },
@@ -347,15 +401,50 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDER_NOT_FOUND);
       }
 
+      // const products = order.products;
+
       order.status = Status.SENT;
       order.trackingNumber = trackingNumber;
 
-      await this.orderRepository.save(order);
+      await queryRunner.manager.save(order);
+
+      // for (const product of products) {
+      //   product.isAvailable = false;
+      //   await queryRunner.manager.save(product);
+      // }
+
+      const buyer = await this.userRepository.findOne({
+        where: { id: order.buyerId },
+      });
+
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: buyer.email,
+        subject: 'Order sent on CodeLions!',
+        templateName: 'sent-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
+        },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await queryRunner.commitTransaction();
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      await queryRunner.rollbackTransaction();
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
         throw error;
       }
-      throw new InternalServerErrorException(Errors.FAILED_TO_SEND_ORDER);
+
+      throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
+    } finally {
+      await queryRunner.release();
     }
   }
 
