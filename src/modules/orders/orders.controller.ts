@@ -25,6 +25,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -351,8 +352,10 @@ export class OrdersController {
   }
 
   @Patch('reject/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR, Role.BUYER)
   @ApiOperation({
-    summary: 'Reject the order by vendor',
+    summary: 'Reject the order by vendor or buyer',
     tags: ['Order Endpoints'],
     description: 'This endpoint changes status of the order to rejected.',
   })
@@ -373,6 +376,19 @@ export class OrdersController {
       },
     },
   })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
   @ApiInternalServerErrorResponse({
     description: 'Failed to reject the order',
     schema: {
@@ -386,22 +402,92 @@ export class OrdersController {
       },
     },
   })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
+  @ApiBody({
+    schema: {
+      properties: {
+        rejectReason: {
+          type: 'string',
+          example: 'The product is not available',
+        },
+      },
+    },
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
   async rejectOrder(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
     @Body('rejectReason') rejectReason: string,
   ): Promise<void> {
-    const vendorId = request.user.id;
+    const user = request.user;
 
-    return await this.ordersService.rejectOrder(
-      vendorId,
-      orderId,
-      rejectReason,
-    );
+    return await this.ordersService.rejectOrder(user, orderId, rejectReason);
   }
 
   @Patch('send/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR)
+  @ApiOperation({
+    summary: 'Send the order by vendor to buyer',
+    tags: ['Order Endpoints'],
+    description:
+      'This endpoint changes status of the order to sent and sets the tracking number.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to send the order',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
+  @ApiBody({
+    schema: {
+      properties: {
+        trackingNumber: {
+          type: 'string',
+          example: 'ju12-112k-rhfd-sl12',
+        },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
   async sendOrderByVendor(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
@@ -417,6 +503,59 @@ export class OrdersController {
   }
 
   @Patch('receive/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.BUYER)
+  @ApiOperation({
+    summary: 'Receive the order by buyer',
+    tags: ['Order Endpoints'],
+    description:
+      'This endpoint changes status of the order to received by buyer.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to receive the order',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_RECEIVE_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
+  @HttpCode(HttpStatus.NO_CONTENT)
   async receiveOrderByBuyer(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
@@ -427,6 +566,69 @@ export class OrdersController {
   }
 
   @Patch('send-back/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.BUYER)
+  @ApiOperation({
+    summary: 'Send the order back by buyer',
+    tags: ['Order Endpoints'],
+    description:
+      'This endpoint changes status of the order to sent back and sets the tracking number.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to send the order back',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_BACK,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
+  @ApiBody({
+    schema: {
+      properties: {
+        trackingNumber: {
+          type: 'string',
+          example: 'ju12-112k-rhfd-sl12',
+        },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
   async sendBackOrderByBuyer(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
@@ -442,6 +644,46 @@ export class OrdersController {
   }
 
   @Patch('return/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.VENDOR)
+  @ApiOperation({
+    summary: 'Confirm the return of the order',
+    tags: ['Order Endpoints'],
+    description:
+      'This endpoint changes status of the order to returned by vendor.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to return the order',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_RETURN_ORDER,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
+  @HttpCode(HttpStatus.NO_CONTENT)
   async returnOrderByVendor(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
@@ -452,6 +694,69 @@ export class OrdersController {
   }
 
   @Patch('pay-send/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.BUYER)
+  @ApiOperation({
+    summary: 'Pay the fine and send the order back by buyer',
+    tags: ['Order Endpoints'],
+    description:
+      'This endpoint changes status of the order to sent back and pays the fine for overdue return.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: responseDescrptions.success,
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.ORDER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Service is unavailable',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 503 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_SEND_EMAIL,
+        },
+        error: { type: 'string', example: 'Service Unavailable' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to pay and send the order back',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_PAY_AND_SEND,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @ApiParam({ name: 'orderId', description: 'The ID of the order' })
+  @ApiBody({
+    schema: {
+      properties: {
+        trackingNumber: {
+          type: 'string',
+          example: 'ju12-112k-rhfd-sl12',
+        },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
   async paySendOrder(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,

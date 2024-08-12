@@ -347,7 +347,7 @@ export class OrdersService {
   }
 
   async rejectOrder(
-    vendorId: string,
+    user: UserResponseDto,
     orderId: number,
     rejectReason: string,
   ): Promise<void> {
@@ -358,7 +358,10 @@ export class OrdersService {
 
     try {
       const order = await this.orderRepository.findOne({
-        where: { orderId, vendorId },
+        where: [
+          { vendorId: user.id, orderId },
+          { buyerId: user.id, orderId },
+        ],
         relations: ['products'],
       });
 
@@ -376,16 +379,24 @@ export class OrdersService {
       //   await queryRunner.manager.save(product);
       // }
 
-      const buyer = await this.userRepository.findOne({
-        where: { id: order.buyerId },
+      const partnerId =
+        user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
+
+      const partner = await this.userRepository.findOne({
+        where: { id: partnerId },
       });
 
+      if (!partner) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
       const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: buyer.email,
+        receiverEmail: partner.email,
         subject: 'Order rejected on CodeLions!',
         templateName: 'reject-order.hbs',
         context: {
           orderNumber: order.orderId,
+          role: user.role,
           rejectReason,
         },
       });
