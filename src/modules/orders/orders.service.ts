@@ -533,6 +533,7 @@ export class OrdersService {
           }
 
           order.status = Status.RECEIVED;
+          order.receivedAt = new Date();
           order.trackingNumber = null;
 
           await transactionalEntityManager.save(order);
@@ -718,30 +719,6 @@ export class OrdersService {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
-    }
-  }
-
-  async updateStatus(orderId: string, status: Status): Promise<void> {
-    try {
-      const order = await this.orderRepository.findOneById(orderId);
-
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
-
-      order.status = status;
-
-      if (status === Status.RECEIVED) {
-        order.receivedAt = new Date();
-      }
-      await this.orderRepository.save(order);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        Errors.FAILED_TO_CHANGE_ORDER_STATUS,
-      );
     }
   }
 
