@@ -615,7 +615,7 @@ export class AuthController {
   async changeEmail(
     @GetUser() user: UserResponseDto,
     @Body() changeEmailDto: EmailDto,
-  ): Promise<void> {
-    await this.authService.changeEmail(user, changeEmailDto.email);
+  ): Promise<UserResponseDto> {
+    return await this.authService.changeEmail(user, changeEmailDto.email);
   }
 }
