@@ -6,8 +6,8 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { ORDERS_ON_PAGE } from 'src/config';
@@ -43,6 +43,7 @@ interface GetOrdersOptions {
 @Injectable()
 export class OrdersService {
   constructor(
+    @InjectEntityManager() private readonly entityManager: EntityManager,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(User)
@@ -56,7 +57,6 @@ export class OrdersService {
     private mailerService: MailerService,
     @Inject(forwardRef(() => StripeService))
     private stripeService: StripeService,
-    private readonly dataSource: DataSource,
   ) {}
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
@@ -357,76 +357,66 @@ export class OrdersService {
     orderId: number,
     rejectReason: string,
   ): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
-      const order = await this.orderRepository.findOne({
-        where: [
-          { vendorId: user.id, orderId },
-          { buyerId: user.id, orderId },
-        ],
-        relations: ['products'],
-      });
+      return await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const order = await transactionalEntityManager.findOne(Order, {
+            where: [
+              { vendorId: user.id, orderId },
+              { buyerId: user.id, orderId },
+            ],
+            relations: ['products', 'buyerOrder'],
+          });
 
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
+          if (!order) {
+            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+          }
 
-      order.status = Status.REJECTED;
+          order.status = Status.REJECTED;
+          await transactionalEntityManager.save(order);
 
-      await queryRunner.manager.save(order);
+          for (const product of order.products) {
+            product.isAvailable = true;
+            await transactionalEntityManager.save(product);
+          }
 
-      // const products = order.products;
-      // for (const product of products) {
-      //   product.isAvailable = true;
-      //   await queryRunner.manager.save(product);
-      // }
+          const partnerId =
+            user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
 
-      const partnerId =
-        user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
+          const partner = await transactionalEntityManager.findOne(User, {
+            where: { id: partnerId },
+          });
 
-      const partner = await this.userRepository.findOne({
-        where: { id: partnerId },
-      });
+          if (!partner) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
 
-      if (!partner) {
-        throw new NotFoundException(Errors.USER_NOT_FOUND);
-      }
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: partner.email,
+            subject: 'Order rejected on CodeLions!',
+            templateName: 'reject-order.hbs',
+            context: {
+              orderNumber: order.orderId,
+              role: user.role,
+              rejectReason,
+            },
+          });
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: partner.email,
-        subject: 'Order rejected on CodeLions!',
-        templateName: 'reject-order.hbs',
-        context: {
-          orderNumber: order.orderId,
-          role: user.role,
-          rejectReason,
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+
+          await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
         },
-      });
-
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
-
-      await queryRunner.commitTransaction();
-
-      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
+      );
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-
       if (
         error instanceof NotFoundException ||
         error instanceof ServiceUnavailableException
       ) {
         throw error;
       }
-
       throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
-    } finally {
-      await queryRunner.release();
     }
   }
 
@@ -435,274 +425,267 @@ export class OrdersService {
     orderId: number,
     trackingNumber: string,
   ): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
-      const order = await this.orderRepository.findOne({
-        where: { orderId, vendorId },
-      });
+      await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const order = await transactionalEntityManager.findOne(Order, {
+            where: { orderId, vendorId },
+            relations: ['buyerOrder'],
+          });
 
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
+          if (!order) {
+            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+          }
 
-      order.status = Status.SENT;
-      order.trackingNumber = trackingNumber;
+          order.status = Status.SENT;
+          order.trackingNumber = trackingNumber;
 
-      await queryRunner.manager.save(order);
+          await transactionalEntityManager.save(order);
 
-      // const products = order.products;
-      // for (const product of products) {
-      //   product.isAvailable = false;
-      //   await queryRunner.manager.save(product);
-      // }
+          const buyer = await transactionalEntityManager.findOne(User, {
+            where: { id: order.buyerId },
+          });
 
-      const buyer = await this.userRepository.findOne({
-        where: { id: order.buyerId },
-      });
+          if (!buyer) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: buyer.email,
-        subject: 'Order sent on CodeLions!',
-        templateName: 'sent-order.hbs',
-        context: {
-          orderNumber: order.orderId,
-          trackingNumber,
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: buyer.email,
+            subject: 'Order sent on CodeLions!',
+            templateName: 'sent-order.hbs',
+            context: {
+              orderNumber: order.orderId,
+              trackingNumber,
+            },
+          });
+
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+
+          await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
         },
-      });
-
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
-
-      await queryRunner.commitTransaction();
-
-      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
+      );
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-
       if (
         error instanceof NotFoundException ||
         error instanceof ServiceUnavailableException
       ) {
         throw error;
       }
-
       throw new InternalServerErrorException(Errors.FAILED_TO_SEND_ORDER);
-    } finally {
-      await queryRunner.release();
     }
   }
 
   async receiveOrderByBuyer(buyerId: string, orderId: number): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
-      const order = await this.orderRepository.findOne({
-        where: { orderId, buyerId },
-      });
+      await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const order = await transactionalEntityManager.findOne(Order, {
+            where: { orderId, buyerId },
+            relations: ['buyerOrder'],
+          });
 
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
+          if (!order) {
+            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+          }
 
-      order.status = Status.RECEIVED;
-      order.trackingNumber = null;
+          order.status = Status.RECEIVED;
+          order.trackingNumber = null;
 
-      await queryRunner.manager.save(order);
+          await transactionalEntityManager.save(order);
 
-      const vendor = await this.userRepository.findOne({
-        where: { id: order.vendorId },
-      });
+          const vendor = await transactionalEntityManager.findOne(User, {
+            where: { id: order.vendorId },
+          });
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: vendor.email,
-        subject: 'Buyer received your order!',
-        templateName: 'received-order.hbs',
-        context: {
-          orderNumber: order.orderId,
+          if (!vendor) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
+
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: vendor.email,
+            subject: 'Buyer received your order!',
+            templateName: 'received-order.hbs',
+            context: {
+              orderNumber: order.orderId,
+            },
+          });
+
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+
+          // const totalOrderAmount: number = order.price + order.shipping;
+          // const paymentIntentId: string = order.buyerOrder.paymentId;
+          // const currentFee: number = await this.stripeService.getApplicationFee();
+
+          // await this.stripeService.transferMoneyToVendor(
+          //   vendor.stripeAccount,
+          //   paymentIntentId,
+          //   totalOrderAmount,
+          //   currentFee
+          // );
         },
-      });
-
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
-
-      // const totalOrderAmount: number = order.price + order.shipping;
-      // const paymentIntentId: string = order.buyerOrder.paymentId;
-      // const currentFee: number = await this.stripeService.getApplicationFee();
-
-      // await this.stripeService.transferMoneyToVendor(vendor.stripeAccount, paymentIntentId, totalOrderAmount, currentFee)
-
-      await queryRunner.commitTransaction();
+      );
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-
       if (
         error instanceof NotFoundException ||
         error instanceof ServiceUnavailableException
       ) {
         throw error;
       }
-
       throw new InternalServerErrorException(Errors.FAILED_TO_RECEIVE_ORDER);
-    } finally {
-      await queryRunner.release();
     }
   }
 
-  async sendOrderByBuyer(
-    buyerId: string,
-    orderId: number,
-    trackingNumber: string,
-  ): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
+  // async sendOrderByBuyer(
+  //   buyerId: string,
+  //   orderId: number,
+  //   trackingNumber: string,
+  // ): Promise<void> {
+  //   const queryRunner = this.dataSource.createQueryRunner();
 
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  //   await queryRunner.connect();
+  //   await queryRunner.startTransaction();
 
-    try {
-      const order = await this.orderRepository.findOne({
-        where: { orderId, buyerId },
-      });
+  //   try {
+  //     const order = await this.orderRepository.findOne({
+  //       where: { orderId, buyerId },
+  //     });
 
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
+  //     if (!order) {
+  //       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+  //     }
 
-      order.status = Status.SENT_BACK;
-      order.trackingNumber = trackingNumber;
+  //     order.status = Status.SENT_BACK;
+  //     order.trackingNumber = trackingNumber;
 
-      await queryRunner.manager.save(order);
+  //     await queryRunner.manager.save(order);
 
-      const vendor = await this.userRepository.findOne({
-        where: { id: order.vendorId },
-      });
+  //     const vendor = await this.userRepository.findOne({
+  //       where: { id: order.vendorId },
+  //     });
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: vendor.email,
-        subject: 'Order sent back on CodeLions!',
-        templateName: 'sent-back-order.hbs',
-        context: {
-          orderNumber: order.orderId,
-          trackingNumber,
-        },
-      });
+  //     const isMailSent = await this.mailerService.sendMail({
+  //       receiverEmail: vendor.email,
+  //       subject: 'Order sent back on CodeLions!',
+  //       templateName: 'sent-back-order.hbs',
+  //       context: {
+  //         orderNumber: order.orderId,
+  //         trackingNumber,
+  //       },
+  //     });
 
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
+  //     if (!isMailSent) {
+  //       throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+  //     }
 
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
+  //     await queryRunner.commitTransaction();
+  //   } catch (error) {
+  //     await queryRunner.rollbackTransaction();
 
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ServiceUnavailableException
-      ) {
-        throw error;
-      }
+  //     if (
+  //       error instanceof NotFoundException ||
+  //       error instanceof ServiceUnavailableException
+  //     ) {
+  //       throw error;
+  //     }
 
-      throw new InternalServerErrorException(Errors.FAILED_TO_SEND_BACK);
-    } finally {
-      await queryRunner.release();
-    }
-  }
+  //     throw new InternalServerErrorException(Errors.FAILED_TO_SEND_BACK);
+  //   } finally {
+  //     await queryRunner.release();
+  //   }
+  // }
 
-  async returnOrder(vendorId: string, orderId: number): Promise<void> {
-    try {
-      const order = await this.orderRepository.findOne({
-        where: { orderId, vendorId },
-      });
+  // async returnOrder(vendorId: string, orderId: number): Promise<void> {
+  //   try {
+  //     const order = await this.orderRepository.findOne({
+  //       where: { orderId, vendorId },
+  //     });
 
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
+  //     if (!order) {
+  //       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+  //     }
 
-      order.status = Status.RETURNED;
-      order.trackingNumber = null;
+  //     order.status = Status.RETURNED;
+  //     order.trackingNumber = null;
 
-      // const products = order.products;
+  //     // const products = order.products;
 
-      // for (const product of products) {
-      //   product.isAvailable = false;
-      //   await queryRunner.manager.save(product);
-      // }
+  //     // for (const product of products) {
+  //     //   product.isAvailable = false;
+  //     //   await queryRunner.manager.save(product);
+  //     // }
 
-      await this.orderRepository.save(order);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(Errors.FAILED_TO_RETURN_ORDER);
-    }
-  }
+  //     await this.orderRepository.save(order);
+  //   } catch (error) {
+  //     if (error instanceof NotFoundException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(Errors.FAILED_TO_RETURN_ORDER);
+  //   }
+  // }
 
-  async paySendOrder(
-    buyerId: string,
-    orderId: number,
-    trackingNumber: string,
-  ): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
+  // async paySendOrder(
+  //   buyerId: string,
+  //   orderId: number,
+  //   trackingNumber: string,
+  // ): Promise<void> {
+  //   const queryRunner = this.dataSource.createQueryRunner();
 
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  //   await queryRunner.connect();
+  //   await queryRunner.startTransaction();
 
-    try {
-      const order = await this.orderRepository.findOne({
-        where: { orderId, buyerId },
-      });
+  //   try {
+  //     const order = await this.orderRepository.findOne({
+  //       where: { orderId, buyerId },
+  //     });
 
-      if (!order) {
-        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-      }
+  //     if (!order) {
+  //       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+  //     }
 
-      order.status = Status.SENT_BACK;
-      order.trackingNumber = trackingNumber;
+  //     order.status = Status.SENT_BACK;
+  //     order.trackingNumber = trackingNumber;
 
-      await queryRunner.manager.save(order);
+  //     await queryRunner.manager.save(order);
 
-      const vendor = await this.userRepository.findOne({
-        where: { id: order.vendorId },
-      });
+  //     const vendor = await this.userRepository.findOne({
+  //       where: { id: order.vendorId },
+  //     });
 
-      const isMailSent = await this.mailerService.sendMail({
-        receiverEmail: vendor.email,
-        subject: 'Order sent back on CodeLions!',
-        templateName: 'sent-back-order.hbs',
-        context: {
-          orderNumber: order.orderId,
-          trackingNumber,
-        },
-      });
+  //     const isMailSent = await this.mailerService.sendMail({
+  //       receiverEmail: vendor.email,
+  //       subject: 'Order sent back on CodeLions!',
+  //       templateName: 'sent-back-order.hbs',
+  //       context: {
+  //         orderNumber: order.orderId,
+  //         trackingNumber,
+  //       },
+  //     });
 
-      if (!isMailSent) {
-        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-      }
+  //     if (!isMailSent) {
+  //       throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+  //     }
 
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
+  //     await queryRunner.commitTransaction();
+  //   } catch (error) {
+  //     await queryRunner.rollbackTransaction();
 
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ServiceUnavailableException
-      ) {
-        throw error;
-      }
+  //     if (
+  //       error instanceof NotFoundException ||
+  //       error instanceof ServiceUnavailableException
+  //     ) {
+  //       throw error;
+  //     }
 
-      throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
-    } finally {
-      await queryRunner.release();
-    }
-  }
+  //     throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
+  //   } finally {
+  //     await queryRunner.release();
+  //   }
+  // }
 
   private async getOrders(
     options?: GetOrdersOptions,
