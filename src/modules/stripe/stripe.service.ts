@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -8,23 +9,28 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import Stripe from 'stripe';
+import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { CANADA_POST_LOGO } from 'src/config';
 import { CartService } from 'src/modules/cart/cart.service';
+import { MailerService } from 'src/modules/mailer/mailer.service';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { ProductsService } from 'src/modules/products/products.service';
-
-import { UsersService } from '../users/users.service';
+import { UsersService } from 'src/modules/users/users.service';
 
 import { PaymentDto } from './dto/payment.dto';
+import { ApplicationFee } from './entities/stripe.entity';
 import { StripeModuleOptions } from './stripe.interfaces';
 import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
 
 const minDifference = 0.01;
 const centsInDollar = 100;
 const successStatus = 'succeeded';
+const holdOnStatus = 'requires_capture';
+const currency = 'CAD';
 
 @Injectable()
 export class StripeService {
@@ -32,12 +38,16 @@ export class StripeService {
   private readonly Logger = new Logger(StripeService.name);
 
   constructor(
+    @InjectRepository(ApplicationFee)
+    private readonly applicationFeeRepository: Repository<ApplicationFee>,
     @Inject(MODULE_OPTIONS_TOKEN) private options: StripeModuleOptions,
     private usersServise: UsersService,
     private productsService: ProductsService,
     private configService: ConfigService,
     private cartService: CartService,
+    @Inject(forwardRef(() => OrdersService))
     private ordersService: OrdersService,
+    private mailerService: MailerService,
   ) {
     this.StripeApi = new Stripe(this.options.apiKey, this.options.options);
   }
@@ -76,7 +86,7 @@ export class StripeService {
         products.map((product) => {
           return {
             price_data: {
-              currency: 'usd',
+              currency: currency,
               product_data: {
                 name: product.name,
                 images: [product.images[0]],
@@ -90,7 +100,7 @@ export class StripeService {
       if (shippingPrice > 0) {
         lineItems.push({
           price_data: {
-            currency: 'usd',
+            currency: currency,
             product_data: {
               name: 'Shipping',
               images: [CANADA_POST_LOGO],
@@ -107,7 +117,11 @@ export class StripeService {
           userId: customerId,
           shippingPrice: shippingPrice,
         },
+        payment_intent_data: {
+          capture_method: 'manual',
+        },
         mode: 'payment',
+        currency: currency,
         success_url: this.configService.get<string>('STRIPE_SUCCESS_URL'),
         cancel_url: this.configService.get<string>('STRIPE_CANCEL_URL'),
       });
@@ -125,7 +139,101 @@ export class StripeService {
     }
   }
 
+  async captureMoney(
+    paymentIntentId: string,
+    amount: number,
+  ): Promise<boolean> {
+    try {
+      const intent = await this.StripeApi.paymentIntents.capture(
+        paymentIntentId,
+        {
+          amount_to_capture: Math.round(amount * centsInDollar),
+        },
+      );
+
+      if (intent.status !== successStatus) {
+        throw new Error('Payment intent status is not succeeded');
+      }
+
+      this.Logger.log(
+        `Capture Money. Payment Intent ID: ${paymentIntentId}, amount: $${amount}`,
+      );
+
+      return true;
+    } catch (error) {
+      this.Logger.error(error);
+      this.Logger.error(
+        `Payment Intent ID: ${paymentIntentId}, amount: $${amount}`,
+      );
+
+      const parameters = JSON.stringify({
+        paymentIntentId,
+        amount,
+      });
+
+      this.sendErrorMail('captureMoney', parameters, error);
+
+      return false;
+    }
+  }
+
+  async returnMoney(paymentIntentId: string): Promise<boolean> {
+    try {
+      await this.StripeApi.paymentIntents.cancel(paymentIntentId);
+
+      this.Logger.log(`Return Money. Payment Intent ID: ${paymentIntentId}`);
+
+      return true;
+    } catch (error) {
+      this.Logger.error(error);
+      this.Logger.error(`Payment Intent ID: ${paymentIntentId}`);
+
+      this.sendErrorMail('returnMoney', paymentIntentId, error);
+
+      return false;
+    }
+  }
+
+  async transferMoneyToVendor(
+    vendorStripeAccount: string,
+    paymentIntentId: string,
+    amount: number,
+    fee: number,
+  ): Promise<boolean> {
+    try {
+      const transfer = await this.StripeApi.transfers.create({
+        amount: Math.round(amount * (centsInDollar - fee)),
+        currency: currency,
+        destination: vendorStripeAccount,
+        transfer_group: paymentIntentId,
+      });
+
+      this.Logger.log(
+        `Transfer ID: ${transfer.id}, amount: $${amount}, fee: ${fee}%`,
+      );
+
+      return true;
+    } catch (error) {
+      this.Logger.error(error);
+      this.Logger.error(
+        `Vendor Stripe Account: ${vendorStripeAccount}, Payment Intent ID: ${paymentIntentId}, amount: $${amount}, fee: ${fee}`,
+      );
+
+      const parameters = JSON.stringify({
+        vendorStripeAccount,
+        paymentIntentId,
+        amount,
+        fee,
+      });
+
+      this.sendErrorMail('transferMoneyToVendor', parameters, error);
+
+      return false;
+    }
+  }
+
   async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
+    this.Logger.log(event);
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentIntentId = session.payment_intent as string;
@@ -134,11 +242,11 @@ export class StripeService {
         await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
       const metadata = session.metadata;
 
-      const { id: paymentId, amount_received: total, status } = paymentIntent;
+      const { id: paymentId, amount_capturable: total, status } = paymentIntent;
       const { userId, shippingPrice } = metadata;
 
       const totalAmount = total / centsInDollar;
-      const isPaid = status === successStatus;
+      const isPaid = status === holdOnStatus;
 
       this.Logger.log(
         `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
@@ -181,7 +289,6 @@ export class StripeService {
 
       return consrtuctedEvent;
     } catch (error) {
-      this.Logger.error(error);
       throw new BadRequestException(Errors.INVALID_WEBHOOK_SIGNATURE);
     }
   }
@@ -226,6 +333,49 @@ export class StripeService {
       refresh_url: this.configService.get<string>('STRIPE_REFRESH_URL'),
       return_url: this.configService.get<string>('STRIPE_RETURN_URL'),
       type: 'account_onboarding',
+    });
+  }
+
+  async getApplicationFee(): Promise<number> {
+    const applicationFeeRecord = await this.applicationFeeRepository.findOne({
+      where: { id: 1 },
+    });
+
+    if (!applicationFeeRecord) {
+      throw new Error(Errors.APPLICATION_FEE_NOT_FOUND);
+    }
+
+    return applicationFeeRecord.applicationFee;
+  }
+
+  async updateApplicationFee(newFee: number): Promise<ApplicationFee> {
+    const applicationFeeRecord = await this.applicationFeeRepository.findOne({
+      where: { id: 1 },
+    });
+
+    if (!applicationFeeRecord) {
+      throw new NotFoundException(Errors.APPLICATION_FEE_NOT_FOUND);
+    }
+    applicationFeeRecord.applicationFee = newFee;
+
+    return this.applicationFeeRepository.save(applicationFeeRecord);
+  }
+
+  private async sendErrorMail(
+    action: string,
+    parameters: string,
+    error: unknown,
+  ): Promise<void> {
+    await this.mailerService.sendMail({
+      receiverEmail: this.configService.get<string>('STRIPE_PROBLEMS_EMAIL'),
+      subject: `Stripe money capture problem [${action}]`,
+      templateName: 'stripe-error.hbs',
+      context: {
+        action: action,
+        parameters: parameters,
+        error: JSON.stringify(error),
+        date: new Date(),
+      },
     });
   }
 }

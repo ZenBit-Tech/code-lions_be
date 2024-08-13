@@ -18,6 +18,8 @@ import {
 
 import { Server, Socket } from 'socket.io';
 import { Errors } from 'src/common/errors';
+import { Type } from 'src/modules/notifications/entities/notification-type.enum';
+import { Status } from 'src/modules/orders/entities/order-status.enum';
 
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
@@ -221,6 +223,31 @@ export class EventsGateway
     notification: NotificationResponseDTO,
   ): Promise<void> {
     this.server.to(userId).emit('newNotification', notification);
+  }
+
+  @SubscribeMessage('createNotification')
+  async handleCreateNotification(
+    client: SocketWithAuth,
+    notificationData: {
+      type: Type;
+      orderId?: number;
+      userId?: string;
+      shippingStatus?: Status;
+    },
+  ): Promise<void> {
+    try {
+      const savedNotification =
+        await this.notificationsService.createNotification(
+          notificationData.type,
+          notificationData.userId,
+          notificationData.orderId,
+          notificationData.shippingStatus,
+        );
+
+      client.emit('notificationSaved', savedNotification);
+    } catch (error) {
+      throw new BadRequestException(Errors.UNABLE_TO_CREATE_NOTIFICATION);
+    }
   }
 
   @SubscribeMessage('getNotifications')
