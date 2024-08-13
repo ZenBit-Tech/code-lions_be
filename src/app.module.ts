@@ -9,6 +9,7 @@ import { CartModule } from 'src/modules/cart/cart.module';
 import { ChatModule } from 'src/modules/chat/chat.module';
 import { EventsModule } from 'src/modules/events/events.module';
 import { GeoNamesModule } from 'src/modules/geoNames/geoNames.module';
+import { NotificationsModule } from 'src/modules/notifications/notifications.module';
 import { OrdersModule } from 'src/modules/orders/orders.module';
 import { ProductsModule } from 'src/modules/products/products.module';
 import { ReviewsModule } from 'src/modules/reviews/reviews.module';
@@ -42,6 +43,7 @@ import { WishlistModule } from 'src/modules/wishlist/wishlist.module';
       }),
     }),
     OrdersModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

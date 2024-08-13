@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CartModule } from 'src/modules/cart/cart.module';
+import { MailerModule } from 'src/modules/mailer/mailer.module';
 import { OrdersModule } from 'src/modules/orders/orders.module';
 import { ProductsModule } from 'src/modules/products/products.module';
 import { UsersModule } from 'src/modules/users/users.module';
@@ -20,6 +21,7 @@ import { StripeService } from './stripe.service';
     ConfigModule,
     UsersModule,
     ProductsModule,
+    MailerModule,
     CartModule,
     OrdersModule,
     TypeOrmModule.forFeature([ApplicationFee]),

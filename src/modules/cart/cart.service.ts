@@ -109,7 +109,11 @@ export class CartService {
             where: { id: userId },
           });
           const product = await transactionalEntityManager.findOne(Product, {
-            where: { id: productId, status: Status.PUBLISHED },
+            where: {
+              id: productId,
+              status: Status.PUBLISHED,
+              isAvailable: true,
+            },
             relations: ['images', 'color'],
           });
 
@@ -149,6 +153,7 @@ export class CartService {
         },
       );
     } catch (error) {
+      console.error(error);
       if (
         error instanceof NotFoundException ||
         error instanceof ConflictException

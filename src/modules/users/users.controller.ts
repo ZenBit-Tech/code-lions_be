@@ -1139,7 +1139,7 @@ export class UsersController {
       },
     },
   })
-  async toggleNotifications(@GetUserId() userId: string): Promise<void> {
+  async toggleNotifications(@GetUserId() userId: string): Promise<User> {
     return this.usersService.toggleNotifications(userId);
   }
 }

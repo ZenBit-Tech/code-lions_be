@@ -14,7 +14,6 @@ export class CreateOrderDto {
   totalAmount: number;
 
   @ApiProperty({ description: 'Is paid', type: Boolean, example: true })
-  @IsNumber()
   @IsNotEmpty()
   isPaid: boolean;
 

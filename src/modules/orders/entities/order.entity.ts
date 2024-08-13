@@ -76,7 +76,7 @@ export class Order {
   price: number;
 
   @ApiProperty({
-    example: 'published',
+    example: Status.SENT,
     description: 'The status of the order',
     enum: Status,
   })
@@ -95,6 +95,21 @@ export class Order {
   })
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
+
+  @ApiProperty({
+    example: 7,
+    description: 'The duration of how long user can own products from order',
+  })
+  @Column({ type: 'int', default: 0 })
+  duration: number;
+
+  @ApiProperty({
+    example: '2024-06-28 21:04:24',
+    description: 'The date the order was received',
+    type: Date,
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  receivedAt: Date;
 
   @ApiProperty({
     example: '61c674384-f944-401b-949b-b76e8793bdc9',
