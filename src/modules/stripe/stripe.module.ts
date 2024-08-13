@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { forwardRef, Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CartModule } from 'src/modules/cart/cart.module';
@@ -10,11 +10,25 @@ import { UsersModule } from 'src/modules/users/users.module';
 
 import { ApplicationFee } from './entities/stripe.entity';
 import { StripeController } from './stripe.controller';
-import { ConfigurableModuleClass } from './stripe.module-definition';
+import { StripeModuleOptions } from './stripe.interfaces';
+import {
+  ConfigurableModuleClass,
+  MODULE_OPTIONS_TOKEN,
+} from './stripe.module-definition';
 import { StripeService } from './stripe.service';
 
 @Module({
-  providers: [StripeService],
+  providers: [
+    StripeService,
+    {
+      provide: MODULE_OPTIONS_TOKEN,
+      useFactory: (configService: ConfigService): StripeModuleOptions => ({
+        apiKey: configService.get<string>('STRIPE_SECRET_KEY'),
+        options: {},
+      }),
+      inject: [ConfigService],
+    },
+  ],
   exports: [StripeService],
   controllers: [StripeController],
   imports: [
@@ -23,7 +37,7 @@ import { StripeService } from './stripe.service';
     ProductsModule,
     MailerModule,
     CartModule,
-    OrdersModule,
+    forwardRef(() => OrdersModule),
     TypeOrmModule.forFeature([ApplicationFee]),
   ],
 })

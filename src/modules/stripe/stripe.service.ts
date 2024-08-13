@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -44,6 +45,7 @@ export class StripeService {
     private productsService: ProductsService,
     private configService: ConfigService,
     private cartService: CartService,
+    @Inject(forwardRef(() => OrdersService))
     private ordersService: OrdersService,
     private mailerService: MailerService,
   ) {

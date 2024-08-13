@@ -49,6 +49,16 @@ export class Order {
   shipping: number;
 
   @ApiProperty({
+    example: 'rghh-g5g6-5678',
+    description: 'The tracking number of the order',
+  })
+  @Column({
+    nullable: true,
+    default: null,
+  })
+  trackingNumber: string;
+
+  @ApiProperty({
     example: 'product1 , product2',
     description: 'The products of the order',
     type: [Product],

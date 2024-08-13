@@ -78,7 +78,7 @@ module.exports = {
         selector: 'variable',
         format: ['PascalCase', 'UPPER_CASE'],
         types: ['boolean'],
-        prefix: ['is', 'should', 'has', 'can', 'did', 'will'],
+        prefix: ['is', 'are', 'should', 'has', 'can', 'did', 'will'],
       },
       {
         selector: 'variableLike',
