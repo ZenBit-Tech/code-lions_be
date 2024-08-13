@@ -15,6 +15,7 @@ import { Cart } from 'src/modules/cart/cart.entity';
 import { ChatRoom } from 'src/modules/chat/entities/chat-room.entity';
 import { MessageRead } from 'src/modules/chat/entities/message-read.entity';
 import { Message } from 'src/modules/chat/entities/message.entity';
+import { Notification } from 'src/modules/notifications/entities/notification.entity';
 import { BuyerOrder } from 'src/modules/orders/entities/buyer-order.entity';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { Product } from 'src/modules/products/entities/product.entity';
@@ -348,4 +349,7 @@ export class User {
 
   @OneToMany(() => MessageRead, (messageRead) => messageRead.user)
   readMessages: MessageRead[];
+
+  @OneToMany(() => Notification, (notifications) => notifications.user)
+  notifications: Notification[];
 }

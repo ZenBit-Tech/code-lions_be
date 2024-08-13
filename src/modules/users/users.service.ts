@@ -554,19 +554,14 @@ export class UsersService {
     }
   }
 
-  async updateUserEmail(
-    user: User,
-    email: string,
-    otp: string,
-    otpExpiration: Date,
-  ): Promise<void> {
+  async updateUserEmail(user: User, email: string): Promise<User> {
     try {
       user.email = email;
       user.isEmailVerified = false;
-      user.otp = otp;
-      user.otpExpiration = otpExpiration;
 
       await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       throw new InternalServerErrorException(Errors.FAILED_TO_CHANGE_EMAIL);
     }
@@ -951,6 +946,10 @@ export class UsersService {
             page: 1,
             limit: LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
             where: { key: 'vendorId', value: vendor.vendorId },
+            andWhere: {
+              key: 'isAvailable',
+              value: true,
+            },
             ...options,
           });
 
@@ -1063,7 +1062,7 @@ export class UsersService {
     };
   }
 
-  async toggleNotifications(userId: string): Promise<void> {
+  async toggleNotifications(userId: string): Promise<User> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
 
@@ -1073,6 +1072,8 @@ export class UsersService {
 
       user.notificationsEnabled = !user.notificationsEnabled;
       await this.userRepository.save(user);
+
+      return user;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

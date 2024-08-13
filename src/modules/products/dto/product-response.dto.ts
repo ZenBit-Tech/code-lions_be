@@ -148,4 +148,11 @@ export class ProductResponseDTO {
     description: 'The deletion date of the product',
   })
   deletedAt: Date;
+
+  @ApiProperty({
+    type: Boolean,
+    example: true,
+    description: 'The field shows if the product is available',
+  })
+  isAvailable: boolean;
 }

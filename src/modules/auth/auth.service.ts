@@ -12,10 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
-import {
-  VERIFICATION_CODE_EXPIRATION,
-  VERIFICATION_CODE_LENGTH,
-} from 'src/config';
+import { VERIFICATION_CODE_LENGTH } from 'src/config';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { UsersService } from 'src/modules/users/users.service';
@@ -302,7 +299,10 @@ export class AuthService {
     }
   }
 
-  async changeEmail(user: UserResponseDto, email: string): Promise<void> {
+  async changeEmail(
+    user: UserResponseDto,
+    email: string,
+  ): Promise<UserResponseDto> {
     try {
       const userExists =
         await this.usersService.getUserByEmailWithDeleted(email);
@@ -312,14 +312,8 @@ export class AuthService {
       }
 
       const otp = this.generateOtp(VERIFICATION_CODE_LENGTH);
-      const otpExpiration = new Date(Date.now() + VERIFICATION_CODE_EXPIRATION);
 
-      await this.usersService.updateUserEmail(
-        user as User,
-        email,
-        otp,
-        otpExpiration,
-      );
+      await this.usersService.saveOtp(user.id, otp);
 
       const isMailSent = await this.mailerService.sendMail({
         receiverEmail: email,
@@ -334,6 +328,8 @@ export class AuthService {
       if (!isMailSent) {
         throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
       }
+
+      return await this.usersService.updateUserEmail(user as User, email);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
