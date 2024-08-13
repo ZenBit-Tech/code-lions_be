@@ -1,4 +1,6 @@
 import {
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -10,6 +12,13 @@ import { Errors } from 'src/common/errors';
 import { ORDERS_ON_PAGE } from 'src/config';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Cart } from 'src/modules/cart/cart.entity';
+import {
+  EventsGateway,
+  SocketWithAuth,
+} from 'src/modules/events/events.gateway';
+import { CreateNotificationDTO } from 'src/modules/notifications/dto/create-notification.dto';
+import { Type } from 'src/modules/notifications/entities/notification-type.enum';
+import { Notification } from 'src/modules/notifications/entities/notification.entity';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
@@ -48,6 +57,10 @@ export class OrdersService {
     private readonly buyerOrderRepository: Repository<BuyerOrder>,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
+    @InjectRepository(Notification)
+    private readonly notificationRepository: Repository<Notification>,
+    @Inject(forwardRef(() => EventsGateway))
+    private eventsGateway: EventsGateway,
   ) {}
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
@@ -309,14 +322,39 @@ export class OrdersService {
       }
 
       order.status = Status.REJECTED;
-
       await this.orderRepository.save(order);
+
+      const notification: CreateNotificationDTO = {
+        userId: order.buyerId,
+        type: Type.ORDER_REJECTION,
+        orderId: order.orderId,
+      };
+
+      const client: SocketWithAuth = await this.getClientByUserId(
+        order.buyerId,
+      );
+
+      await this.eventsGateway.handleCreateNotification(client, notification);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_REJECT_ORDER);
     }
+  }
+
+  private async getClientByUserId(
+    userId: string,
+  ): Promise<SocketWithAuth | null> {
+    const sockets = this.eventsGateway.server.sockets.sockets;
+
+    for (const socket of sockets.values()) {
+      if ((socket as SocketWithAuth).userId === userId) {
+        return socket as SocketWithAuth;
+      }
+    }
+
+    return null;
   }
 
   private async getOrders(
