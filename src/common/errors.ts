@@ -242,4 +242,5 @@ export const Errors = {
   TOKEN_VERIFICATION_FAILED: 'Token verification failed',
   UNABLE_TO_CREATE_NOTIFICATION: 'Unable to create notification',
   INVALID_RAW_BODY: 'Invalid raw body',
+  APPLICATION_FEE_NOT_FOUND: 'Application fee not found',
 };
