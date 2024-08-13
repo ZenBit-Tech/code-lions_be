@@ -14,7 +14,7 @@ import { EventsGateway } from './events.gateway';
     forwardRef(() => ChatModule),
     forwardRef(() => NotificationsModule),
     JwtModule,
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   exports: [EventsGateway],
 })

@@ -6,10 +6,11 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import { getClientByUserId } from 'src/common/utils/getClientByUserId';
 import { ORDERS_ON_PAGE } from 'src/config';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -417,6 +418,22 @@ export class OrdersService {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
 
+          const notification: CreateNotificationDTO = {
+            userId: order.buyerId,
+            type: Type.ORDER_REJECTION,
+            orderId: order.orderId,
+          };
+
+          const client: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            order.buyerId,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            client,
+            notification,
+          );
+
           await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
         },
       );
@@ -475,6 +492,40 @@ export class OrdersService {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
 
+          const notificationBuyer: CreateNotificationDTO = {
+            userId: buyer.id,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.SENT,
+          };
+
+          const notificationVendor: CreateNotificationDTO = {
+            userId: order.vendorId,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.SENT,
+          };
+
+          const clientBuyer: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            buyer.id,
+          );
+
+          const clientVendor: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            order.vendorId,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientBuyer,
+            notificationBuyer,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientVendor,
+            notificationVendor,
+          );
+
           await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
         },
       );
@@ -527,6 +578,40 @@ export class OrdersService {
           if (!isMailSent) {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
+
+          const notificationBuyer: CreateNotificationDTO = {
+            userId: buyerId,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.RECEIVED,
+          };
+
+          const notificationVendor: CreateNotificationDTO = {
+            userId: order.vendorId,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.RECEIVED,
+          };
+
+          const clientBuyer: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            buyerId,
+          );
+
+          const clientVendor: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            order.vendorId,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientBuyer,
+            notificationBuyer,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientVendor,
+            notificationVendor,
+          );
 
           const totalOrderAmount: number = order.price + order.shipping;
           const paymentIntentId: string = order.buyerOrder.paymentId;
@@ -594,6 +679,40 @@ export class OrdersService {
           if (!isMailSent) {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
+
+          const notificationBuyer: CreateNotificationDTO = {
+            userId: buyerId,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.SENT_BACK,
+          };
+
+          const notificationVendor: CreateNotificationDTO = {
+            userId: order.vendorId,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.SENT_BACK,
+          };
+
+          const clientBuyer: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            buyerId,
+          );
+
+          const clientVendor: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            order.vendorId,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientBuyer,
+            notificationBuyer,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientVendor,
+            notificationVendor,
+          );
         },
       );
     } catch (error) {
@@ -628,17 +747,39 @@ export class OrdersService {
 
       await this.orderRepository.save(order);
 
-      const notification: CreateNotificationDTO = {
+      const notificationBuyer: CreateNotificationDTO = {
         userId: order.buyerId,
-        type: Type.ORDER_REJECTION,
+        type: Type.SHIPPING_UPDATES,
         orderId: order.orderId,
+        shippingStatus: Status.RETURNED,
       };
 
-      const client: SocketWithAuth = await this.getClientByUserId(
+      const notificationVendor: CreateNotificationDTO = {
+        userId: order.vendorId,
+        type: Type.SHIPPING_UPDATES,
+        orderId: order.orderId,
+        shippingStatus: Status.RETURNED,
+      };
+
+      const clientBuyer: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
         order.buyerId,
       );
 
-      await this.eventsGateway.handleCreateNotification(client, notification);
+      const clientVendor: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        order.vendorId,
+      );
+
+      await this.eventsGateway.handleCreateNotification(
+        clientBuyer,
+        notificationBuyer,
+      );
+
+      await this.eventsGateway.handleCreateNotification(
+        clientVendor,
+        notificationVendor,
+      );
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -689,6 +830,40 @@ export class OrdersService {
           if (!isMailSent) {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
+
+          const notificationBuyer: CreateNotificationDTO = {
+            userId: buyerId,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.SENT_BACK,
+          };
+
+          const notificationVendor: CreateNotificationDTO = {
+            userId: vendor.id,
+            type: Type.SHIPPING_UPDATES,
+            orderId: order.orderId,
+            shippingStatus: Status.SENT_BACK,
+          };
+
+          const clientBuyer: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            buyerId,
+          );
+
+          const clientVendor: SocketWithAuth = await getClientByUserId(
+            this.eventsGateway.server,
+            vendor.id,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientBuyer,
+            notificationBuyer,
+          );
+
+          await this.eventsGateway.handleCreateNotification(
+            clientVendor,
+            notificationVendor,
+          );
         },
       );
     } catch (error) {
@@ -701,20 +876,6 @@ export class OrdersService {
       }
       throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
     }
-  }
-
-  private async getClientByUserId(
-    userId: string,
-  ): Promise<SocketWithAuth | null> {
-    const sockets = this.eventsGateway.server.sockets.sockets;
-
-    for (const socket of sockets.values()) {
-      if ((socket as SocketWithAuth).userId === userId) {
-        return socket as SocketWithAuth;
-      }
-    }
-
-    return null;
   }
 
   private async getOrders(

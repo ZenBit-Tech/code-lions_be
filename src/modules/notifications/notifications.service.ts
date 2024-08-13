@@ -178,6 +178,14 @@ export class NotificationsService {
           text: `Hi ${userName}. Your email address has been changed successfully. If you did not request this change, please contact support immediately.`,
         };
 
+      case Type.LOW_RATING:
+        return {
+          id: id,
+          type: type,
+          createdAt: createdAt,
+          text: `Hi ${userName}. Unfortunately you have received a lot of low ratings on CodeLions. Your account will be suspended for 30 days`,
+        };
+
       default:
         return {
           id: id,
