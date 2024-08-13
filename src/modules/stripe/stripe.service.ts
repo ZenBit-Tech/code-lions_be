@@ -9,7 +9,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import Stripe from 'stripe';
+import { Repository } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { CANADA_POST_LOGO } from 'src/config';
@@ -20,6 +22,7 @@ import { ProductsService } from 'src/modules/products/products.service';
 import { UsersService } from 'src/modules/users/users.service';
 
 import { PaymentDto } from './dto/payment.dto';
+import { ApplicationFee } from './entities/stripe.entity';
 import { StripeModuleOptions } from './stripe.interfaces';
 import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
 
@@ -35,6 +38,8 @@ export class StripeService {
   private readonly Logger = new Logger(StripeService.name);
 
   constructor(
+    @InjectRepository(ApplicationFee)
+    private readonly applicationFeeRepository: Repository<ApplicationFee>,
     @Inject(MODULE_OPTIONS_TOKEN) private options: StripeModuleOptions,
     private usersServise: UsersService,
     private productsService: ProductsService,
@@ -329,6 +334,31 @@ export class StripeService {
       return_url: this.configService.get<string>('STRIPE_RETURN_URL'),
       type: 'account_onboarding',
     });
+  }
+
+  async getApplicationFee(): Promise<number> {
+    const applicationFeeRecord = await this.applicationFeeRepository.findOne({
+      where: { id: 1 },
+    });
+
+    if (!applicationFeeRecord) {
+      throw new Error(Errors.APPLICATION_FEE_NOT_FOUND);
+    }
+
+    return applicationFeeRecord.applicationFee;
+  }
+
+  async updateApplicationFee(newFee: number): Promise<ApplicationFee> {
+    const applicationFeeRecord = await this.applicationFeeRepository.findOne({
+      where: { id: 1 },
+    });
+
+    if (!applicationFeeRecord) {
+      throw new NotFoundException(Errors.APPLICATION_FEE_NOT_FOUND);
+    }
+    applicationFeeRecord.applicationFee = newFee;
+
+    return this.applicationFeeRepository.save(applicationFeeRecord);
   }
 
   private async sendErrorMail(

@@ -517,16 +517,17 @@ export class OrdersService {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
 
-          // const totalOrderAmount: number = order.price + order.shipping;
-          // const paymentIntentId: string = order.buyerOrder.paymentId;
-          // const currentFee: number = await this.stripeService.getApplicationFee();
+          const totalOrderAmount: number = order.price + order.shipping;
+          const paymentIntentId: string = order.buyerOrder.paymentId;
+          const currentFee: number =
+            await this.stripeService.getApplicationFee();
 
-          // await this.stripeService.transferMoneyToVendor(
-          //   vendor.stripeAccount,
-          //   paymentIntentId,
-          //   totalOrderAmount,
-          //   currentFee
-          // );
+          await this.stripeService.transferMoneyToVendor(
+            vendor.stripeAccount,
+            paymentIntentId,
+            totalOrderAmount,
+            currentFee,
+          );
         },
       );
     } catch (error) {
@@ -540,152 +541,144 @@ export class OrdersService {
     }
   }
 
-  // async sendOrderByBuyer(
-  //   buyerId: string,
-  //   orderId: number,
-  //   trackingNumber: string,
-  // ): Promise<void> {
-  //   const queryRunner = this.dataSource.createQueryRunner();
+  async sendOrderByBuyer(
+    buyerId: string,
+    orderId: number,
+    trackingNumber: string,
+  ): Promise<void> {
+    try {
+      await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const order = await transactionalEntityManager.findOne(Order, {
+            where: { orderId, buyerId },
+          });
 
-  //   await queryRunner.connect();
-  //   await queryRunner.startTransaction();
+          if (!order) {
+            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+          }
 
-  //   try {
-  //     const order = await this.orderRepository.findOne({
-  //       where: { orderId, buyerId },
-  //     });
+          order.status = Status.SENT_BACK;
+          order.trackingNumber = trackingNumber;
 
-  //     if (!order) {
-  //       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-  //     }
+          await transactionalEntityManager.save(order);
 
-  //     order.status = Status.SENT_BACK;
-  //     order.trackingNumber = trackingNumber;
+          const vendor = await transactionalEntityManager.findOne(User, {
+            where: { id: order.vendorId },
+          });
 
-  //     await queryRunner.manager.save(order);
+          if (!vendor) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
 
-  //     const vendor = await this.userRepository.findOne({
-  //       where: { id: order.vendorId },
-  //     });
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: vendor.email,
+            subject: 'Order sent back on CodeLions!',
+            templateName: 'sent-back-order.hbs',
+            context: {
+              orderNumber: order.orderId,
+              trackingNumber,
+            },
+          });
 
-  //     const isMailSent = await this.mailerService.sendMail({
-  //       receiverEmail: vendor.email,
-  //       subject: 'Order sent back on CodeLions!',
-  //       templateName: 'sent-back-order.hbs',
-  //       context: {
-  //         orderNumber: order.orderId,
-  //         trackingNumber,
-  //       },
-  //     });
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_SEND_ORDER);
+    }
+  }
 
-  //     if (!isMailSent) {
-  //       throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-  //     }
+  async returnOrder(vendorId: string, orderId: number): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId, vendorId },
+        relations: ['products'],
+      });
 
-  //     await queryRunner.commitTransaction();
-  //   } catch (error) {
-  //     await queryRunner.rollbackTransaction();
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-  //     if (
-  //       error instanceof NotFoundException ||
-  //       error instanceof ServiceUnavailableException
-  //     ) {
-  //       throw error;
-  //     }
+      order.status = Status.RETURNED;
+      order.trackingNumber = null;
 
-  //     throw new InternalServerErrorException(Errors.FAILED_TO_SEND_BACK);
-  //   } finally {
-  //     await queryRunner.release();
-  //   }
-  // }
+      for (const product of order.products) {
+        product.isAvailable = true;
+        await this.productRepository.save(product);
+      }
 
-  // async returnOrder(vendorId: string, orderId: number): Promise<void> {
-  //   try {
-  //     const order = await this.orderRepository.findOne({
-  //       where: { orderId, vendorId },
-  //     });
+      await this.orderRepository.save(order);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_RETURN_ORDER);
+    }
+  }
 
-  //     if (!order) {
-  //       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-  //     }
+  async paySendOrder(
+    buyerId: string,
+    orderId: number,
+    trackingNumber: string,
+  ): Promise<void> {
+    try {
+      await this.entityManager.transaction(
+        async (transactionalEntityManager) => {
+          const order = await transactionalEntityManager.findOne(Order, {
+            where: { orderId, buyerId },
+          });
 
-  //     order.status = Status.RETURNED;
-  //     order.trackingNumber = null;
+          if (!order) {
+            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+          }
 
-  //     // const products = order.products;
+          order.status = Status.SENT_BACK;
+          order.trackingNumber = trackingNumber;
 
-  //     // for (const product of products) {
-  //     //   product.isAvailable = false;
-  //     //   await queryRunner.manager.save(product);
-  //     // }
+          await transactionalEntityManager.save(order);
 
-  //     await this.orderRepository.save(order);
-  //   } catch (error) {
-  //     if (error instanceof NotFoundException) {
-  //       throw error;
-  //     }
-  //     throw new InternalServerErrorException(Errors.FAILED_TO_RETURN_ORDER);
-  //   }
-  // }
+          const vendor = await transactionalEntityManager.findOne(User, {
+            where: { id: order.vendorId },
+          });
 
-  // async paySendOrder(
-  //   buyerId: string,
-  //   orderId: number,
-  //   trackingNumber: string,
-  // ): Promise<void> {
-  //   const queryRunner = this.dataSource.createQueryRunner();
+          if (!vendor) {
+            throw new NotFoundException(Errors.USER_NOT_FOUND);
+          }
 
-  //   await queryRunner.connect();
-  //   await queryRunner.startTransaction();
+          const isMailSent = await this.mailerService.sendMail({
+            receiverEmail: vendor.email,
+            subject: 'Order sent back on CodeLions!',
+            templateName: 'sent-back-order.hbs',
+            context: {
+              orderNumber: order.orderId,
+              trackingNumber,
+            },
+          });
 
-  //   try {
-  //     const order = await this.orderRepository.findOne({
-  //       where: { orderId, buyerId },
-  //     });
-
-  //     if (!order) {
-  //       throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-  //     }
-
-  //     order.status = Status.SENT_BACK;
-  //     order.trackingNumber = trackingNumber;
-
-  //     await queryRunner.manager.save(order);
-
-  //     const vendor = await this.userRepository.findOne({
-  //       where: { id: order.vendorId },
-  //     });
-
-  //     const isMailSent = await this.mailerService.sendMail({
-  //       receiverEmail: vendor.email,
-  //       subject: 'Order sent back on CodeLions!',
-  //       templateName: 'sent-back-order.hbs',
-  //       context: {
-  //         orderNumber: order.orderId,
-  //         trackingNumber,
-  //       },
-  //     });
-
-  //     if (!isMailSent) {
-  //       throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-  //     }
-
-  //     await queryRunner.commitTransaction();
-  //   } catch (error) {
-  //     await queryRunner.rollbackTransaction();
-
-  //     if (
-  //       error instanceof NotFoundException ||
-  //       error instanceof ServiceUnavailableException
-  //     ) {
-  //       throw error;
-  //     }
-
-  //     throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
-  //   } finally {
-  //     await queryRunner.release();
-  //   }
-  // }
+          if (!isMailSent) {
+            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+          }
+        },
+      );
+    } catch (error) {
+      console.error(error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(Errors.FAILED_TO_PAY_AND_SEND);
+    }
+  }
 
   private async getOrders(
     options?: GetOrdersOptions,
