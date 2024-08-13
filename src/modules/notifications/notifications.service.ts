@@ -57,10 +57,12 @@ export class NotificationsService {
 
     const notificationResponse = await this.generateNotification(notification);
 
-    await this.eventsGateway.sendNotificationToUser(
-      userId,
-      notificationResponse,
-    );
+    if (user.notificationsEnabled) {
+      await this.eventsGateway.sendNotificationToUser(
+        userId,
+        notificationResponse,
+      );
+    }
 
     return notificationResponse;
   }
