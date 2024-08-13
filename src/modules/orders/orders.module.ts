@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -15,7 +15,7 @@ import { User } from 'src/modules/users/user.entity';
   imports: [
     TypeOrmModule.forFeature([Order, User, Product, BuyerOrder, Cart]),
     MailerModule,
-    StripeModule,
+    forwardRef(() => StripeModule),
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

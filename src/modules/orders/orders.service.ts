@@ -1,4 +1,6 @@
 import {
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -52,6 +54,7 @@ export class OrdersService {
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     private mailerService: MailerService,
+    @Inject(forwardRef(() => StripeService))
     private stripeService: StripeService,
     private readonly dataSource: DataSource,
   ) {}
