@@ -17,10 +17,10 @@ import {
   EventsGateway,
   SocketWithAuth,
 } from 'src/modules/events/events.gateway';
+import { MailerService } from 'src/modules/mailer/mailer.service';
 import { CreateNotificationDTO } from 'src/modules/notifications/dto/create-notification.dto';
 import { Type } from 'src/modules/notifications/entities/notification-type.enum';
 import { Notification } from 'src/modules/notifications/entities/notification.entity';
-import { MailerService } from 'src/modules/mailer/mailer.service';
 import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
