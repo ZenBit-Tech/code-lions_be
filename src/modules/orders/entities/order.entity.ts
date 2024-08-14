@@ -59,6 +59,26 @@ export class Order {
   trackingNumber: string;
 
   @ApiProperty({
+    example: 'vendor',
+    description: 'The role of the user who rejected the order',
+  })
+  @Column({
+    nullable: true,
+    default: null,
+  })
+  rejectedBy: string;
+
+  @ApiProperty({
+    example: 'The product is not available',
+    description: 'The reason of order rejection',
+  })
+  @Column({
+    nullable: true,
+    default: null,
+  })
+  rejectReason: string;
+
+  @ApiProperty({
     example: 'product1 , product2',
     description: 'The products of the order',
     type: [Product],

@@ -71,7 +71,7 @@ export class ReviewsService {
             throw new NotFoundException(Errors.ORDER_NOT_FOUND);
           }
 
-          if (order.status !== orderStatus.RECEIVED || orderStatus.RETURNED) {
+          if (order.status !== orderStatus.RETURNED) {
             throw new ConflictException(Errors.ORDER_NOT_RECEIVED);
           }
 

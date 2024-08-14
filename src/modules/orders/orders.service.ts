@@ -6,6 +6,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { Interval } from '@nestjs/schedule';
 import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 
@@ -40,6 +41,8 @@ interface GetOrdersOptions {
   sortOrder?: string;
 }
 
+const everyMinute = 60000;
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -58,6 +61,35 @@ export class OrdersService {
     @Inject(forwardRef(() => StripeService))
     private stripeService: StripeService,
   ) {}
+
+  @Interval(everyMinute)
+  async handleOverdueOrders(): Promise<void> {
+    try {
+      const now = new Date();
+      const orders = await this.orderRepository.find({
+        where: {
+          status: Status.RECEIVED,
+        },
+      });
+
+      for (const order of orders) {
+        if (order.receivedAt) {
+          const durationEndDate = new Date(order.receivedAt.getTime());
+
+          durationEndDate.setDate(durationEndDate.getDate() + order.duration);
+
+          if (now > durationEndDate) {
+            order.status = Status.OVERDUE;
+            await this.orderRepository.save(order);
+          }
+        }
+      }
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CHANGE_ORDER_STATUS,
+      );
+    }
+  }
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
     try {
@@ -261,7 +293,16 @@ export class OrdersService {
 
       for (const order of orders) {
         const newOrder = new Order();
+        const maxDurationProduct = order.products.reduce(
+          (maxProduct, currentProduct) => {
+            return currentProduct.duration > (maxProduct?.duration || 0)
+              ? currentProduct
+              : maxProduct;
+          },
+          null,
+        );
 
+        newOrder.duration = maxDurationProduct.duration;
         newOrder.vendorId = order.vendorId;
         newOrder.buyerId = userId;
         newOrder.shipping = shippingPrice / orders.length;
@@ -338,13 +379,13 @@ export class OrdersService {
     if (sentOrders.length === orders.length) {
       await this.stripeService.captureMoney(
         buyerOrder.paymentId,
-        buyerOrder.price,
+        Number(buyerOrder.price),
       );
     } else if (rejectedOrders.length === orders.length) {
       await this.stripeService.returnMoney(buyerOrder.paymentId);
     } else {
       const amount = sentOrders.reduce(
-        (total, order) => total + order.price + order.shipping,
+        (total, order) => total + Number(order.price) + Number(order.shipping),
         0,
       );
 
@@ -373,6 +414,9 @@ export class OrdersService {
           }
 
           order.status = Status.REJECTED;
+          order.rejectedBy = user.role;
+          order.rejectReason = rejectReason;
+
           await transactionalEntityManager.save(order);
 
           for (const product of order.products) {
@@ -492,6 +536,7 @@ export class OrdersService {
           }
 
           order.status = Status.RECEIVED;
+          order.receivedAt = new Date();
           order.trackingNumber = null;
 
           await transactionalEntityManager.save(order);
@@ -517,16 +562,15 @@ export class OrdersService {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
 
-          const totalOrderAmount: number = order.price + order.shipping;
-          const paymentIntentId: string = order.buyerOrder.paymentId;
-          const currentFee: number =
-            await this.stripeService.getApplicationFee();
+          const totalOrderAmount = Number(order.price) + Number(order.shipping);
+          const paymentIntentId = order.buyerOrder.paymentId;
+          const currentFee = await this.stripeService.getApplicationFee();
 
           await this.stripeService.transferMoneyToVendor(
             vendor.stripeAccount,
             paymentIntentId,
             totalOrderAmount,
-            currentFee,
+            Number(currentFee),
           );
         },
       );
@@ -669,7 +713,6 @@ export class OrdersService {
         },
       );
     } catch (error) {
-      console.error(error);
       if (
         error instanceof NotFoundException ||
         error instanceof ServiceUnavailableException

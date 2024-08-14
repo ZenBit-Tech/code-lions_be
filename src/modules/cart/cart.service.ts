@@ -153,7 +153,6 @@ export class CartService {
         },
       );
     } catch (error) {
-      console.error(error);
       if (
         error instanceof NotFoundException ||
         error instanceof ConflictException

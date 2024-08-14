@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -14,6 +15,7 @@ import { User } from 'src/modules/users/user.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, User, Product, BuyerOrder, Cart]),
+    ScheduleModule.forRoot(),
     MailerModule,
     forwardRef(() => StripeModule),
   ],
