@@ -379,13 +379,13 @@ export class OrdersService {
     if (sentOrders.length === orders.length) {
       await this.stripeService.captureMoney(
         buyerOrder.paymentId,
-        buyerOrder.price,
+        Number(buyerOrder.price),
       );
     } else if (rejectedOrders.length === orders.length) {
       await this.stripeService.returnMoney(buyerOrder.paymentId);
     } else {
       const amount = sentOrders.reduce(
-        (total, order) => total + order.price + order.shipping,
+        (total, order) => total + Number(order.price) + Number(order.shipping),
         0,
       );
 
@@ -414,6 +414,9 @@ export class OrdersService {
           }
 
           order.status = Status.REJECTED;
+          order.rejectedBy = user.role;
+          order.rejectReason = rejectReason;
+
           await transactionalEntityManager.save(order);
 
           for (const product of order.products) {
@@ -559,16 +562,15 @@ export class OrdersService {
             throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
           }
 
-          const totalOrderAmount: number = order.price + order.shipping;
-          const paymentIntentId: string = order.buyerOrder.paymentId;
-          const currentFee: number =
-            await this.stripeService.getApplicationFee();
+          const totalOrderAmount = Number(order.price) + Number(order.shipping);
+          const paymentIntentId = order.buyerOrder.paymentId;
+          const currentFee = await this.stripeService.getApplicationFee();
 
           await this.stripeService.transferMoneyToVendor(
             vendor.stripeAccount,
             paymentIntentId,
             totalOrderAmount,
-            currentFee,
+            Number(currentFee),
           );
         },
       );
@@ -711,7 +713,6 @@ export class OrdersService {
         },
       );
     } catch (error) {
-      console.error(error);
       if (
         error instanceof NotFoundException ||
         error instanceof ServiceUnavailableException

@@ -37,8 +37,6 @@ export class FollowService {
 
       return buyerWithFollowers;
     } catch (error) {
-      console.log(error);
-
       if (error instanceof NotFoundException) {
         throw error;
       }
