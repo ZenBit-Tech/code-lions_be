@@ -19,18 +19,23 @@ import { CartService } from 'src/modules/cart/cart.service';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { ProductsService } from 'src/modules/products/products.service';
+import { OverduePaymentDto } from 'src/modules/stripe/dto/overdue-payment.dto';
+import { PaymentDto } from 'src/modules/stripe/dto/payment.dto';
+import { ApplicationFee } from 'src/modules/stripe/entities/stripe.entity';
+import { StripeModuleOptions } from 'src/modules/stripe/stripe.interfaces';
+import { MODULE_OPTIONS_TOKEN } from 'src/modules/stripe/stripe.module-definition';
 import { UsersService } from 'src/modules/users/users.service';
-
-import { PaymentDto } from './dto/payment.dto';
-import { ApplicationFee } from './entities/stripe.entity';
-import { StripeModuleOptions } from './stripe.interfaces';
-import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
 
 const minDifference = 0.01;
 const centsInDollar = 100;
 const successStatus = 'succeeded';
 const holdOnStatus = 'requires_capture';
 const currency = 'CAD';
+
+enum PaymentType {
+  OVERDUE = 'overdue',
+  ORDER = 'order',
+}
 
 @Injectable()
 export class StripeService {
@@ -114,6 +119,7 @@ export class StripeService {
       const session = await this.StripeApi.checkout.sessions.create({
         line_items: lineItems,
         metadata: {
+          type: PaymentType.ORDER,
           userId: customerId,
           shippingPrice: shippingPrice,
         },
@@ -132,6 +138,61 @@ export class StripeService {
         error instanceof NotFoundException ||
         error instanceof ConflictException
       ) {
+        throw error;
+      }
+      this.Logger.error(error);
+      throw new InternalServerErrorException(Errors.PAYMENT_ERROR);
+    }
+  }
+
+  async createOverdueSession(
+    customerId: string,
+    overduePayment: OverduePaymentDto,
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
+    const { vendorStripeAccount, orderId, amount } = overduePayment;
+
+    try {
+      const user = await this.usersServise.getUserById(customerId);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const session = await this.StripeApi.checkout.sessions.create({
+        line_items: [
+          {
+            price_data: {
+              currency: currency,
+              product_data: {
+                name: `Overdue payment for order #${orderId}`,
+              },
+              unit_amount: Math.round(Number(amount) * centsInDollar),
+            },
+            quantity: 1,
+          },
+        ],
+        payment_intent_data: {
+          application_fee_amount: 100,
+          transfer_data: {
+            destination: vendorStripeAccount,
+          },
+        },
+
+        metadata: {
+          type: PaymentType.OVERDUE,
+          orderId: orderId,
+        },
+
+        mode: 'payment',
+        success_url: this.configService.get<string>(
+          'STRIPE_OVERDUE_SUCCESS_URL',
+        ),
+        cancel_url: this.configService.get<string>('STRIPE_OVERDUE_CANCEL_URL'),
+      });
+
+      return session;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
         throw error;
       }
       this.Logger.error(error);

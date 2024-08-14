@@ -27,6 +27,7 @@ import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
 import { AccountLinkResponseDto } from 'src/modules/stripe/dto/account-link-response.dto';
+import { OverduePaymentDto } from 'src/modules/stripe/dto/overdue-payment.dto';
 import { PaymentDto } from 'src/modules/stripe/dto/payment.dto';
 import { StripeService } from 'src/modules/stripe/stripe.service';
 import { User } from 'src/modules/users/user.entity';
@@ -111,6 +112,71 @@ export class StripeController {
     const session = await this.stripeService.createCheckoutSession(
       request.user.id,
       payment,
+    );
+
+    return session;
+  }
+
+  @Post('create-overdue-session')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({
+    summary: 'Create checkout session for overdue payment',
+    tags: ['stripe'],
+    description:
+      'Create checkout session and returns object with session id and link',
+  })
+  @ApiCreatedResponse({
+    description: 'Created checkout session for overdue payment',
+    type: AccountLinkResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user or not found order with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create checkout session for overdue payment',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.PAYMENT_ERROR,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @Roles(Role.BUYER)
+  async createOverdueSession(
+    @Body() overduePayment: OverduePaymentDto,
+    @Req() request: { user: User },
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
+    const session = await this.stripeService.createOverdueSession(
+      request.user.id,
+      overduePayment,
     );
 
     return session;
