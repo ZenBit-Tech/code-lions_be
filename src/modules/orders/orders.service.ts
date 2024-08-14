@@ -373,6 +373,9 @@ export class OrdersService {
           }
 
           order.status = Status.REJECTED;
+          order.rejectedBy = user.role;
+          order.rejectReason = rejectReason;
+
           await transactionalEntityManager.save(order);
 
           for (const product of order.products) {
