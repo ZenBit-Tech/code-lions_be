@@ -672,7 +672,6 @@ export class OrdersService {
         },
       );
     } catch (error) {
-      console.error(error);
       if (
         error instanceof NotFoundException ||
         error instanceof ServiceUnavailableException

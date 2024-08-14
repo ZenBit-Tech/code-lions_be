@@ -22,6 +22,20 @@ export class OrderResponseDTO {
   orderId: number;
 
   @ApiProperty({
+    example: '51c674384-f944-401b-949b-b76e8793bdc9',
+    description: 'The ID of the vendor',
+    type: String,
+  })
+  vendorId: string;
+
+  @ApiProperty({
+    example: '31c674384-f944-401b-949b-b76e8793bdc9',
+    description: 'The ID of the buyer',
+    type: String,
+  })
+  buyerId: string;
+
+  @ApiProperty({
     example: 15,
     description: 'The order`s shipping',
     type: Number,
@@ -81,6 +95,8 @@ export class OrderResponseDTO {
   constructor(order: Order) {
     this.id = order.id;
     this.orderId = order.orderId;
+    this.vendorId = order.vendorId;
+    this.buyerId = order.buyerId;
     this.products = order.products;
     this.price = order.price;
     this.status = order.status;
