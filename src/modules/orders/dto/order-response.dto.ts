@@ -43,6 +43,20 @@ export class OrderResponseDTO {
   status: Status;
 
   @ApiProperty({
+    example: '23456',
+    description: 'The remaining time to sent back.',
+    type: Number,
+  })
+  timer: number | null;
+
+  @ApiProperty({
+    example: '3939399',
+    description: 'Tracking number of order',
+    type: String,
+  })
+  trackingNumber: string | null;
+
+  @ApiProperty({
     example: '2024-06-28 21:04:24',
     description: 'The date the order was created',
     type: Date,
@@ -65,5 +79,29 @@ export class OrderResponseDTO {
     this.status = order.status;
     this.createdAt = order.createdAt;
     this.shipping = order.shipping;
+    this.trackingNumber = order.trackingNumber;
+    this.timer = this.calculateRemainingTime(order);
+  }
+
+  private calculateRemainingTime(order: Order): number | null {
+    const hours = 24;
+    const minutes = 60;
+    const seconds = 60;
+    const milliseconds = 1000;
+
+    if (
+      (order.status === Status.RECEIVED || order.status === Status.OVERDUE) &&
+      order.receivedAt
+    ) {
+      const expirationTime = new Date(
+        order.receivedAt.getTime() +
+          order.duration * hours * minutes * seconds * milliseconds,
+      );
+      const currentTime = new Date();
+
+      return expirationTime.getTime() - currentTime.getTime();
+    }
+
+    return null;
   }
 }

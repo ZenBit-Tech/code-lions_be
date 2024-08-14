@@ -6,8 +6,9 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Interval } from '@nestjs/schedule';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { getClientByUserId } from 'src/common/utils/getClientByUserId';
@@ -48,6 +49,8 @@ interface GetOrdersOptions {
   sortOrder?: string;
 }
 
+const everyMinute = 60000;
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -70,6 +73,35 @@ export class OrdersService {
     @Inject(forwardRef(() => StripeService))
     private stripeService: StripeService,
   ) {}
+
+  @Interval(everyMinute)
+  async handleOverdueOrders(): Promise<void> {
+    try {
+      const now = new Date();
+      const orders = await this.orderRepository.find({
+        where: {
+          status: Status.RECEIVED,
+        },
+      });
+
+      for (const order of orders) {
+        if (order.receivedAt) {
+          const durationEndDate = new Date(order.receivedAt.getTime());
+
+          durationEndDate.setDate(durationEndDate.getDate() + order.duration);
+
+          if (now > durationEndDate) {
+            order.status = Status.OVERDUE;
+            await this.orderRepository.save(order);
+          }
+        }
+      }
+    } catch (error) {
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CHANGE_ORDER_STATUS,
+      );
+    }
+  }
 
   async findByVendor(vendorId: string): Promise<OrderResponseDTO[]> {
     try {
@@ -273,7 +305,16 @@ export class OrdersService {
 
       for (const order of orders) {
         const newOrder = new Order();
+        const maxDurationProduct = order.products.reduce(
+          (maxProduct, currentProduct) => {
+            return currentProduct.duration > (maxProduct?.duration || 0)
+              ? currentProduct
+              : maxProduct;
+          },
+          null,
+        );
 
+        newOrder.duration = maxDurationProduct.duration;
         newOrder.vendorId = order.vendorId;
         newOrder.buyerId = userId;
         newOrder.shipping = shippingPrice / orders.length;
@@ -554,6 +595,7 @@ export class OrdersService {
           }
 
           order.status = Status.RECEIVED;
+          order.receivedAt = new Date();
           order.trackingNumber = null;
 
           await transactionalEntityManager.save(order);

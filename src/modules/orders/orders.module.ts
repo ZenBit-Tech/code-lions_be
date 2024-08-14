@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Cart } from 'src/modules/cart/cart.entity';
@@ -26,6 +27,7 @@ import { User } from 'src/modules/users/user.entity';
     MailerModule,
     forwardRef(() => EventsModule),
     forwardRef(() => StripeModule),
+    ScheduleModule.forRoot(),
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

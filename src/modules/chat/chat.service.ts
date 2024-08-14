@@ -434,7 +434,9 @@ export class ChatService {
     if (message) {
       let contentType: string;
 
-      if (message.content) {
+      if (message.content && message.content.match(IS_VALID_URL)) {
+        contentType = chatContentType.LINK;
+      } else if (message.content) {
         contentType = chatContentType.TEXT;
       } else if (message.fileType === chatContentType.IMAGE) {
         contentType = chatContentType.IMAGE;
