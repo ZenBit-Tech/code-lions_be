@@ -249,4 +249,6 @@ export const Errors = {
   UNABLE_TO_CREATE_NOTIFICATION: 'Unable to create notification',
   INVALID_RAW_BODY: 'Invalid raw body',
   APPLICATION_FEE_NOT_FOUND: 'Application fee not found',
+  LOGIN_VIA_GOOGLE: 'Please, login via google',
+  LOGIN_VIA_EMAIL: 'Please, login via email',
 };
