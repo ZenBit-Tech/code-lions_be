@@ -151,6 +151,11 @@ export class StripeService {
   ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
     const { vendorStripeAccount, orderId, amount } = overduePayment;
 
+    const fee = await this.getApplicationFee();
+    const applicationFeeAmount = Math.round(
+      fee * Number(amount) * centsInDollar,
+    );
+
     try {
       const user = await this.usersServise.getUserById(customerId);
 
@@ -172,7 +177,7 @@ export class StripeService {
           },
         ],
         payment_intent_data: {
-          application_fee_amount: 100,
+          application_fee_amount: applicationFeeAmount,
           transfer_data: {
             destination: vendorStripeAccount,
           },
@@ -263,7 +268,7 @@ export class StripeService {
   ): Promise<boolean> {
     try {
       const transfer = await this.StripeApi.transfers.create({
-        amount: Math.round(amount * (centsInDollar - fee)),
+        amount: Math.round(amount * centsInDollar * (1 - fee)),
         currency: currency,
         destination: vendorStripeAccount,
         transfer_group: paymentIntentId,
@@ -294,7 +299,7 @@ export class StripeService {
   }
 
   async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
-    this.Logger.log(event);
+    //this.Logger.log(event);
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentIntentId = session.payment_intent as string;

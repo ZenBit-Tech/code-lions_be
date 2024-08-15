@@ -8,10 +8,12 @@ import {
 } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import Stripe from 'stripe';
 import { Repository, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { ORDERS_ON_PAGE } from 'src/config';
+import { OVERDUE_DAILY_FINE } from 'src/config';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Cart } from 'src/modules/cart/cart.entity';
 import { MailerService } from 'src/modules/mailer/mailer.service';
@@ -319,7 +321,7 @@ export class OrdersService {
 
           product.isAvailable = false;
           await this.productRepository.save(product);
-          await this.cartRepository.delete(product);
+          await this.cartRepository.delete({ productId: product.id });
           newOrder.products.push(product);
         }
 
@@ -399,60 +401,56 @@ export class OrdersService {
     rejectReason: string,
   ): Promise<void> {
     try {
-      return await this.entityManager.transaction(
-        async (transactionalEntityManager) => {
-          const order = await transactionalEntityManager.findOne(Order, {
-            where: [
-              { vendorId: user.id, orderId },
-              { buyerId: user.id, orderId },
-            ],
-            relations: ['products', 'buyerOrder'],
-          });
+      const order = await this.entityManager.findOne(Order, {
+        where: [
+          { vendorId: user.id, orderId },
+          { buyerId: user.id, orderId },
+        ],
+        relations: ['products', 'buyerOrder'],
+      });
 
-          if (!order) {
-            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-          }
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-          order.status = Status.REJECTED;
-          order.rejectedBy = user.role;
-          order.rejectReason = rejectReason;
+      order.status = Status.REJECTED;
+      order.rejectedBy = user.role;
+      order.rejectReason = rejectReason;
 
-          await transactionalEntityManager.save(order);
+      await this.entityManager.save(order);
 
-          for (const product of order.products) {
-            product.isAvailable = true;
-            await transactionalEntityManager.save(product);
-          }
+      for (const product of order.products) {
+        product.isAvailable = true;
+        await this.entityManager.save(product);
+      }
 
-          const partnerId =
-            user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
+      const partnerId =
+        user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
 
-          const partner = await transactionalEntityManager.findOne(User, {
-            where: { id: partnerId },
-          });
+      const partner = await this.entityManager.findOne(User, {
+        where: { id: partnerId },
+      });
 
-          if (!partner) {
-            throw new NotFoundException(Errors.USER_NOT_FOUND);
-          }
+      if (!partner) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-          const isMailSent = await this.mailerService.sendMail({
-            receiverEmail: partner.email,
-            subject: 'Order rejected on CodeLions!',
-            templateName: 'reject-order.hbs',
-            context: {
-              orderNumber: order.orderId,
-              role: user.role,
-              rejectReason,
-            },
-          });
-
-          if (!isMailSent) {
-            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-          }
-
-          await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: partner.email,
+        subject: 'Order rejected on CodeLions!',
+        templateName: 'reject-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          role: user.role,
+          rejectReason,
         },
-      );
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -470,47 +468,43 @@ export class OrdersService {
     trackingNumber: string,
   ): Promise<void> {
     try {
-      await this.entityManager.transaction(
-        async (transactionalEntityManager) => {
-          const order = await transactionalEntityManager.findOne(Order, {
-            where: { orderId, vendorId },
-            relations: ['buyerOrder'],
-          });
+      const order = await this.entityManager.findOne(Order, {
+        where: { orderId, vendorId },
+        relations: ['buyerOrder'],
+      });
 
-          if (!order) {
-            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-          }
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-          order.status = Status.SENT;
-          order.trackingNumber = trackingNumber;
+      order.status = Status.SENT;
+      order.trackingNumber = trackingNumber;
 
-          await transactionalEntityManager.save(order);
+      await this.entityManager.save(order);
 
-          const buyer = await transactionalEntityManager.findOne(User, {
-            where: { id: order.buyerId },
-          });
+      const buyer = await this.entityManager.findOne(User, {
+        where: { id: order.buyerId },
+      });
 
-          if (!buyer) {
-            throw new NotFoundException(Errors.USER_NOT_FOUND);
-          }
+      if (!buyer) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-          const isMailSent = await this.mailerService.sendMail({
-            receiverEmail: buyer.email,
-            subject: 'Order sent on CodeLions!',
-            templateName: 'sent-order.hbs',
-            context: {
-              orderNumber: order.orderId,
-              trackingNumber,
-            },
-          });
-
-          if (!isMailSent) {
-            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-          }
-
-          await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: buyer.email,
+        subject: 'Order sent on CodeLions!',
+        templateName: 'sent-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
         },
-      );
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -672,46 +666,49 @@ export class OrdersService {
     buyerId: string,
     orderId: number,
     trackingNumber: string,
-  ): Promise<void> {
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
     try {
-      await this.entityManager.transaction(
-        async (transactionalEntityManager) => {
-          const order = await transactionalEntityManager.findOne(Order, {
-            where: { orderId, buyerId },
-          });
+      const order = await this.orderRepository.findOne({
+        where: { orderId, buyerId },
+      });
 
-          if (!order) {
-            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-          }
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-          order.status = Status.SENT_BACK;
-          order.trackingNumber = trackingNumber;
+      await this.orderRepository.save(order);
 
-          await transactionalEntityManager.save(order);
+      const vendor = await this.userRepository.findOne({
+        where: { id: order.vendorId },
+      });
 
-          const vendor = await transactionalEntityManager.findOne(User, {
-            where: { id: order.vendorId },
-          });
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-          if (!vendor) {
-            throw new NotFoundException(Errors.USER_NOT_FOUND);
-          }
+      const receivedAt = new Date(order.receivedAt);
+      const overdueDays = this.calculateOverdueDays(order.duration, receivedAt);
+      const vendorStripeAccount = vendor.stripeAccount;
 
-          const isMailSent = await this.mailerService.sendMail({
-            receiverEmail: vendor.email,
-            subject: 'Order sent back on CodeLions!',
-            templateName: 'sent-back-order.hbs',
-            context: {
-              orderNumber: order.orderId,
-              trackingNumber,
-            },
-          });
+      const session = await this.stripeService.createOverdueSession(buyerId, {
+        vendorStripeAccount,
 
-          if (!isMailSent) {
-            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-          }
+        orderId: orderId,
+
+        amount: overdueDays * OVERDUE_DAILY_FINE,
+      });
+
+      await this.mailerService.sendMail({
+        receiverEmail: vendor.email,
+        subject: 'Order sent back on CodeLions!',
+        templateName: 'sent-back-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
         },
-      );
+      });
+
+      return session;
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -819,5 +816,20 @@ export class OrdersService {
         Errors.FAILED_TO_FETCH_VENDOR_ORDERS,
       );
     }
+  }
+
+  private calculateOverdueDays(duration: number, receivedAt: Date): number {
+    const msInDay = 86400000;
+    const dueDate = new Date(receivedAt);
+
+    dueDate.setDate(dueDate.getDate() + duration);
+
+    const currentDate = new Date();
+
+    const diffTime = currentDate.getTime() - dueDate.getTime();
+
+    const diffDays = Math.ceil(diffTime / msInDay);
+
+    return diffDays > 0 ? diffDays : 0;
   }
 }
