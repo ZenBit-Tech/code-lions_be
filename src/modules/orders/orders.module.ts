@@ -11,6 +11,7 @@ import { Order } from 'src/modules/orders/entities/order.entity';
 import { OrdersController } from 'src/modules/orders/orders.controller';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { Review } from 'src/modules/reviews/review.entity';
 import { StripeModule } from 'src/modules/stripe/stripe.module';
 import { User } from 'src/modules/users/user.entity';
 
@@ -23,6 +24,7 @@ import { User } from 'src/modules/users/user.entity';
       BuyerOrder,
       Cart,
       Notification,
+      Review,
     ]),
     MailerModule,
     forwardRef(() => EventsModule),

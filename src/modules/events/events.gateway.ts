@@ -104,8 +104,6 @@ export class EventsGateway
 
       const notifications = this.notificationsStore.get(client.userId) || [];
 
-      console.error('notifications: ' + notifications);
-      console.error('notificationsStore: ' + this.notificationsStore);
       notifications.forEach((notification) => {
         client.emit('newNotification', notification);
       });
