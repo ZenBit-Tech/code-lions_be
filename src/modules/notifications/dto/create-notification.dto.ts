@@ -25,6 +25,15 @@ export class CreateNotificationDTO {
   orderId?: number;
 
   @ApiProperty({
+    example: '8b96d532-0681-4ce4-8252-04f585fe9620',
+    description: 'The ID of the user',
+    type: String,
+    required: false,
+  })
+  @IsOptional()
+  userId?: string;
+
+  @ApiProperty({
     example: 'Sent',
     description: 'The shipping status of the order',
     enum: Status,

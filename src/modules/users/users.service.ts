@@ -5,6 +5,8 @@ import {
   ConflictException,
   ServiceUnavailableException,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -14,6 +16,7 @@ import { Repository, Like, FindOptionsWhere } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
 import { Errors } from 'src/common/errors';
+import { getClientByUserId } from 'src/common/utils/getClientByUserId';
 import {
   LIMIT_OF_BEST_VENDORS_PER_PAGE,
   LIMIT_OF_BEST_VENDORS_PRODUCTS_PER_PAGE,
@@ -21,6 +24,12 @@ import {
   VERIFICATION_CODE_EXPIRATION,
 } from 'src/config';
 import { GooglePayloadDto } from 'src/modules/auth/dto/google-payload.dto';
+import {
+  EventsGateway,
+  SocketWithAuth,
+} from 'src/modules/events/events.gateway';
+import { CreateNotificationDTO } from 'src/modules/notifications/dto/create-notification.dto';
+import { Type } from 'src/modules/notifications/entities/notification-type.enum';
 import {
   GetProductsOptions,
   ProductsService,
@@ -55,6 +64,8 @@ export class UsersService {
     private mailerService: MailerService,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @Inject(forwardRef(() => EventsGateway))
+    private eventsGateway: EventsGateway,
   ) {}
 
   private async hashPassword(password: string): Promise<string> {
@@ -540,6 +551,18 @@ export class UsersService {
         },
       });
 
+      const notification: CreateNotificationDTO = {
+        type: Type.CHANGED_PASSWORD,
+        userId: user.id,
+      };
+
+      const client: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        user.id,
+      );
+
+      await this.eventsGateway.handleCreateNotification(client, notification);
+
       if (!isMailSent) {
         throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
       }
@@ -560,6 +583,18 @@ export class UsersService {
       user.isEmailVerified = false;
 
       await this.userRepository.save(user);
+
+      const notification: CreateNotificationDTO = {
+        type: Type.CHANGED_EMAIL,
+        userId: user.id,
+      };
+
+      const client: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        user.id,
+      );
+
+      await this.eventsGateway.handleCreateNotification(client, notification);
 
       return user;
     } catch (error) {

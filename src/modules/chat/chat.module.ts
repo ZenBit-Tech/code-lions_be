@@ -14,7 +14,7 @@ import { Message } from './entities/message.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChatRoom, Message, User, MessageRead]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => EventsModule),
   ],
   controllers: [ChatController],

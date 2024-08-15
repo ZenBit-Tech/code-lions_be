@@ -4,11 +4,14 @@ import {
   NotFoundException,
   InternalServerErrorException,
   ServiceUnavailableException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
 import { Repository, EntityManager, LessThan } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
+import { getClientByUserId } from 'src/common/utils/getClientByUserId';
 import getDateWithoutTime from 'src/common/utils/getDateWithoutTime';
 import {
   LOW_RATINGS_COUNT_ONE,
@@ -18,7 +21,13 @@ import {
   RENTAL_RULES_LINK,
   THIRTY_DAYS,
 } from 'src/config';
+import {
+  EventsGateway,
+  SocketWithAuth,
+} from 'src/modules/events/events.gateway';
 import { MailerService } from 'src/modules/mailer/mailer.service';
+import { CreateNotificationDTO } from 'src/modules/notifications/dto/create-notification.dto';
+import { Type } from 'src/modules/notifications/entities/notification-type.enum';
 import { Status as orderStatus } from 'src/modules/orders/entities/order-status.enum';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { User } from 'src/modules/users/user.entity';
@@ -36,6 +45,8 @@ export class ReviewsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @Inject(forwardRef(() => EventsGateway))
+    private eventsGateway: EventsGateway,
 
     private readonly mailerService: MailerService,
   ) {}
@@ -158,6 +169,18 @@ export class ReviewsService {
         if (!isMailSent) {
           throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
         }
+
+        const notification: CreateNotificationDTO = {
+          type: Type.LOW_RATING,
+          userId: user.id,
+        };
+
+        const client: SocketWithAuth = await getClientByUserId(
+          this.eventsGateway.server,
+          user.id,
+        );
+
+        await this.eventsGateway.handleCreateNotification(client, notification);
       }
     } catch (error) {
       if (
