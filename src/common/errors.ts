@@ -250,4 +250,6 @@ export const Errors = {
   INVALID_RAW_BODY: 'Invalid raw body',
   UNABLE_TO_RETRIEVE_NOTIFICATIONS: 'Unable to retrieve notifications',
   APPLICATION_FEE_NOT_FOUND: 'Application fee not found',
+  LOGIN_VIA_GOOGLE: 'Please, login via google',
+  LOGIN_VIA_EMAIL: 'Please, login via email',
 };

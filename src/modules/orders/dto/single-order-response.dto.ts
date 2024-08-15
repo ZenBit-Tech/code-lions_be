@@ -23,6 +23,13 @@ export class SingleOrderResponse {
   userId: string;
 
   @ApiProperty({
+    description: 'Indicates if the user left review for the order',
+    type: Boolean,
+    example: false,
+  })
+  hasLeftReview: boolean;
+
+  @ApiProperty({
     type: AddressDTO,
     description: 'The address to which the order is delivered',
   })
