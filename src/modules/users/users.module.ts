@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EventsModule } from 'src/modules/events/events.module';
 import { MailerModule } from 'src/modules/mailer/mailer.module';
 import { Product } from 'src/modules/products/entities/product.entity';
 import { ProductsModule } from 'src/modules/products/products.module';
@@ -29,6 +30,7 @@ import { UsersService } from './users.service';
         },
       }),
     }),
+    forwardRef(() => EventsModule),
   ],
   controllers: [UsersController, BestVendorsController, FollowController],
   providers: [UsersService, FollowService],

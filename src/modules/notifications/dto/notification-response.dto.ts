@@ -7,6 +7,13 @@ import { Type } from '../entities/notification-type.enum';
 
 export class NotificationResponseDTO {
   @ApiProperty({
+    example: '61c674384-f944-401b-949b-b76e8793bdc9',
+    description: 'The ID of the notification',
+    type: String,
+  })
+  id: string;
+
+  @ApiProperty({
     example: 'Hi Jon. You have a new notification.',
     description: 'Text of the notification',
     type: String,

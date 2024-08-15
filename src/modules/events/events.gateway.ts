@@ -4,7 +4,6 @@ import {
   Inject,
   Logger,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -21,7 +20,6 @@ import { Errors } from 'src/common/errors';
 import { Type } from 'src/modules/notifications/entities/notification-type.enum';
 import { Status } from 'src/modules/orders/entities/order-status.enum';
 
-import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import {
   GetUserChatsDto,
@@ -33,16 +31,16 @@ import { NotificationResponseDTO } from '../notifications/dto/notification-respo
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 
-type SocketWithAuth = {
+export type SocketWithAuth = {
   userId: string;
 } & Socket;
 
-UseGuards(JwtAuthGuard);
 @WebSocketGateway({ cors: { origin: '*' } })
 export class EventsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly Logger = new Logger(EventsGateway.name);
+  private notificationsStore = new Map<string, NotificationResponseDTO[]>();
 
   @WebSocketServer()
   server: Server;
@@ -103,6 +101,14 @@ export class EventsGateway
         userId: client.userId,
         status: 'online',
       });
+
+      const notifications = this.notificationsStore.get(client.userId) || [];
+
+      notifications.forEach((notification) => {
+        client.emit('newNotification', notification);
+      });
+
+      this.notificationsStore.delete(client.userId);
     } catch (error) {
       this.Logger.error(`Error in handleConnection: ${error.message}`);
     }
@@ -218,13 +224,6 @@ export class EventsGateway
     }
   }
 
-  async sendNotificationToUser(
-    userId: string,
-    notification: NotificationResponseDTO,
-  ): Promise<void> {
-    this.server.to(userId).emit('newNotification', notification);
-  }
-
   @SubscribeMessage('createNotification')
   async handleCreateNotification(
     client: SocketWithAuth,
@@ -244,7 +243,14 @@ export class EventsGateway
           notificationData.shippingStatus,
         );
 
-      client.emit('notificationSaved', savedNotification);
+      if (client.userId === notificationData.userId) {
+        client.emit('newNotification', savedNotification);
+      } else {
+        await this.sendNotificationToUser(
+          notificationData.userId,
+          savedNotification,
+        );
+      }
     } catch (error) {
       throw new BadRequestException(Errors.UNABLE_TO_CREATE_NOTIFICATION);
     }
@@ -255,11 +261,35 @@ export class EventsGateway
     client: SocketWithAuth,
     data: { userId: string },
   ): Promise<NotificationResponseDTO[]> {
-    const notifications =
-      await this.notificationsService.getNotificationsByUser(data.userId);
+    try {
+      const notifications =
+        await this.notificationsService.getNotificationsByUser(data.userId);
 
-    client.emit('userNotifications', notifications);
+      client.emit('userNotifications', notifications);
 
-    return notifications;
+      return notifications;
+    } catch (error) {
+      this.Logger.error(`Error in handleGetNotifications: ${error.message}`);
+      throw new BadRequestException(Errors.UNABLE_TO_RETRIEVE_NOTIFICATIONS);
+    }
+  }
+
+  async sendNotificationToUser(
+    userId: string,
+    notification: NotificationResponseDTO,
+  ): Promise<void> {
+    const connectedSockets = Array.from(this.server.sockets.sockets.values());
+    const userSocket = connectedSockets.find(
+      (socket) => (socket as SocketWithAuth).userId === userId,
+    );
+
+    if (userSocket) {
+      (userSocket as SocketWithAuth).emit('newNotification', notification);
+    } else {
+      if (!this.notificationsStore.has(userId)) {
+        this.notificationsStore.set(userId, []);
+      }
+      this.notificationsStore.get(userId).push(notification);
+    }
   }
 }

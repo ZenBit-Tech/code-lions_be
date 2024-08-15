@@ -81,13 +81,14 @@ export class NotificationsService {
     return Promise.all(notificationsPromises);
   }
 
-  private async generateNotification(
+  async generateNotification(
     notification: Notification,
   ): Promise<NotificationResponseDTO> {
     const HOURS = 24;
     const SECONDS_MINUTES = 60;
     const MILLISECONDS = 1000;
-    const { type, orderId, createdAt, shippingStatus, userId } = notification;
+    const { id, type, orderId, createdAt, shippingStatus, userId } =
+      notification;
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
@@ -139,6 +140,7 @@ export class NotificationsService {
     switch (type) {
       case Type.ORDER_REJECTION:
         return {
+          id: id,
           type: type,
           createdAt: createdAt,
           text: `Hi ${userName}. We regret to inform you that your recent order ${orderLink} has been rejected. Please feel free to contact Vendor or Admin via chat. Thank you for your understanding.`,
@@ -146,6 +148,7 @@ export class NotificationsService {
 
       case Type.SHIPPING_UPDATES:
         return {
+          id: id,
           type: type,
           createdAt: createdAt,
           text: `Hi ${userName}. We confirm that your order ${orderLink} status has been changed to '${shippingStatus}'. Thank you for renting with us!`,
@@ -153,6 +156,7 @@ export class NotificationsService {
 
       case Type.RETURNED_REMINDER:
         return {
+          id: id,
           type: type,
           createdAt: createdAt,
           text: `Hi ${userName}. We would like to remind you that your rental order ${orderLink} is due for return on ${returnDate}. Please make sure to send it back to avoid any late fees. Thank you for your cooperation and choosing us!`,
@@ -160,6 +164,7 @@ export class NotificationsService {
 
       case Type.CHANGED_PASSWORD:
         return {
+          id: id,
           type: type,
           createdAt: createdAt,
           text: `Hi ${userName}. Your password has been changed successfully. If you did not make this change, please contact our support team immediately. Thank you for keeping your account secure!`,
@@ -167,13 +172,23 @@ export class NotificationsService {
 
       case Type.CHANGED_EMAIL:
         return {
+          id: id,
           type: type,
           createdAt: createdAt,
           text: `Hi ${userName}. Your email address has been changed successfully. If you did not request this change, please contact support immediately.`,
         };
 
+      case Type.LOW_RATING:
+        return {
+          id: id,
+          type: type,
+          createdAt: createdAt,
+          text: `Hi ${userName}. Unfortunately you have received a lot of low ratings on CodeLions. Your account will be suspended for 30 days`,
+        };
+
       default:
         return {
+          id: id,
           type: type,
           createdAt: createdAt,
           text: `Hi ${userName}. You have a new notification.`,
