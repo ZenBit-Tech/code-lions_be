@@ -854,6 +854,8 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDER_NOT_FOUND);
       }
 
+      order.status = Status.SENT_BACK;
+      order.trackingNumber = trackingNumber;
       await this.orderRepository.save(order);
 
       const vendor = await this.userRepository.findOne({
@@ -1040,7 +1042,7 @@ export class OrdersService {
 
     const diffTime = currentDate.getTime() - dueDate.getTime();
 
-    const diffDays = Math.ceil(diffTime / msInDay);
+    const diffDays = Math.floor(diffTime / msInDay);
 
     return diffDays > 0 ? diffDays : 0;
   }
