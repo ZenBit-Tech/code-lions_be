@@ -4,7 +4,6 @@ import {
   Inject,
   Logger,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -21,7 +20,6 @@ import { Errors } from 'src/common/errors';
 import { Type } from 'src/modules/notifications/entities/notification-type.enum';
 import { Status } from 'src/modules/orders/entities/order-status.enum';
 
-import { JwtAuthGuard } from '../auth/auth.guard';
 import { ChatService } from '../chat/chat.service';
 import {
   GetUserChatsDto,
@@ -37,7 +35,6 @@ export type SocketWithAuth = {
   userId: string;
 } & Socket;
 
-@UseGuards(JwtAuthGuard)
 @WebSocketGateway({ cors: { origin: '*' } })
 export class EventsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -107,6 +104,8 @@ export class EventsGateway
 
       const notifications = this.notificationsStore.get(client.userId) || [];
 
+      console.error('notifications: ' + notifications);
+      console.error('notificationsStore: ' + this.notificationsStore);
       notifications.forEach((notification) => {
         client.emit('newNotification', notification);
       });

@@ -629,7 +629,7 @@ export class OrdersService {
           };
 
           const notificationVendor: CreateNotificationDTO = {
-            userId: order.vendorId,
+            userId: vendor.id,
             type: Type.SHIPPING_UPDATES,
             orderId: order.orderId,
             shippingStatus: Status.RECEIVED,
@@ -642,7 +642,7 @@ export class OrdersService {
 
           const clientVendor: SocketWithAuth = await getClientByUserId(
             this.eventsGateway.server,
-            order.vendorId,
+            vendor.id,
           );
 
           await this.eventsGateway.handleCreateNotification(
@@ -730,7 +730,7 @@ export class OrdersService {
           };
 
           const notificationVendor: CreateNotificationDTO = {
-            userId: order.vendorId,
+            userId: vendor.id,
             type: Type.SHIPPING_UPDATES,
             orderId: order.orderId,
             shippingStatus: Status.SENT_BACK,
@@ -743,7 +743,7 @@ export class OrdersService {
 
           const clientVendor: SocketWithAuth = await getClientByUserId(
             this.eventsGateway.server,
-            order.vendorId,
+            vendor.id,
           );
 
           await this.eventsGateway.handleCreateNotification(
