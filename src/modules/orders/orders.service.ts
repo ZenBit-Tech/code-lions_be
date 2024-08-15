@@ -133,9 +133,12 @@ export class OrdersService {
     }
   }
 
-  async hasUserLeftReview(orderId: number, userId: string): Promise<boolean> {
+  async hasUserLeftReview(
+    orderId: number,
+    reviewerId: string,
+  ): Promise<boolean> {
     const review = await this.reviewRepository.findOne({
-      where: { orderId, userId },
+      where: { orderId, reviewerId },
     });
 
     return !!review;
