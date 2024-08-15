@@ -19,6 +19,7 @@ import { OrderResponseDTO } from 'src/modules/orders/dto/order-response.dto';
 import { Order } from 'src/modules/orders/entities/order.entity';
 import { ProductResponseDTO } from 'src/modules/products/dto/product-response.dto';
 import { Product } from 'src/modules/products/entities/product.entity';
+import { Review } from 'src/modules/reviews/review.entity';
 import { RoleForUser } from 'src/modules/roles/role-user.enum';
 import { StripeService } from 'src/modules/stripe/stripe.service';
 import { User } from 'src/modules/users/user.entity';
@@ -57,6 +58,8 @@ export class OrdersService {
     private readonly buyerOrderRepository: Repository<BuyerOrder>,
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
+    @InjectRepository(Review)
+    private readonly reviewRepository: Repository<Review>,
     private mailerService: MailerService,
     @Inject(forwardRef(() => StripeService))
     private stripeService: StripeService,
@@ -118,6 +121,14 @@ export class OrdersService {
     }
   }
 
+  async hasUserLeftReview(orderId: number, userId: string): Promise<boolean> {
+    const review = await this.reviewRepository.findOne({
+      where: { orderId, userId },
+    });
+
+    return !!review;
+  }
+
   async findByUserIdAndOrderId(
     user: UserResponseDto,
     orderId: number,
@@ -135,6 +146,8 @@ export class OrdersService {
       if (!order.length) {
         throw new NotFoundException(Errors.ORDERS_NOT_FOUND);
       }
+
+      const hasLeftReview = await this.hasUserLeftReview(orderId, user.id);
 
       const partnerId =
         user.role === RoleForUser.VENDOR ? order[0].buyerId : order[0].vendorId;
@@ -160,6 +173,7 @@ export class OrdersService {
         order: order.map((order) => new OrderResponseDTO(order)),
         userName: partnerName,
         userId: partnerId,
+        hasLeftReview,
         address: partnerAddress,
       };
 

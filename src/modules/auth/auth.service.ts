@@ -126,6 +126,10 @@ export class AuthService {
       throw new BadRequestException(Errors.ACCOUNT_DELETED_BY_ADMIN);
     }
 
+    if (user && user.googleId !== null) {
+      throw new ConflictException(Errors.LOGIN_VIA_GOOGLE);
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
@@ -279,6 +283,10 @@ export class AuthService {
     if (user) {
       if (user.deletedAt !== null) {
         throw new BadRequestException(Errors.ACCOUNT_DELETED_BY_ADMIN);
+      }
+
+      if (!user.googleId) {
+        throw new ConflictException(Errors.LOGIN_VIA_EMAIL);
       }
 
       const isGoogleIdValid = user.googleId === payload.sub;
