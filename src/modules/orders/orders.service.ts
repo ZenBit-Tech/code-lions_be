@@ -840,6 +840,23 @@ export class OrdersService {
     }
   }
 
+  async setSentBack(orderId: number): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId },
+      });
+
+      if (!order) {
+        return;
+      }
+
+      order.status = Status.SENT_BACK;
+      await this.orderRepository.save(order);
+    } catch {
+      throw new InternalServerErrorException(Errors.FAILED_TO_SET_SENT_BACK);
+    }
+  }
+
   async paySendOrder(
     buyerId: string,
     orderId: number,
@@ -854,7 +871,6 @@ export class OrdersService {
         throw new NotFoundException(Errors.ORDER_NOT_FOUND);
       }
 
-      order.status = Status.SENT_BACK;
       order.trackingNumber = trackingNumber;
       await this.orderRepository.save(order);
 

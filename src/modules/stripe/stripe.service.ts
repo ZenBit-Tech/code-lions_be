@@ -275,14 +275,14 @@ export class StripeService {
       });
 
       this.Logger.log(
-        `Transfer ID: ${transfer.id}, amount: $${amount}, fee: ${fee}%`,
+        `Transfer ID: ${transfer.id}, amount: $${amount}, fee: ${fee * centsInDollar}%`,
       );
 
       return true;
     } catch (error) {
       this.Logger.error(error);
       this.Logger.error(
-        `Vendor Stripe Account: ${vendorStripeAccount}, Payment Intent ID: ${paymentIntentId}, amount: $${amount}, fee: ${fee}`,
+        `Vendor Stripe Account: ${vendorStripeAccount}, Payment Intent ID: ${paymentIntentId}, amount: $${amount}, fee: ${fee * centsInDollar}`,
       );
 
       const parameters = JSON.stringify({
@@ -299,33 +299,48 @@ export class StripeService {
   }
 
   async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
-    //this.Logger.log(event);
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentIntentId = session.payment_intent as string;
 
       const paymentIntent =
         await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
-      const metadata = session.metadata;
 
-      const { id: paymentId, amount_capturable: total, status } = paymentIntent;
-      const { userId, shippingPrice } = metadata;
+      const { userId, shippingPrice, type } = session.metadata;
 
-      const totalAmount = total / centsInDollar;
-      const isPaid = status === holdOnStatus;
+      if (type === PaymentType.ORDER) {
+        const {
+          id: paymentId,
+          amount_capturable: total,
+          status,
+        } = paymentIntent;
+        const totalAmount = total / centsInDollar;
+        const isPaid = status === holdOnStatus;
 
-      this.Logger.log(
-        `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
-      );
+        this.Logger.log(
+          `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
+        );
 
-      await this.ordersService.createOrdersForUser(
-        userId,
-        Number(shippingPrice),
-        totalAmount,
-        isPaid,
-        paymentId,
-      );
-      await this.cartService.emptyCart(userId);
+        await this.ordersService.createOrdersForUser(
+          userId,
+          Number(shippingPrice),
+          totalAmount,
+          isPaid,
+          paymentId,
+        );
+        await this.cartService.emptyCart(userId);
+      } else if (type === PaymentType.OVERDUE) {
+        try {
+          const orderId = Number(session.metadata.orderId);
+
+          if (orderId) {
+            await this.ordersService.setSentBack(orderId);
+          }
+          this.Logger.log(`Overdue paid, orderId: ${orderId}`);
+        } catch (error) {
+          this.Logger.error(error);
+        }
+      }
     } else if (event.type === 'account.updated') {
       const account = event.data.object as Stripe.Account;
 
