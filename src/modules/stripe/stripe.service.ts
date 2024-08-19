@@ -205,6 +205,33 @@ export class StripeService {
     }
   }
 
+  async createLoginLink(customerId: string): Promise<string> {
+    try {
+      const user = await this.usersServise.getUserById(customerId);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (!user.stripeAccount) {
+        throw new NotFoundException(Errors.STRIPE_ACCOUNT_NOT_FOUND);
+      }
+
+      const loginLink = await this.StripeApi.accounts.createLoginLink(
+        user.stripeAccount,
+      );
+
+      return loginLink.url;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CREATE_LOGIN_LINK,
+      );
+    }
+  }
+
   async captureMoney(
     paymentIntentId: string,
     amount: number,

@@ -370,4 +370,65 @@ export class StripeController {
       updateApplicationFee.applicationFee,
     );
   }
+
+  @Post('create-login-link')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create stripe login link',
+    tags: ['Stripe'],
+    description: 'Create stripe one-time link for vendor`s account',
+  })
+  @ApiCreatedResponse({
+    description: 'Created stripe login link',
+    type: AccountLinkResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - No token or invalid token or expired token',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 401 },
+        message: {
+          type: 'string',
+          example: Errors.USER_UNAUTHORIZED,
+        },
+        error: { type: 'string', example: 'Unauthorized' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Not found user with given id',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 404 },
+        message: {
+          type: 'string',
+          example: Errors.USER_NOT_FOUND,
+        },
+        error: { type: 'string', example: 'Not Found' },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to create account in Stripe',
+    schema: {
+      properties: {
+        statusCode: { type: 'integer', example: 500 },
+        message: {
+          type: 'string',
+          example: Errors.FAILED_TO_CREATE_ACCOUNT,
+        },
+        error: { type: 'string', example: 'Internal Server Error' },
+      },
+    },
+  })
+  @Roles(Role.VENDOR)
+  async createLoginLink(
+    @Req() request: { user: User },
+  ): Promise<{ url: string }> {
+    const userId = request.user.id;
+    const accountLink = await this.stripeService.createLoginLink(userId);
+
+    return { url: accountLink };
+  }
 }
