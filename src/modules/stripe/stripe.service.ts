@@ -19,18 +19,23 @@ import { CartService } from 'src/modules/cart/cart.service';
 import { MailerService } from 'src/modules/mailer/mailer.service';
 import { OrdersService } from 'src/modules/orders/orders.service';
 import { ProductsService } from 'src/modules/products/products.service';
+import { OverduePaymentDto } from 'src/modules/stripe/dto/overdue-payment.dto';
+import { PaymentDto } from 'src/modules/stripe/dto/payment.dto';
+import { ApplicationFee } from 'src/modules/stripe/entities/stripe.entity';
+import { StripeModuleOptions } from 'src/modules/stripe/stripe.interfaces';
+import { MODULE_OPTIONS_TOKEN } from 'src/modules/stripe/stripe.module-definition';
 import { UsersService } from 'src/modules/users/users.service';
-
-import { PaymentDto } from './dto/payment.dto';
-import { ApplicationFee } from './entities/stripe.entity';
-import { StripeModuleOptions } from './stripe.interfaces';
-import { MODULE_OPTIONS_TOKEN } from './stripe.module-definition';
 
 const minDifference = 0.01;
 const centsInDollar = 100;
 const successStatus = 'succeeded';
 const holdOnStatus = 'requires_capture';
 const currency = 'CAD';
+
+enum PaymentType {
+  OVERDUE = 'overdue',
+  ORDER = 'order',
+}
 
 @Injectable()
 export class StripeService {
@@ -114,6 +119,7 @@ export class StripeService {
       const session = await this.StripeApi.checkout.sessions.create({
         line_items: lineItems,
         metadata: {
+          type: PaymentType.ORDER,
           userId: customerId,
           shippingPrice: shippingPrice,
         },
@@ -136,6 +142,93 @@ export class StripeService {
       }
       this.Logger.error(error);
       throw new InternalServerErrorException(Errors.PAYMENT_ERROR);
+    }
+  }
+
+  async createOverdueSession(
+    customerId: string,
+    overduePayment: OverduePaymentDto,
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
+    const { vendorStripeAccount, orderId, amount } = overduePayment;
+
+    const fee = await this.getApplicationFee();
+    const applicationFeeAmount = Math.round(
+      fee * Number(amount) * centsInDollar,
+    );
+
+    try {
+      const user = await this.usersServise.getUserById(customerId);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      const session = await this.StripeApi.checkout.sessions.create({
+        line_items: [
+          {
+            price_data: {
+              currency: currency,
+              product_data: {
+                name: `Overdue payment for order #${orderId}`,
+              },
+              unit_amount: Math.round(Number(amount) * centsInDollar),
+            },
+            quantity: 1,
+          },
+        ],
+        payment_intent_data: {
+          application_fee_amount: applicationFeeAmount,
+          transfer_data: {
+            destination: vendorStripeAccount,
+          },
+        },
+
+        metadata: {
+          type: PaymentType.OVERDUE,
+          orderId: orderId,
+        },
+
+        mode: 'payment',
+        success_url: this.configService.get<string>(
+          'STRIPE_OVERDUE_SUCCESS_URL',
+        ),
+        cancel_url: this.configService.get<string>('STRIPE_OVERDUE_CANCEL_URL'),
+      });
+
+      return session;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.Logger.error(error);
+      throw new InternalServerErrorException(Errors.PAYMENT_ERROR);
+    }
+  }
+
+  async createLoginLink(customerId: string): Promise<string> {
+    try {
+      const user = await this.usersServise.getUserById(customerId);
+
+      if (!user) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
+
+      if (!user.stripeAccount) {
+        throw new NotFoundException(Errors.STRIPE_ACCOUNT_NOT_FOUND);
+      }
+
+      const loginLink = await this.StripeApi.accounts.createLoginLink(
+        user.stripeAccount,
+      );
+
+      return loginLink.url;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        Errors.FAILED_TO_CREATE_LOGIN_LINK,
+      );
     }
   }
 
@@ -202,21 +295,21 @@ export class StripeService {
   ): Promise<boolean> {
     try {
       const transfer = await this.StripeApi.transfers.create({
-        amount: Math.round(amount * (centsInDollar - fee)),
+        amount: Math.round(amount * centsInDollar * (1 - fee)),
         currency: currency,
         destination: vendorStripeAccount,
         transfer_group: paymentIntentId,
       });
 
       this.Logger.log(
-        `Transfer ID: ${transfer.id}, amount: $${amount}, fee: ${fee}%`,
+        `Transfer ID: ${transfer.id}, amount: $${amount}, fee: ${fee * centsInDollar}%`,
       );
 
       return true;
     } catch (error) {
       this.Logger.error(error);
       this.Logger.error(
-        `Vendor Stripe Account: ${vendorStripeAccount}, Payment Intent ID: ${paymentIntentId}, amount: $${amount}, fee: ${fee}`,
+        `Vendor Stripe Account: ${vendorStripeAccount}, Payment Intent ID: ${paymentIntentId}, amount: $${amount}, fee: ${fee * centsInDollar}`,
       );
 
       const parameters = JSON.stringify({
@@ -233,33 +326,48 @@ export class StripeService {
   }
 
   async webhookHandler(event: Stripe.Event): Promise<{ received: boolean }> {
-    this.Logger.log(event);
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const paymentIntentId = session.payment_intent as string;
 
       const paymentIntent =
         await this.StripeApi.paymentIntents.retrieve(paymentIntentId);
-      const metadata = session.metadata;
 
-      const { id: paymentId, amount_capturable: total, status } = paymentIntent;
-      const { userId, shippingPrice } = metadata;
+      const { userId, shippingPrice, type } = session.metadata;
 
-      const totalAmount = total / centsInDollar;
-      const isPaid = status === holdOnStatus;
+      if (type === PaymentType.ORDER) {
+        const {
+          id: paymentId,
+          amount_capturable: total,
+          status,
+        } = paymentIntent;
+        const totalAmount = total / centsInDollar;
+        const isPaid = status === holdOnStatus;
 
-      this.Logger.log(
-        `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
-      );
+        this.Logger.log(
+          `User: ${userId}, shipping: ${Number(shippingPrice)}, total: ${totalAmount}, isPaid: ${isPaid}, paymentId: ${paymentId}`,
+        );
 
-      await this.ordersService.createOrdersForUser(
-        userId,
-        Number(shippingPrice),
-        totalAmount,
-        isPaid,
-        paymentId,
-      );
-      await this.cartService.emptyCart(userId);
+        await this.ordersService.createOrdersForUser(
+          userId,
+          Number(shippingPrice),
+          totalAmount,
+          isPaid,
+          paymentId,
+        );
+        await this.cartService.emptyCart(userId);
+      } else if (type === PaymentType.OVERDUE) {
+        try {
+          const orderId = Number(session.metadata.orderId);
+
+          if (orderId) {
+            await this.ordersService.setSentBack(orderId);
+          }
+          this.Logger.log(`Overdue paid, orderId: ${orderId}`);
+        } catch (error) {
+          this.Logger.error(error);
+        }
+      }
     } else if (event.type === 'account.updated') {
       const account = event.data.object as Stripe.Account;
 

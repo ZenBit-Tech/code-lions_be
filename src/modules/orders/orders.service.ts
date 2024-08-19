@@ -8,11 +8,13 @@ import {
 } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import Stripe from 'stripe';
 import { Repository, EntityManager } from 'typeorm';
 
 import { Errors } from 'src/common/errors';
 import { getClientByUserId } from 'src/common/utils/getClientByUserId';
 import { ORDERS_ON_PAGE } from 'src/config';
+import { OVERDUE_DAILY_FINE } from 'src/config';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { Cart } from 'src/modules/cart/cart.entity';
 import {
@@ -348,7 +350,7 @@ export class OrdersService {
 
           product.isAvailable = false;
           await this.productRepository.save(product);
-          await this.cartRepository.delete(product);
+          await this.cartRepository.delete({ productId: product.id });
           newOrder.products.push(product);
         }
 
@@ -428,76 +430,69 @@ export class OrdersService {
     rejectReason: string,
   ): Promise<void> {
     try {
-      return await this.entityManager.transaction(
-        async (transactionalEntityManager) => {
-          const order = await transactionalEntityManager.findOne(Order, {
-            where: [
-              { vendorId: user.id, orderId },
-              { buyerId: user.id, orderId },
-            ],
-            relations: ['products', 'buyerOrder'],
-          });
+      const order = await this.entityManager.findOne(Order, {
+        where: [
+          { vendorId: user.id, orderId },
+          { buyerId: user.id, orderId },
+        ],
+        relations: ['products', 'buyerOrder'],
+      });
 
-          if (!order) {
-            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-          }
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-          order.status = Status.REJECTED;
-          order.rejectedBy = user.role;
-          order.rejectReason = rejectReason;
+      order.status = Status.REJECTED;
+      order.rejectedBy = user.role;
+      order.rejectReason = rejectReason;
 
-          await transactionalEntityManager.save(order);
+      await this.entityManager.save(order);
 
-          for (const product of order.products) {
-            product.isAvailable = true;
-            await transactionalEntityManager.save(product);
-          }
+      for (const product of order.products) {
+        product.isAvailable = true;
+        await this.entityManager.save(product);
+      }
 
-          const partnerId =
-            user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
+      const partnerId =
+        user.role === RoleForUser.VENDOR ? order.buyerId : order.vendorId;
 
-          const partner = await transactionalEntityManager.findOne(User, {
-            where: { id: partnerId },
-          });
+      const partner = await this.entityManager.findOne(User, {
+        where: { id: partnerId },
+      });
 
-          if (!partner) {
-            throw new NotFoundException(Errors.USER_NOT_FOUND);
-          }
+      if (!partner) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-          const isMailSent = await this.mailerService.sendMail({
-            receiverEmail: partner.email,
-            subject: 'Order rejected on CodeLions!',
-            templateName: 'reject-order.hbs',
-            context: {
-              orderNumber: order.orderId,
-              role: user.role,
-              rejectReason,
-            },
-          });
-
-          if (!isMailSent) {
-            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-          }
-
-          const notification: CreateNotificationDTO = {
-            userId: order.buyerId,
-            type: Type.ORDER_REJECTION,
-            orderId: order.orderId,
-          };
-
-          const client: SocketWithAuth = await getClientByUserId(
-            this.eventsGateway.server,
-            order.buyerId,
-          );
-
-          await this.eventsGateway.handleCreateNotification(
-            client,
-            notification,
-          );
-
-          await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: partner.email,
+        subject: 'Order rejected on CodeLions!',
+        templateName: 'reject-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          role: user.role,
+          rejectReason,
         },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      const notification: CreateNotificationDTO = {
+        userId: order.buyerId,
+        type: Type.ORDER_REJECTION,
+        orderId: order.orderId,
+      };
+
+      const client: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        order.buyerId,
       );
+
+      await this.eventsGateway.handleCreateNotification(client, notification);
+
+      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -515,81 +510,77 @@ export class OrdersService {
     trackingNumber: string,
   ): Promise<void> {
     try {
-      await this.entityManager.transaction(
-        async (transactionalEntityManager) => {
-          const order = await transactionalEntityManager.findOne(Order, {
-            where: { orderId, vendorId },
-            relations: ['buyerOrder'],
-          });
+      const order = await this.entityManager.findOne(Order, {
+        where: { orderId, vendorId },
+        relations: ['buyerOrder'],
+      });
 
-          if (!order) {
-            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-          }
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-          order.status = Status.SENT;
-          order.trackingNumber = trackingNumber;
+      order.status = Status.SENT;
+      order.trackingNumber = trackingNumber;
 
-          await transactionalEntityManager.save(order);
+      await this.entityManager.save(order);
 
-          const buyer = await transactionalEntityManager.findOne(User, {
-            where: { id: order.buyerId },
-          });
+      const buyer = await this.entityManager.findOne(User, {
+        where: { id: order.buyerId },
+      });
 
-          if (!buyer) {
-            throw new NotFoundException(Errors.USER_NOT_FOUND);
-          }
+      if (!buyer) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-          const isMailSent = await this.mailerService.sendMail({
-            receiverEmail: buyer.email,
-            subject: 'Order sent on CodeLions!',
-            templateName: 'sent-order.hbs',
-            context: {
-              orderNumber: order.orderId,
-              trackingNumber,
-            },
-          });
-
-          if (!isMailSent) {
-            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-          }
-
-          const notificationBuyer: CreateNotificationDTO = {
-            userId: buyer.id,
-            type: Type.SHIPPING_UPDATES,
-            orderId: order.orderId,
-            shippingStatus: Status.SENT,
-          };
-
-          const notificationVendor: CreateNotificationDTO = {
-            userId: order.vendorId,
-            type: Type.SHIPPING_UPDATES,
-            orderId: order.orderId,
-            shippingStatus: Status.SENT,
-          };
-
-          const clientBuyer: SocketWithAuth = await getClientByUserId(
-            this.eventsGateway.server,
-            buyer.id,
-          );
-
-          const clientVendor: SocketWithAuth = await getClientByUserId(
-            this.eventsGateway.server,
-            order.vendorId,
-          );
-
-          await this.eventsGateway.handleCreateNotification(
-            clientBuyer,
-            notificationBuyer,
-          );
-
-          await this.eventsGateway.handleCreateNotification(
-            clientVendor,
-            notificationVendor,
-          );
-
-          await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
+      const isMailSent = await this.mailerService.sendMail({
+        receiverEmail: buyer.email,
+        subject: 'Order sent on CodeLions!',
+        templateName: 'sent-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
         },
+      });
+
+      if (!isMailSent) {
+        throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
+      }
+
+      const notificationBuyer: CreateNotificationDTO = {
+        userId: buyer.id,
+        type: Type.SHIPPING_UPDATES,
+        orderId: order.orderId,
+        shippingStatus: Status.SENT,
+      };
+
+      const notificationVendor: CreateNotificationDTO = {
+        userId: order.vendorId,
+        type: Type.SHIPPING_UPDATES,
+        orderId: order.orderId,
+        shippingStatus: Status.SENT,
+      };
+
+      const clientBuyer: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        buyer.id,
       );
+
+      const clientVendor: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        order.vendorId,
+      );
+
+      await this.eventsGateway.handleCreateNotification(
+        clientBuyer,
+        notificationBuyer,
+      );
+
+      await this.eventsGateway.handleCreateNotification(
+        clientVendor,
+        notificationVendor,
+      );
+
+      await this.checkIfOrdersAreSentOrRejected(order.buyerOrder.id);
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -849,84 +840,105 @@ export class OrdersService {
     }
   }
 
+  async setSentBack(orderId: number): Promise<void> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { orderId },
+      });
+
+      if (!order) {
+        return;
+      }
+
+      order.status = Status.SENT_BACK;
+      await this.orderRepository.save(order);
+    } catch {
+      throw new InternalServerErrorException(Errors.FAILED_TO_SET_SENT_BACK);
+    }
+  }
+
   async paySendOrder(
     buyerId: string,
     orderId: number,
     trackingNumber: string,
-  ): Promise<void> {
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
     try {
-      await this.entityManager.transaction(
-        async (transactionalEntityManager) => {
-          const order = await transactionalEntityManager.findOne(Order, {
-            where: { orderId, buyerId },
-          });
+      const order = await this.orderRepository.findOne({
+        where: { orderId, buyerId },
+      });
 
-          if (!order) {
-            throw new NotFoundException(Errors.ORDER_NOT_FOUND);
-          }
+      if (!order) {
+        throw new NotFoundException(Errors.ORDER_NOT_FOUND);
+      }
 
-          order.status = Status.SENT_BACK;
-          order.trackingNumber = trackingNumber;
+      order.trackingNumber = trackingNumber;
+      await this.orderRepository.save(order);
 
-          await transactionalEntityManager.save(order);
+      const vendor = await this.userRepository.findOne({
+        where: { id: order.vendorId },
+      });
 
-          const vendor = await transactionalEntityManager.findOne(User, {
-            where: { id: order.vendorId },
-          });
+      if (!vendor) {
+        throw new NotFoundException(Errors.USER_NOT_FOUND);
+      }
 
-          if (!vendor) {
-            throw new NotFoundException(Errors.USER_NOT_FOUND);
-          }
+      const receivedAt = new Date(order.receivedAt);
+      const overdueDays = this.calculateOverdueDays(order.duration, receivedAt);
+      const vendorStripeAccount = vendor.stripeAccount;
 
-          const isMailSent = await this.mailerService.sendMail({
-            receiverEmail: vendor.email,
-            subject: 'Order sent back on CodeLions!',
-            templateName: 'sent-back-order.hbs',
-            context: {
-              orderNumber: order.orderId,
-              trackingNumber,
-            },
-          });
+      const session = await this.stripeService.createOverdueSession(buyerId, {
+        vendorStripeAccount,
 
-          if (!isMailSent) {
-            throw new ServiceUnavailableException(Errors.FAILED_TO_SEND_EMAIL);
-          }
+        orderId: orderId,
 
-          const notificationBuyer: CreateNotificationDTO = {
-            userId: buyerId,
-            type: Type.SHIPPING_UPDATES,
-            orderId: order.orderId,
-            shippingStatus: Status.SENT_BACK,
-          };
+        amount: overdueDays * OVERDUE_DAILY_FINE,
+      });
 
-          const notificationVendor: CreateNotificationDTO = {
-            userId: vendor.id,
-            type: Type.SHIPPING_UPDATES,
-            orderId: order.orderId,
-            shippingStatus: Status.SENT_BACK,
-          };
-
-          const clientBuyer: SocketWithAuth = await getClientByUserId(
-            this.eventsGateway.server,
-            buyerId,
-          );
-
-          const clientVendor: SocketWithAuth = await getClientByUserId(
-            this.eventsGateway.server,
-            vendor.id,
-          );
-
-          await this.eventsGateway.handleCreateNotification(
-            clientBuyer,
-            notificationBuyer,
-          );
-
-          await this.eventsGateway.handleCreateNotification(
-            clientVendor,
-            notificationVendor,
-          );
+      await this.mailerService.sendMail({
+        receiverEmail: vendor.email,
+        subject: 'Order sent back on CodeLions!',
+        templateName: 'sent-back-order.hbs',
+        context: {
+          orderNumber: order.orderId,
+          trackingNumber,
         },
+      });
+
+      const notificationBuyer: CreateNotificationDTO = {
+        userId: buyerId,
+        type: Type.SHIPPING_UPDATES,
+        orderId: order.orderId,
+        shippingStatus: Status.SENT_BACK,
+      };
+
+      const notificationVendor: CreateNotificationDTO = {
+        userId: vendor.id,
+        type: Type.SHIPPING_UPDATES,
+        orderId: order.orderId,
+        shippingStatus: Status.SENT_BACK,
+      };
+
+      const clientBuyer: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        buyerId,
       );
+
+      const clientVendor: SocketWithAuth = await getClientByUserId(
+        this.eventsGateway.server,
+        vendor.id,
+      );
+
+      await this.eventsGateway.handleCreateNotification(
+        clientBuyer,
+        notificationBuyer,
+      );
+
+      await this.eventsGateway.handleCreateNotification(
+        clientVendor,
+        notificationVendor,
+      );
+
+      return session;
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -1034,5 +1046,20 @@ export class OrdersService {
         Errors.FAILED_TO_FETCH_VENDOR_ORDERS,
       );
     }
+  }
+
+  private calculateOverdueDays(duration: number, receivedAt: Date): number {
+    const msInDay = 86400000;
+    const dueDate = new Date(receivedAt);
+
+    dueDate.setDate(dueDate.getDate() + duration);
+
+    const currentDate = new Date();
+
+    const diffTime = currentDate.getTime() - dueDate.getTime();
+
+    const diffDays = Math.floor(diffTime / msInDay);
+
+    return diffDays > 0 ? diffDays : 0;
   }
 }

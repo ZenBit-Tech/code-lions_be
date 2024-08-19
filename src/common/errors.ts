@@ -252,4 +252,7 @@ export const Errors = {
   APPLICATION_FEE_NOT_FOUND: 'Application fee not found',
   LOGIN_VIA_GOOGLE: 'Please, login via google',
   LOGIN_VIA_EMAIL: 'Please, login via email',
+  FAILED_TO_SET_SENT_BACK: 'Failed to set sent back',
+  FAILED_TO_CREATE_LOGIN_LINK: 'Failed to create login link',
+  STRIPE_ACCOUNT_NOT_FOUND: 'Stripe account not found',
 };

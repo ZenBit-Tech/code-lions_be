@@ -29,6 +29,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import Stripe from 'stripe';
 
 import { GetUserId } from 'src/common/decorators/get-user-id';
 import { ErrorResponse } from 'src/common/error-response';
@@ -703,7 +704,7 @@ export class OrdersController {
       'This endpoint changes status of the order to sent back and pays the fine for overdue return.',
   })
   @ApiResponse({
-    status: 204,
+    status: 200,
     description: responseDescrptions.success,
   })
   @ApiNotFoundResponse({
@@ -756,12 +757,12 @@ export class OrdersController {
       },
     },
   })
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   async paySendOrder(
     @Request() request: Request & { user: UserResponseDto },
     @Param('orderId') orderId: number,
     @Body('trackingNumber') trackingNumber: string,
-  ): Promise<void> {
+  ): Promise<Stripe.Response<Stripe.Checkout.Session>> {
     const buyerId = request.user.id;
 
     return await this.ordersService.paySendOrder(

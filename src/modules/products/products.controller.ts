@@ -174,8 +174,6 @@ export class ProductsController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.VENDOR, Role.BUYER)
   @Get('vendor/:id')
   @ApiOperation({
     summary: 'Get products by vendor ID',
@@ -196,19 +194,6 @@ export class ProductsController {
           example: Errors.USER_NOT_FOUND,
         },
         error: { type: 'string', example: 'Not Found' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - No token or invalid token or expired token',
-    schema: {
-      properties: {
-        statusCode: { type: 'integer', example: 401 },
-        message: {
-          type: 'string',
-          example: Errors.USER_UNAUTHORIZED,
-        },
-        error: { type: 'string', example: 'Unauthorized' },
       },
     },
   })

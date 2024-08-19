@@ -47,6 +47,7 @@ import { FileUploadRequest } from 'src/interceptors/file-upload/file-upload.inte
 import { JwtAuthGuard } from 'src/modules/auth/auth.guard';
 import { UserResponseDto } from 'src/modules/auth/dto/user-response.dto';
 import { UserWithTokensResponseDto } from 'src/modules/auth/dto/user-with-tokens-response.dto';
+import { Public } from 'src/modules/auth/public.decorator';
 import { Role } from 'src/modules/roles/role.enum';
 import { Roles } from 'src/modules/roles/roles.decorator';
 import { RolesGuard } from 'src/modules/roles/roles.guard';
@@ -243,8 +244,8 @@ export class UsersController {
     return await this.usersService.getPublicUserById(id);
   }
 
+  @Public()
   @Get(':id')
-  @Roles(Role.BUYER, Role.VENDOR)
   @ApiOperation({
     summary: 'Get user by ID',
     tags: ['Users Endpoints'],
